@@ -3,13 +3,16 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    #[cfg(windows)]
-    {
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+    if target_os == "windows" {
         // Clap + the full command graph can exceed the default 1 MiB Windows
-        // main-thread stack during process startup. Reserve a larger stack for
-        // the CLI binary so `rtk.exe --version`, `--help`, and hook entry
-        // points start reliably without requiring ad-hoc RUSTFLAGS.
-        println!("cargo:rustc-link-arg=/STACK:8388608");
+        // main-thread stack during process startup. Reserve 8 MiB stack.
+        if target_env == "gnu" {
+            println!("cargo:rustc-link-arg=-Wl,--stack,8388608");
+        } else {
+            println!("cargo:rustc-link-arg=/STACK:8388608");
+        }
     }
 
     check_cmds_modules_declared();

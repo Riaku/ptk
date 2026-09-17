@@ -13,7 +13,9 @@ use std::sync::OnceLock;
 
 static CACHED_SALT: OnceLock<String> = OnceLock::new();
 
+#[allow(dead_code)]
 const TELEMETRY_URL: Option<&str> = option_env!("RTK_TELEMETRY_URL");
+#[allow(dead_code)]
 const TELEMETRY_TOKEN: Option<&str> = option_env!("RTK_TELEMETRY_TOKEN");
 const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 
@@ -25,7 +27,7 @@ const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 /// CI `env:` block, which exports an empty string when the repository variable
 /// is not configured.
 pub fn endpoint_url() -> Option<&'static str> {
-    TELEMETRY_URL.filter(|&u| crate::core::utils::env_is_some(Some(u)))
+    None
 }
 
 /// Send a telemetry ping if enabled and not already sent today.
@@ -661,14 +663,14 @@ mod tests {
     #[test]
     fn test_salt_file_path_is_in_rtk_dir() {
         let path = salt_file_path();
-        assert!(path.to_string_lossy().contains("rtk"));
+        assert!(path.to_string_lossy().contains("ptk"));
         assert!(path.to_string_lossy().contains(".device_salt"));
     }
 
     #[test]
     fn test_marker_path_exists() {
         let path = telemetry_marker_path();
-        assert!(path.to_string_lossy().contains("rtk"));
+        assert!(path.to_string_lossy().contains("ptk"));
     }
 
     #[test]

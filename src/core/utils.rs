@@ -514,12 +514,25 @@ pub fn resolved_command(name: &str) -> Command {
     match resolve_binary(name) {
         Ok(path) => Command::new(path),
         Err(e) => {
+            #[cfg(windows)]
+            {
+                if crate::core::windows_shell::is_cmd_builtin(name) {
+                    return crate::core::windows_shell::spawn_cmd(name, &[]);
+                }
+                if crate::core::windows_shell::is_powershell_cmdlet(name) {
+                    let ps_bin = crate::core::windows_shell::resolve_powershell_bin();
+                    let mut cmd = Command::new(ps_bin);
+                    cmd.arg("-NoProfile").arg("-NonInteractive").arg(name);
+                    return cmd;
+                }
+            }
+
             // On Windows, resolution failure likely means a .CMD/.BAT wrapper
             // wasn't found — always warn so users have a signal.
             // On Unix, this is less common; only log in debug builds.
             if cfg!(any(target_os = "windows", debug_assertions)) {
                 eprintln!(
-                    "rtk: Failed to resolve '{}' via PATH, falling back to direct exec: {}",
+                    "ptk: Failed to resolve '{}' via PATH, falling back to direct exec: {}",
                     name, e
                 );
             }
@@ -617,6 +630,7 @@ pub fn tool_exists(name: &str) -> bool {
 /// assert!(!env_is_some(Some("")));
 /// assert!(!env_is_some(None));
 /// ```
+#[allow(dead_code)]
 pub fn env_is_some(value: Option<&str>) -> bool {
     value.is_some_and(|v| !v.is_empty())
 }

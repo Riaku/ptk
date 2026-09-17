@@ -2117,8 +2117,8 @@ mod tests {
         temp_env::with_var_unset("RTK_DB_PATH", || {
             let db_path = get_db_path().expect("Failed to get db path");
             assert!(
-                db_path.ends_with("rtk/history.db"),
-                "expected default path ending with rtk/history.db, got: {}",
+                db_path.ends_with("ptk/history.db"),
+                "expected default path ending with ptk/history.db, got: {}",
                 db_path.display()
             );
         });

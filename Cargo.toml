@@ -1,12 +1,11 @@
 [package]
-name = "rtk"
+name = "ptk"
 version = "0.48.0"
 edition = "2024"
 rust-version = "1.91"
-authors = ["Patrick Szymkowiak"]
-description = "Rust Token Killer - High-performance CLI proxy to minimize LLM token consumption"
+authors = ["PTK Contributors", "Patrick Szymkowiak"]
+description = "Proxy Token Killer - High-performance CLI proxy to minimize LLM token consumption across Windows and POSIX shells"
 license = "Apache-2.0"
-homepage = "https://www.rtk-ai.app"
 repository = "https://github.com/rtk-ai/rtk"
 readme = "README.md"
 keywords = ["cli", "llm", "token", "filter", "productivity"]

@@ -872,6 +872,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "ptk"
+version = "0.48.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "codepage",
+ "colored",
+ "dirs",
+ "encoding_rs",
+ "flate2",
+ "getrandom 0.4.2",
+ "ignore",
+ "libc",
+ "oem_cp",
+ "quick-xml",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "temp-env",
+ "tempfile",
+ "toml",
+ "toml_edit",
+ "ureq",
+ "walkdir",
+ "which",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "quick-xml"
 version = "0.37.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -956,38 +988,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "rtk"
-version = "0.48.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "codepage",
- "colored",
- "dirs",
- "encoding_rs",
- "flate2",
- "getrandom 0.4.2",
- "ignore",
- "libc",
- "oem_cp",
- "quick-xml",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "temp-env",
- "tempfile",
- "toml",
- "toml_edit",
- "ureq",
- "walkdir",
- "which",
- "windows-sys 0.59.0",
 ]
 
 [[package]]

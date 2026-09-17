@@ -27,6 +27,10 @@ use cmds::system::{
     ast_grep_cmd, ctest_cmd, deps, env_cmd, find_cmd, format_cmd, json_cmd, local_llm, log_cmd, ls,
     pipe_cmd, read, search, summary, tree, wc_cmd,
 };
+use cmds::windows::{
+    dir_cmd, dns_cmd, event_cmd, findstr_cmd, format_cmd as win_format_cmd, gci_cmd, json_csv_cmd,
+    netip_cmd, nettcp_cmd, new_item_cmd, process_cmd, service_cmd, tnc_cmd, type_cmd,
+};
 
 use anyhow::{Context, Result};
 use clap::error::ErrorKind;
@@ -65,10 +69,10 @@ pub enum AgentTarget {
 
 #[derive(Parser)]
 #[command(
-    name = "rtk",
+    name = "ptk",
     version,
-    about = "Rust Token Killer - Minimize LLM token consumption",
-    long_about = "A high-performance CLI proxy designed to filter and summarize system outputs before they reach your LLM context."
+    about = "Proxy Token Killer - Minimize LLM token consumption across Windows & POSIX shells",
+    long_about = "A high-performance CLI proxy designed to filter and summarize command outputs (PowerShell, CMD, Bash) before they reach your LLM context."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -89,6 +93,178 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Windows directory list with token-optimized output (proxy to native CMD dir)
+    Dir {
+        /// Arguments passed to dir
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell directory list with token-optimized output (proxy to Get-ChildItem)
+    #[command(alias = "get-childitem")]
+    Gci {
+        /// Arguments passed to Get-ChildItem
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// Windows file content viewer with token-optimized output (proxy to native CMD type)
+    Type {
+        /// Arguments passed to type
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell file content viewer with token-optimized output (proxy to Get-Content)
+    #[command(alias = "get-content")]
+    Gc {
+        /// Arguments passed to Get-Content
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// Windows string search with token-optimized output (proxy to native CMD findstr)
+    Findstr {
+        /// Arguments passed to findstr
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell string search with token-optimized output (proxy to Select-String)
+    #[command(alias = "select-string")]
+    Sls {
+        /// Arguments passed to Select-String
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell process viewer with token-optimized output (proxy to Get-Process)
+    #[command(alias = "get-process", alias = "gps")]
+    Ps {
+        /// Arguments passed to Get-Process
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell service viewer with token-optimized output (proxy to Get-Service)
+    #[command(alias = "get-service")]
+    Gsv {
+        /// Arguments passed to Get-Service
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell network IP viewer with token-optimized output (proxy to Get-NetIPAddress)
+    #[command(alias = "get-netipaddress")]
+    Netip {
+        /// Arguments passed to Get-NetIPAddress
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell item creator with token-optimized output (proxy to New-Item)
+    #[command(alias = "new-item")]
+    Ni {
+        /// Arguments passed to New-Item
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell event log viewer with token-optimized output (proxy to Get-EventLog)
+    #[command(alias = "get-eventlog")]
+    Eventlog {
+        /// Arguments passed to Get-EventLog
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell Windows event viewer with token-optimized output (proxy to Get-WinEvent)
+    #[command(alias = "get-winevent")]
+    Winevent {
+        /// Arguments passed to Get-WinEvent
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell TCP connection viewer with token-optimized output (proxy to Get-NetTCPConnection)
+    #[command(alias = "get-nettcpconnection")]
+    Nettcp {
+        /// Arguments passed to Get-NetTCPConnection
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// Network connection viewer with token-optimized output (proxy to netstat)
+    Netstat {
+        /// Arguments passed to netstat
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell DNS query tool with token-optimized output (proxy to Resolve-DnsName)
+    #[command(alias = "resolve-dnsname", alias = "dns")]
+    ResolveDns {
+        /// Arguments passed to Resolve-DnsName
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell network connectivity tester with token-optimized output (proxy to Test-NetConnection)
+    #[command(alias = "test-netconnection", alias = "tnc")]
+    TestNet {
+        /// Arguments passed to Test-NetConnection
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell JSON deserializer with token-optimized output (proxy to ConvertFrom-Json)
+    #[command(alias = "convertfrom-json")]
+    FromJson {
+        /// Arguments passed to ConvertFrom-Json
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell JSON serializer with minified output (proxy to ConvertTo-Json)
+    #[command(alias = "convertto-json")]
+    ToJson {
+        /// Arguments passed to ConvertTo-Json
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell CSV parser with token-optimized output (proxy to ConvertFrom-Csv)
+    #[command(alias = "convertfrom-csv")]
+    FromCsv {
+        /// Arguments passed to ConvertFrom-Csv
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell CSV exporter with concise output (proxy to Export-Csv)
+    #[command(alias = "epcsv")]
+    ExportCsv {
+        /// Arguments passed to Export-Csv
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell table formatter with token-optimized output (proxy to Format-Table)
+    #[command(alias = "ft")]
+    FormatTable {
+        /// Arguments passed to Format-Table
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// PowerShell list formatter with token-optimized output (proxy to Format-List)
+    #[command(alias = "fl")]
+    FormatList {
+        /// Arguments passed to Format-List
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
     /// List directory contents with token-optimized output (proxy to native ls)
     Ls {
         /// Arguments passed to ls (supports all native ls flags like -l, -a, -h, -R)
@@ -1545,6 +1721,14 @@ fn run_fallback(parse_error: clap::Error) -> Result<i32> {
     }
 
     let raw_command = args.join(" ");
+
+    #[cfg(windows)]
+    if crate::core::windows_shell::is_cmd_builtin(&args[0])
+        || crate::core::windows_shell::is_powershell_cmdlet(&args[0])
+    {
+        return cmds::windows::run_smart_command(&raw_command, 0);
+    }
+
     let error_message = core::utils::strip_ansi(&parse_error.to_string());
 
     // Start timer before execution to capture actual command runtime
@@ -1792,7 +1976,7 @@ fn main() {
     let code = match run_cli() {
         Ok(code) => code,
         Err(e) => {
-            eprintln!("rtk: {:#}", e);
+            eprintln!("ptk: {:#}", e);
             1
         }
     };
@@ -1878,6 +2062,29 @@ fn run_cli() -> Result<i32> {
     }
 
     let code = match cli.command {
+        Commands::Dir { args } => dir_cmd::run(&args, cli.verbose)?,
+        Commands::Gci { args } => gci_cmd::run(&args, cli.verbose)?,
+        Commands::Type { args } => type_cmd::run_cmd_type(&args, cli.verbose)?,
+        Commands::Gc { args } => type_cmd::run_get_content(&args, cli.verbose)?,
+        Commands::Findstr { args } => findstr_cmd::run_findstr(&args, cli.verbose)?,
+        Commands::Sls { args } => findstr_cmd::run_select_string(&args, cli.verbose)?,
+        Commands::Ps { args } => process_cmd::run(&args, cli.verbose)?,
+        Commands::Gsv { args } => service_cmd::run(&args, cli.verbose)?,
+        Commands::Netip { args } => netip_cmd::run(&args, cli.verbose)?,
+        Commands::Ni { args } => new_item_cmd::run(&args, cli.verbose)?,
+        Commands::Eventlog { args } => event_cmd::run_eventlog(&args, cli.verbose)?,
+        Commands::Winevent { args } => event_cmd::run_winevent(&args, cli.verbose)?,
+        Commands::Nettcp { args } => nettcp_cmd::run_nettcp(&args, cli.verbose)?,
+        Commands::Netstat { args } => nettcp_cmd::run_netstat(&args, cli.verbose)?,
+        Commands::ResolveDns { args } => dns_cmd::run(&args, cli.verbose)?,
+        Commands::TestNet { args } => tnc_cmd::run(&args, cli.verbose)?,
+        Commands::FromJson { args } => json_csv_cmd::run_convertfrom_json(&args, cli.verbose)?,
+        Commands::ToJson { args } => json_csv_cmd::run_convertto_json(&args, cli.verbose)?,
+        Commands::FromCsv { args } => json_csv_cmd::run_convertfrom_csv(&args, cli.verbose)?,
+        Commands::ExportCsv { args } => json_csv_cmd::run_export_csv(&args, cli.verbose)?,
+        Commands::FormatTable { args } => win_format_cmd::run_format_table(&args, cli.verbose)?,
+        Commands::FormatList { args } => win_format_cmd::run_format_list(&args, cli.verbose)?,
+
         Commands::Ls { args } => ls::run(&args, cli.verbose)?,
 
         Commands::Tree { args } => tree::run(&args, cli.verbose)?,
@@ -2880,12 +3087,12 @@ fn run_cli() -> Result<i32> {
             };
             if raw.trim().is_empty() {
                 0
+            } else if cfg!(windows) {
+                cmds::windows::run_smart_command(&raw, cli.verbose)?
             } else {
                 use std::process::Command as ProcCommand;
-                let shell = if cfg!(windows) { "cmd" } else { "sh" };
-                let flag = if cfg!(windows) { "/C" } else { "-c" };
-                let status = ProcCommand::new(shell)
-                    .arg(flag)
+                let status = ProcCommand::new("sh")
+                    .arg("-c")
                     .arg(&raw)
                     .status()
                     .with_context(|| format!("Failed to execute: {}", raw))?;
@@ -3137,7 +3344,29 @@ fn run_cli() -> Result<i32> {
 fn is_operational_command(cmd: &Commands) -> bool {
     matches!(
         cmd,
-        Commands::Ls { .. }
+        Commands::Dir { .. }
+            | Commands::Gci { .. }
+            | Commands::Type { .. }
+            | Commands::Gc { .. }
+            | Commands::Findstr { .. }
+            | Commands::Sls { .. }
+            | Commands::Ps { .. }
+            | Commands::Gsv { .. }
+            | Commands::Netip { .. }
+            | Commands::Ni { .. }
+            | Commands::Eventlog { .. }
+            | Commands::Winevent { .. }
+            | Commands::Nettcp { .. }
+            | Commands::Netstat { .. }
+            | Commands::ResolveDns { .. }
+            | Commands::TestNet { .. }
+            | Commands::FromJson { .. }
+            | Commands::ToJson { .. }
+            | Commands::FromCsv { .. }
+            | Commands::ExportCsv { .. }
+            | Commands::FormatTable { .. }
+            | Commands::FormatList { .. }
+            | Commands::Ls { .. }
             | Commands::Tree { .. }
             | Commands::Read { .. }
             | Commands::Smart { .. }
@@ -3696,6 +3925,28 @@ mod tests {
             "bun",
             "bunx",
             "deno",
+            "dir",
+            "gci",
+            "type",
+            "gc",
+            "findstr",
+            "sls",
+            "ps",
+            "gsv",
+            "netip",
+            "ni",
+            "eventlog",
+            "winevent",
+            "nettcp",
+            "netstat",
+            "resolve-dns",
+            "test-net",
+            "from-json",
+            "to-json",
+            "from-csv",
+            "export-csv",
+            "format-table",
+            "format-list",
         ];
 
         let unclassified: Vec<String> = Cli::command()

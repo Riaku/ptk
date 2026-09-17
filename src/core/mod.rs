@@ -18,3 +18,4 @@ pub mod toml_filter;
 pub mod tracking;
 pub mod truncate;
 pub mod utils;
+pub mod windows_shell;

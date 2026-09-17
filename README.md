@@ -32,16 +32,22 @@
   <a href="README_pt.md">Português</a>
 </p>
 
----
+> [!NOTE]
+> **PTK (Proxy Token Killer)** is an open-source fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk). While retaining all cross-platform and POSIX capabilities of RTK, PTK extends the engine with native support for **Windows PowerShell cmdlets** (`Get-ChildItem`, `Get-Content`, `Select-String`) and **Windows CMD built-ins** (`dir`, `type`, `findstr`, `where`), resolving long-standing limitations for Windows developers and AI coding agents.
 
-rtk filters and compresses command outputs before they reach your LLM context. Single Rust binary, 100+ supported commands, <10ms overhead.
+ptk filters and compresses command outputs before they reach your LLM context. Single Rust binary, cross-platform (Windows, macOS, Linux), 100+ supported commands, <10ms overhead.
 
-## What RTK Does
+## What PTK Does
 
-RTK intercepts shell commands and compresses their output before your agent reads it.
+PTK intercepts shell commands and compresses their output before your agent reads it.
 
-| Operation | What RTK does to the output |
+| Operation | What PTK does to the output |
 |-----------|-----------------------------|
+| **`dir` (CMD)** | Strips volume labels, serials, summary bytes free, formats into clean list |
+| **`Get-ChildItem` / `gci` (PowerShell)** | Strips table whitespace padding, mode headers, formats into clean list |
+| **`type` (CMD) / `Get-Content` (PS)** | Smart file reading: signatures, truncation guards, removes blank line padding |
+| **`findstr` (CMD) / `Select-String` (PS)** | Groups matches by file, caps context lines, deduplicates |
+| `ls` / `tree` | Tree format with file counts instead of one line per entry |
 | `ls` / `tree` | Tree format with file counts instead of one line per entry |
 | `cat` / `read` | Smart file reading: signatures and structure over full bodies |
 | `grep` / `rg` | Truncates long lines, groups matches by file |
@@ -56,6 +62,29 @@ RTK intercepts shell commands and compresses their output before your agent read
 | `pytest` | Failures only, traceback trimmed |
 | `go test` | NDJSON parsed, failures only |
 | `docker ps` | Essential fields only |
+
+### Windows & PowerShell Optimization Benchmark
+
+Measured across the 79-test suite on native Windows (`pwsh`):
+
+| Command Family | Supported Commands & Aliases | Optimization Strategy | Savings Range (Min - Max %) |
+|----------------|------------------------------|-----------------------|:---------------------------:|
+| **Select-String** | `Select-String`, `sls` | Groups by file, formats `file:line: match`, trims context | **0% - 14.2%** *(raw match passthrough)* |
+| **Get-Content** | `Get-Content`, `gc`, `cat`, `type` | Preserves code/config fidelity, strips trailing whitespace | **0% - 11.4%** *(3.1k+ chars saved on docs)* |
+| **netstat** | `netstat -ano`, `netstat` | Strips empty lines/banner headers, aligns TCP/UDP endpoints | **8.7% - 9.9%** |
+| **Format-Table / Format-List** | `Format-Table`, `ft`, `Format-List`, `fl` | Strips dashed headers/separators, compacts key-values | **27.0% - 30.0%** |
+| **ConvertFrom-Json / ConvertTo-Json** | `ConvertFrom-Json`, `ConvertTo-Json` | Minifies JSON, compacts key-values into single lines | **16.7% - 47.1%** |
+| **Get-NetTCPConnection** | `Get-NetTCPConnection`, `nettcp` | Compact tabular network connections, strips padding | **37.9%** |
+| **Get-EventLog / Get-WinEvent** | `Get-EventLog`, `Get-WinEvent`, `winevent` | Aligns `Time  Level  Id  Source  Message`, strips boilerplate | **37.1% - 51.8%** |
+| **Resolve-DnsName** | `Resolve-DnsName`, `dns` | Compact DNS records: `Name  Type  TTL  IP/Target` | **31.6% - 52.7%** |
+| **Get-Service** | `Get-Service`, `gsv` | Minimal columns: `Status  Name  DisplayName` | **11.7% - 50.4%** |
+| **Get-ChildItem** | `Get-ChildItem`, `gci`, `dir` | Compact table: `Mode  Size  Name`, eliminates empty lines | **66.2% - 84.2%** |
+| **New-Item** | `New-Item`, `ni` | Concise one-line indicator: `+ [File/Dir] path (size)` | **69.8% - 71.2%** |
+| **Get-Process** | `Get-Process`, `gps`, `ps` | Minimal columns: `PID(K)  WS(MB)  CPU(s)  ProcessName` | **45.9% - 81.6%** |
+| **Test-NetConnection** | `Test-NetConnection`, `tnc` | Concise one-line result: `Host: IP -> Ping: OK \| TCP: OK` | **62.1% - 82.0%** |
+| **Get-NetIPAddress** | `Get-NetIPAddress`, `netip` | Compact IP summary: `Alias  IPv4/IPv6  Prefix  Status` | **80.7% - 85.2%** |
+
+> **Pipeline Safety Guarantee**: When any command is piped into downstream cmdlets (e.g. `| Measure-Object`, `| Select-Object`, `| Out-String`) or redirected, PTK detects pipeline metacharacters and executes native passthrough (0% modification) to preserve 100% object and data stream integrity.
 
 ## How Savings Work
 
