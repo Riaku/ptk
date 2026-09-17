@@ -215,7 +215,7 @@ fn random_salt() -> String {
 pub fn salt_file_path() -> PathBuf {
     dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join("rtk")
+        .join(RTK_DATA_DIR)
         .join(".device_salt")
 }
 
