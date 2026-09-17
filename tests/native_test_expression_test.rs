@@ -12,7 +12,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn exit_code(cwd: &Path, args: &[&str]) -> i32 {
-    Command::new(env!("CARGO_BIN_EXE_rtk"))
+    Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("LC_ALL", "C")
         .env("HOME", cwd.join("home"))
         .args(args)

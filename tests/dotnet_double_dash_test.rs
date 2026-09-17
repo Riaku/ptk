@@ -55,7 +55,7 @@ fn dotnet_test_reuses_users_double_dash_for_report_trx_injection() {
         std::env::var("PATH").unwrap_or_default()
     );
 
-    let out = Command::new(env!("CARGO_BIN_EXE_rtk"))
+    let out = Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("PATH", path_with_stub)
         .current_dir(dir.path())
         .args(["dotnet", "test", "--", "FullyQualifiedName=MyFilter"])

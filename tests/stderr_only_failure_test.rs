@@ -23,7 +23,7 @@ fn rtk_with(dir: &Path, args: &[&str]) -> Output {
         dir.display(),
         std::env::var("PATH").unwrap_or_default()
     );
-    Command::new(env!("CARGO_BIN_EXE_rtk"))
+    Command::new(env!("CARGO_BIN_EXE_ptk"))
         .args(args)
         .env("PATH", path)
         .output()

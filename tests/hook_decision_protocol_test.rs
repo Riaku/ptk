@@ -69,7 +69,7 @@ impl Sandbox {
     }
 
     fn run(&self, args: &[&str]) -> (i32, String, String) {
-        let out = Command::new(env!("CARGO_BIN_EXE_rtk"))
+        let out = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .args(args)
             .current_dir(&self.project)
             .env("HOME", &self.home)
@@ -134,7 +134,7 @@ impl Sandbox {
             "tool_input": { "command": cmd },
         })
         .to_string();
-        let mut child = Command::new(env!("CARGO_BIN_EXE_rtk"))
+        let mut child = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .args(["hook", "claude"])
             .current_dir(&self.project)
             .env("HOME", &self.home)

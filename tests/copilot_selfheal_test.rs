@@ -87,7 +87,7 @@ impl Sandbox {
     }
 
     fn run_hook(&self, payload: &str) -> (String, String, Option<i32>) {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_rtk"))
+        let mut child = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .args(["hook", "copilot"])
             .current_dir(&self.project)
             .env("HOME", &self.home)

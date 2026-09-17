@@ -9,7 +9,7 @@ use std::os::unix::fs::symlink;
 use tempfile::TempDir;
 
 fn run_rtk(cwd: &Path, agent_dir: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_rtk"))
+    Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("LC_ALL", "C")
         .env("HOME", cwd.join("home"))
         .env("PI_CODING_AGENT_DIR", agent_dir)
@@ -21,7 +21,7 @@ fn run_rtk(cwd: &Path, agent_dir: &Path, args: &[&str]) -> Output {
 
 #[cfg(unix)]
 fn run_rtk_without_agent_dir(cwd: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_rtk"))
+    Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("LC_ALL", "C")
         .env("HOME", cwd.join("home"))
         .env_remove("PI_CODING_AGENT_DIR")

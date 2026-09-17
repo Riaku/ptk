@@ -24,7 +24,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const RTK_BIN: &str = env!("CARGO_BIN_EXE_rtk");
+const RTK_BIN: &str = env!("CARGO_BIN_EXE_ptk");
 
 /// Number of fuzz iterations. Seeded, so this is deterministic across runs/CI.
 const ITERATIONS: usize = 600;

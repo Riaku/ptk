@@ -15,7 +15,7 @@ const REMINDER: &str = "No hook installed";
 /// Runs `rtk <args>` against a home directory whose Claude config directory
 /// exists but registers no hook, and returns stderr.
 fn run(home: &Path, args: &[&str]) -> String {
-    let out = Command::new(env!("CARGO_BIN_EXE_rtk"))
+    let out = Command::new(env!("CARGO_BIN_EXE_ptk"))
         .args(args)
         .env("HOME", home)
         .env("RTK_DB_PATH", home.join("rtk.db"))

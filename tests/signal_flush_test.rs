@@ -48,7 +48,7 @@ fn signalled_run_still_prints_captured_output() {
         std::env::var("PATH").unwrap_or_default()
     );
 
-    let child = Command::new(env!("CARGO_BIN_EXE_rtk"))
+    let child = Command::new(env!("CARGO_BIN_EXE_ptk"))
         .args(["cargo", "clippy"])
         .env("PATH", path)
         .env("HOME", &home)

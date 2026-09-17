@@ -3,7 +3,7 @@ use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
 fn read_stdin(input: &[u8], args: &[&str]) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_rtk"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ptk"))
         .args(["read", "-"])
         .args(args)
         .stdin(Stdio::piped())
@@ -30,7 +30,7 @@ fn read_windows_preserve_non_utf8_files() {
         ("--head-lines", b"\xff\xfe bad\nline2\n".as_slice()),
         ("--tail-lines", b"line2\nline3\n".as_slice()),
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_rtk"))
+        let output = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .arg("read")
             .arg(&file)
             .args([flag, "2"])
@@ -64,7 +64,7 @@ fn read_windows_preserve_binary_boundaries_for_files_and_stdin() {
             ("--head-lines", "99", input),
             ("--tail-lines", "99", input),
         ] {
-            let from_file = Command::new(env!("CARGO_BIN_EXE_rtk"))
+            let from_file = Command::new(env!("CARGO_BIN_EXE_ptk"))
                 .arg("read")
                 .arg(&file)
                 .args([flag, count])
@@ -134,7 +134,7 @@ fn rewritten_head_spellings_match_native_on_non_utf8_files() {
     fs::write(&file, b"\xff\xfe bad\nline2\nline3\n").expect("write binary file");
     for flags in ["-2", "-n 2", "--lines 2", "--lines=2", ""] {
         let command = format!("head {flags} {}", file.display());
-        let rewrite = Command::new(env!("CARGO_BIN_EXE_rtk"))
+        let rewrite = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .current_dir(dir.path())
             .env("CLAUDE_CONFIG_DIR", &claude_dir)
             .env("XDG_CONFIG_HOME", &config_dir)
@@ -153,7 +153,7 @@ fn rewritten_head_spellings_match_native_on_non_utf8_files() {
             rewritten.trim(),
             format!("rtk read {} --head-lines {count}", file.display())
         );
-        let actual = Command::new(env!("CARGO_BIN_EXE_rtk"))
+        let actual = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .args(
                 rewritten
                     .trim()
