@@ -167,6 +167,7 @@ jobs:
     steps:
       - uses: actions/create-github-app-token@v3
         id: app-token
+        if: ${{ secrets.APP_CLIENT_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
         with:
           client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
