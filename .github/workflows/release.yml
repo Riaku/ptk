@@ -17,6 +17,7 @@ on:
       tag:
         description: 'Tag to release (e.g., v0.1.0)'
         required: true
+        type: string
       prerelease:
         description: 'Mark as pre-release'
         type: boolean

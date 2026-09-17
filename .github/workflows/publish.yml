@@ -144,7 +144,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: ${{ env.TOOLCHAIN }}
+          toolchain: "1.91"
           targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools (Linux ARM)
@@ -170,6 +170,11 @@ jobs:
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Inspect build output
+        shell: bash
+        run: |
+          ls -la target/${{ matrix.target }}/release/
 
       - name: Package (Unix tar.gz)
         if: matrix.archive == 'tar.gz'
