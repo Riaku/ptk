@@ -112,7 +112,7 @@ jobs:
             echo "- [ ] Manual security review by 2 maintainers" >> $GITHUB_STEP_SUMMARY
             echo "- [ ] Verify no shell injection vectors" >> $GITHUB_STEP_SUMMARY
             echo "- [ ] Check input validation remains intact" >> $GITHUB_STEP_SUMMARY
-            echo "::warning::Critical RTK files modified - enhanced review required"
+            echo "::warning::Critical PTK files modified - enhanced review required"
           else
             echo "No critical files modified" >> $GITHUB_STEP_SUMMARY
           fi
@@ -254,7 +254,7 @@ jobs:
         run: |
           # System prompt
           cat <<'EOF' > system_prompt.txt
-          You are a documentation reviewer for the RTK project.
+          You are a documentation reviewer for the PTK project.
           You will receive the project's CONTRIBUTING.md (which contains the documentation rules), the PR info, changed files, and diff.
           Your job: based ONLY on the documentation rules in CONTRIBUTING.md, decide if the PR includes the required documentation updates.
 

@@ -15,7 +15,7 @@ jobs:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         id: app-token
         with:
-          client-id: ${{ secrets.APP_CLIENT_ID }}
+          app-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: read
           permission-pull-requests: write
@@ -28,7 +28,7 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_BODY: ${{ github.event.pull_request.body }}
           REPO: ${{ github.repository }}
-          ALLOWED_REPOS: "rtk-ai/rtk"
+          ALLOWED_REPOS: ${{ github.repository }}
         run: |
           set -euo pipefail
 
