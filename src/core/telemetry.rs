@@ -12,11 +12,6 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 static CACHED_SALT: OnceLock<String> = OnceLock::new();
-
-#[allow(dead_code)]
-const TELEMETRY_URL: Option<&str> = option_env!("RTK_TELEMETRY_URL");
-#[allow(dead_code)]
-const TELEMETRY_TOKEN: Option<&str> = option_env!("RTK_TELEMETRY_TOKEN");
 const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 
 /// The telemetry endpoint compiled into this build, if any.
@@ -157,11 +152,7 @@ fn send_ping() -> Result<(), Box<dyn std::error::Error>> {
         ),
     });
 
-    let mut req = ureq::post(url).set("Content-Type", "application/json");
-
-    if let Some(token) = TELEMETRY_TOKEN {
-        req = req.set("X-RTK-Token", token);
-    }
+    let req = ureq::post(url).set("Content-Type", "application/json");
 
     // 2 second timeout — if server is down, we move on
     req.timeout(std::time::Duration::from_secs(2))

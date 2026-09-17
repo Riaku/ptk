@@ -7,7 +7,7 @@ use std::process::Command;
 use std::sync::OnceLock;
 
 /// List of common Windows CMD built-in commands and utilities.
-#[allow(dead_code)]
+#[cfg(any(windows, test))]
 pub const CMD_BUILTINS: &[&str] = &[
     "dir", "type", "findstr", "where", "tasklist", "taskkill", "set", "copy", "del", "erase",
     "ren", "rename", "move", "ver", "vol", "mkdir", "md", "rmdir", "rd", "cls", "assoc", "ftype",
@@ -27,7 +27,7 @@ pub const POWERSHELL_ALIASES: &[&str] = &[
 ];
 
 /// Returns true if the command name is a known Windows CMD built-in.
-#[allow(dead_code)]
+#[cfg(any(windows, test))]
 pub fn is_cmd_builtin(name: &str) -> bool {
     let lower = name.to_lowercase();
     CMD_BUILTINS.contains(&lower.as_str())

@@ -89,21 +89,21 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../rtk-${{ matrix.target }}.${{ matrix.archive }} rtk
+          tar -czvf ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk
           cd ../../..
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          7z a ../../../rtk-${{ matrix.target }}.${{ matrix.archive }} rtk.exe
+          7z a ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk.exe
           cd ../../..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rtk-${{ matrix.target }}
-          path: rtk-${{ matrix.target }}.${{ matrix.archive }}
+          name: ptk-${{ matrix.target }}
+          path: ptk-${{ matrix.target }}.${{ matrix.archive }}
 
   build-deb:
     name: Build DEB package
@@ -127,7 +127,7 @@ jobs:
       - name: Upload DEB
         uses: actions/upload-artifact@v4
         with:
-          name: rtk-deb
+          name: ptk-deb
           path: target/debian/*.deb
 
   build-rpm:
@@ -157,7 +157,7 @@ jobs:
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
-          name: rtk-rpm
+          name: ptk-rpm
           path: target/generate-rpm/*.rpm
 
   release:
@@ -201,10 +201,10 @@ jobs:
         run: |
           cd release
           for f in *.deb; do
-            [ -f "$f" ] && cp "$f" "rtk_amd64.deb"
+            [ -f "$f" ] && cp "$f" "ptk_amd64.deb"
           done
           for f in *.rpm; do
-            [ -f "$f" ] && cp "$f" "rtk.x86_64.rpm"
+            [ -f "$f" ] && cp "$f" "ptk.x86_64.rpm"
           done
 
       - name: Create checksums
@@ -218,13 +218,14 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           files: release/*
           prerelease: ${{ inputs.prerelease }}
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
 
   notify-discord:
     name: Notify Discord
     needs: [release]
-    if: ${{ !inputs.prerelease }}
+    if: ${{ !inputs.prerelease && secrets.RTK_DISCORD_RELEASE != '' }}
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Get version
         id: version
@@ -260,8 +261,9 @@ jobs:
   homebrew:
     name: Update Homebrew formula
     needs: [release]
-    if: ${{ !inputs.prerelease }}
+    if: ${{ !inputs.prerelease && secrets.HOMEBREW_TAP_TOKEN != '' }}
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Get version
         id: version
@@ -372,7 +374,7 @@ jobs:
   winget:
     name: Update winget manifest
     needs: [release]
-    if: ${{ !inputs.prerelease }}
+    if: ${{ !inputs.prerelease && secrets.WINGET_TOKEN != '' }}
     runs-on: ubuntu-latest
     # A failed submission must not fail the release workflow: cd.yml gates
     # update-latest-tag on build-release, so a red job here would leave the
