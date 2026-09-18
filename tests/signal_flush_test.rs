@@ -55,7 +55,7 @@ fn signalled_run_still_prints_captured_output() {
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .expect("spawn rtk");
+        .expect("spawn ptk");
 
     assert!(
         wait_for(&dir.path().join("emitted"), Duration::from_secs(60)),
@@ -69,7 +69,7 @@ fn signalled_run_still_prints_captured_output() {
         .expect("send SIGTERM");
     assert!(killed.success(), "kill failed");
 
-    let out = child.wait_with_output().expect("collect rtk output");
+    let out = child.wait_with_output().expect("collect ptk output");
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         !stdout.trim().is_empty(),

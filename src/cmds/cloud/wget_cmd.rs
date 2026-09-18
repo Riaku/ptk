@@ -38,13 +38,13 @@ pub fn run(url: &str, args: &[String], verbose: u8) -> Result<i32> {
         );
         let shown = never_worse(&raw_output, &msg);
         println!("{}", shown);
-        timer.track(&format!("wget {}", url), "rtk wget", &raw_output, shown);
+        timer.track(&format!("wget {}", url), "ptk wget", &raw_output, shown);
     } else {
         let error = parse_error(&result.stderr, &result.stdout);
         let msg = format!("{} FAILED: {}", compact_url(url), error);
         let shown = never_worse(&raw_output, &msg);
         println!("{}", shown);
-        timer.track(&format!("wget {}", url), "rtk wget", &raw_output, shown);
+        timer.track(&format!("wget {}", url), "ptk wget", &raw_output, shown);
         return Ok(result.exit_code);
     }
 
@@ -73,30 +73,30 @@ pub fn run_stdout(url: &str, args: &[String], verbose: u8) -> Result<i32> {
         let lines: Vec<&str> = result.stdout.lines().collect();
         let total = lines.len();
 
-        let mut rtk_output = String::new();
+        let mut ptk_output = String::new();
         if total > 20 {
-            rtk_output.push_str(&format!(
+            ptk_output.push_str(&format!(
                 "{} ok | {} lines | {}\n",
                 compact_url(url),
                 total,
                 format_size(result.stdout.len() as u64)
             ));
-            rtk_output.push_str("first 10 lines:\n");
+            ptk_output.push_str("first 10 lines:\n");
             for line in lines.iter().take(10) {
-                rtk_output.push_str(&format!("{}\n", truncate_line(line, 100)));
+                ptk_output.push_str(&format!("{}\n", truncate_line(line, 100)));
             }
-            rtk_output.push_str(&format!("... +{} more lines", total - 10));
+            ptk_output.push_str(&format!("... +{} more lines", total - 10));
         } else {
-            rtk_output.push_str(&format!("{} ok | {} lines\n", compact_url(url), total));
+            ptk_output.push_str(&format!("{} ok | {} lines\n", compact_url(url), total));
             for line in &lines {
-                rtk_output.push_str(&format!("{}\n", line));
+                ptk_output.push_str(&format!("{}\n", line));
             }
         }
-        let shown = never_worse(&result.stdout, &rtk_output);
+        let shown = never_worse(&result.stdout, &ptk_output);
         print!("{}", shown);
         timer.track(
             &format!("wget -O - {}", url),
-            "rtk wget -o",
+            "ptk wget -o",
             &result.stdout,
             shown,
         );
@@ -107,7 +107,7 @@ pub fn run_stdout(url: &str, args: &[String], verbose: u8) -> Result<i32> {
         println!("{}", shown);
         timer.track(
             &format!("wget -O - {}", url),
-            "rtk wget -o",
+            "ptk wget -o",
             &result.stderr,
             shown,
         );

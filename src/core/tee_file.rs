@@ -2,7 +2,7 @@
 //! sqlite recall store (`[retriever] mode = "sqlite"`); see retriever.rs.
 
 use crate::core::config::Config;
-use crate::core::constants::RTK_DATA_DIR;
+use crate::core::constants::PTK_DATA_DIR;
 use crate::core::retriever::RetrieverConfig;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -72,9 +72,9 @@ pub fn legacy_tee_migration_pending() -> bool {
     has_recent_logs(&dir, SystemTime::now())
 }
 
-pub const LEGACY_TEE_NOTICE: &str = "Recovery hints moved to a sqlite store: read them with `rtk recall <hash>`.\nRecent tee .log files were found; to keep the legacy file mode, run\n`rtk config recall tee`.";
+pub const LEGACY_TEE_NOTICE: &str = "Recovery hints moved to a sqlite store: read them with `ptk recall <hash>`.\nRecent tee .log files were found; to keep the legacy file mode, run\n`ptk config recall tee`.";
 
-pub const LEGACY_TEE_CONFIG_NOTICE: &str = "Legacy [tee] config detected — file mode kept. A sqlite recall store is now\navailable: run `rtk config recall sqlite` to adopt it (hints become\n`rtk recall <hash>`, see `rtk gain --recalls`).";
+pub const LEGACY_TEE_CONFIG_NOTICE: &str = "Legacy [tee] config detected — file mode kept. A sqlite recall store is now\navailable: run `ptk config recall sqlite` to adopt it (hints become\n`ptk recall <hash>`, see `ptk gain --recalls`).";
 
 pub fn legacy_tee_config_in_use() -> bool {
     Config::load()
@@ -96,13 +96,13 @@ pub(crate) fn resolved_tee_dir() -> Option<PathBuf> {
 }
 
 fn get_tee_dir(cfg: &RetrieverConfig) -> Option<PathBuf> {
-    if let Ok(dir) = std::env::var("RTK_TEE_DIR") {
+    if let Ok(dir) = crate::core::env_compat::env_compat("TEE_DIR") {
         return Some(PathBuf::from(dir));
     }
     if let Some(ref dir) = cfg.tee_directory {
         return Some(dir.clone());
     }
-    dirs::data_local_dir().map(|d| d.join(RTK_DATA_DIR).join("tee"))
+    dirs::data_local_dir().map(|d| d.join(PTK_DATA_DIR).join("tee"))
 }
 
 fn cleanup_old_files(dir: &Path, max_files: usize) {
@@ -406,25 +406,25 @@ mod tests {
 
     #[test]
     fn test_display_shell_path_preserves_simple_paths() {
-        let path = PathBuf::from("/tmp/rtk/tee/123_cargo_test.log");
-        assert_eq!(display_shell_path(&path), "/tmp/rtk/tee/123_cargo_test.log");
+        let path = PathBuf::from("/tmp/ptk/tee/123_cargo_test.log");
+        assert_eq!(display_shell_path(&path), "/tmp/ptk/tee/123_cargo_test.log");
     }
 
     #[test]
     fn test_display_shell_path_quotes_paths_with_spaces() {
-        let path = PathBuf::from("/tmp/rtk/Application Support/123_go_test.log");
+        let path = PathBuf::from("/tmp/ptk/Application Support/123_go_test.log");
         assert_eq!(
             display_shell_path(&path),
-            "\"/tmp/rtk/Application Support/123_go_test.log\""
+            "\"/tmp/ptk/Application Support/123_go_test.log\""
         );
     }
 
     #[test]
     fn test_display_shell_path_quotes_backslashes() {
-        let path = PathBuf::from(r"/tmp/rtk/tee/path\segment.log");
+        let path = PathBuf::from(r"/tmp/ptk/tee/path\segment.log");
         assert_eq!(
             display_shell_path(&path),
-            r#""/tmp/rtk/tee/path\\segment.log""#
+            r#""/tmp/ptk/tee/path\\segment.log""#
         );
     }
 
@@ -436,13 +436,13 @@ mod tests {
         let path = home
             .join("Library")
             .join("Application Support")
-            .join("rtk")
+            .join("ptk")
             .join("tee")
             .join("123_go_test.log");
 
         assert_eq!(
             display_shell_path(&path),
-            "\"$HOME/Library/Application Support/rtk/tee/123_go_test.log\""
+            "\"$HOME/Library/Application Support/ptk/tee/123_go_test.log\""
         );
     }
 }

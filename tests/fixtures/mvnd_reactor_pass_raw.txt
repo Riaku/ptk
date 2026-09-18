@@ -10,7 +10,7 @@
 [INFO] 
 [INFO] Using the SmartBuilder implementation with a thread count of 17
 [multi-module-skeleton] [INFO] 
-[multi-module-skeleton] [INFO] ---------------< com.example.rtk:multi-module-skeleton >----------------
+[multi-module-skeleton] [INFO] ---------------< com.example.ptk:multi-module-skeleton >----------------
 [multi-module-skeleton] [INFO] Building multi-module-skeleton 1.0.0-SNAPSHOT                      [1/3]
 [multi-module-skeleton] [INFO]   from pom.xml
 [multi-module-skeleton] [INFO] --------------------------------[ pom ]---------------------------------
@@ -18,13 +18,13 @@
 [multi-module-skeleton] [INFO] --- clean:3.2.0:clean (default-clean) @ multi-module-skeleton ---
 [multi-module-skeleton] [INFO] 
 [multi-module-skeleton] [INFO] --- install:3.1.4:install (default-install) @ multi-module-skeleton ---
-[multi-module-skeleton] [INFO] Installing C:\work\multi-module-skeleton\pom.xml to C:\Users\dev\.m2\repository\com\example\rtk\multi-module-skeleton\1.0.0-SNAPSHOT\multi-module-skeleton-1.0.0-SNAPSHOT.pom
+[multi-module-skeleton] [INFO] Installing C:\work\multi-module-skeleton\pom.xml to C:\Users\dev\.m2\repository\com\example\ptk\multi-module-skeleton\1.0.0-SNAPSHOT\multi-module-skeleton-1.0.0-SNAPSHOT.pom
 [child-b] [INFO] 
-[child-b] [INFO] ----------------------< com.example.rtk:child-b >-----------------------
+[child-b] [INFO] ----------------------< com.example.ptk:child-b >-----------------------
 [child-b] [INFO] Building child-b 1.0.0-SNAPSHOT                                    [2/3]
 [child-a] [INFO] 
 [child-b] [INFO]   from child-b\pom.xml
-[child-a] [INFO] ----------------------< com.example.rtk:child-a >-----------------------
+[child-a] [INFO] ----------------------< com.example.ptk:child-a >-----------------------
 [child-b] [INFO] --------------------------------[ jar ]---------------------------------
 [child-a] [INFO] Building child-a 1.0.0-SNAPSHOT                                    [3/3]
 [child-a] [INFO]   from child-a\pom.xml
@@ -77,16 +77,16 @@
 [child-b] [INFO] 
 [child-b] [INFO] --- install:3.1.4:install (default-install) @ child-b ---
 [child-a] [INFO] --- install:3.1.4:install (default-install) @ child-a ---
-[child-a] [INFO] Installing C:\work\multi-module-skeleton\child-a\pom.xml to C:\Users\dev\.m2\repository\com\example\rtk\child-a\1.0.0-SNAPSHOT\child-a-1.0.0-SNAPSHOT.pom
-[child-b] [INFO] Installing C:\work\multi-module-skeleton\child-b\pom.xml to C:\Users\dev\.m2\repository\com\example\rtk\child-b\1.0.0-SNAPSHOT\child-b-1.0.0-SNAPSHOT.pom
-[child-b] [INFO] Installing C:\work\multi-module-skeleton\child-b\target\child-b-1.0.0-SNAPSHOT.jar to C:\Users\dev\.m2\repository\com\example\rtk\child-b\1.0.0-SNAPSHOT\child-b-1.0.0-SNAPSHOT.jar
-[child-a] [INFO] Installing C:\work\multi-module-skeleton\child-a\target\child-a-1.0.0-SNAPSHOT.jar to C:\Users\dev\.m2\repository\com\example\rtk\child-a\1.0.0-SNAPSHOT\child-a-1.0.0-SNAPSHOT.jar
+[child-a] [INFO] Installing C:\work\multi-module-skeleton\child-a\pom.xml to C:\Users\dev\.m2\repository\com\example\ptk\child-a\1.0.0-SNAPSHOT\child-a-1.0.0-SNAPSHOT.pom
+[child-b] [INFO] Installing C:\work\multi-module-skeleton\child-b\pom.xml to C:\Users\dev\.m2\repository\com\example\ptk\child-b\1.0.0-SNAPSHOT\child-b-1.0.0-SNAPSHOT.pom
+[child-b] [INFO] Installing C:\work\multi-module-skeleton\child-b\target\child-b-1.0.0-SNAPSHOT.jar to C:\Users\dev\.m2\repository\com\example\ptk\child-b\1.0.0-SNAPSHOT\child-b-1.0.0-SNAPSHOT.jar
+[child-a] [INFO] Installing C:\work\multi-module-skeleton\child-a\target\child-a-1.0.0-SNAPSHOT.jar to C:\Users\dev\.m2\repository\com\example\ptk\child-a\1.0.0-SNAPSHOT\child-a-1.0.0-SNAPSHOT.jar
 [INFO] ------------------------------------------------------------------------
 [INFO] Average project wall time: 0.00s
 [INFO] Total concurrency: 11%
 [INFO] Bottleneck projects that decrease concurrency: (run build with -Dsmartbuilder.profiling=true for further details)
-[INFO] 	- com.example.rtk:multi-module-skeleton:1.0.0-SNAPSHOT
-[INFO] 	- com.example.rtk:child-a:1.0.0-SNAPSHOT
+[INFO] 	- com.example.ptk:multi-module-skeleton:1.0.0-SNAPSHOT
+[INFO] 	- com.example.ptk:child-a:1.0.0-SNAPSHOT
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for multi-module-skeleton 1.0.0-SNAPSHOT:
 [INFO] 

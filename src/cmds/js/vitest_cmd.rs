@@ -255,7 +255,7 @@ pub fn run_test(command: &Commands, args: &[String], verbose: u8) -> Result<i32>
 
     timer.track(
         format!("{} run", framework).as_str(),
-        format!("rtk {} run", framework).as_str(),
+        format!("ptk {} run", framework).as_str(),
         &combined,
         &shown,
     );
@@ -604,7 +604,7 @@ Scope: all 6 workspace projects
         );
 
         assert!(filtered.truncated);
-        assert!(rendered.contains("[RTK:PASSTHROUGH] Output truncated"));
+        assert!(rendered.contains("[PTK:PASSTHROUGH] Output truncated"));
         assert!(rendered.contains("[full output: /tmp/vitest_run.log]"));
         assert!(!rendered.contains("wrong-path.log"));
     }

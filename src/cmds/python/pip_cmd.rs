@@ -19,7 +19,7 @@ struct Package {
 pub fn run(args: &[String], verbose: u8) -> Result<i32> {
     let timer = tracking::TimedExecution::start();
 
-    // The user ran `pip` — run `pip` so RTK stays transparent and reports the
+    // The user ran `pip` — run `pip` so PTK stays transparent and reports the
     // *same* environment the bare command would. Only fall back to `uv pip` when
     // `pip` genuinely isn't on PATH (uv-only environments). Auto-substituting
     // `uv pip` unconditionally made `pip list` show uv's discovered env instead
@@ -49,7 +49,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
 
     timer.track(
         &format!("{} {}", base_cmd, args.join(" ")),
-        &format!("rtk {} {}", base_cmd, args.join(" ")),
+        &format!("ptk {} {}", base_cmd, args.join(" ")),
         &cmd_str,
         &filtered,
     );

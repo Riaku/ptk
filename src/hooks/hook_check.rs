@@ -1,16 +1,16 @@
-//! Detects whether RTK hooks are installed and warns if they are outdated.
+//! Detects whether PTK hooks are installed and warns if they are outdated.
 
 use super::constants::{HOOKS_SUBDIR, PRE_TOOL_USE_KEY, REWRITE_HOOK_FILE, SETTINGS_JSON};
 use super::init::resolve_claude_dir;
 use super::is_claude_hook_command;
-use crate::core::constants::RTK_DATA_DIR;
+use crate::core::constants::PTK_DATA_DIR;
 use crate::core::utils::from_json_str;
 use std::path::PathBuf;
 
 const CURRENT_HOOK_VERSION: u8 = 3;
 const WARN_INTERVAL_SECS: u64 = 24 * 3600;
 
-/// Hook status for diagnostics and `rtk gain`.
+/// Hook status for diagnostics and `ptk gain`.
 #[derive(Debug, PartialEq, Clone)]
 pub enum HookStatus {
     /// Hook is installed and up to date.
@@ -36,7 +36,7 @@ pub fn status() -> HookStatus {
     // Check for new binary command in settings.json first
     if binary_hook_registered(&claude_dir) {
         // If old script file still exists alongside new command, report Outdated
-        // (migration not complete — user should run `rtk init -g` to clean up)
+        // (migration not complete — user should run `ptk init -g` to clean up)
         let old_hook = claude_dir.join(HOOKS_SUBDIR).join(REWRITE_HOOK_FILE);
         if old_hook.exists() {
             return HookStatus::Outdated;
@@ -96,9 +96,9 @@ fn check_and_warn() -> Option<()> {
     let warning = match status() {
         HookStatus::Ok => return Some(()),
         HookStatus::Missing => {
-            "[rtk] /!\\ No hook installed — run `rtk init -g` for automatic token savings"
+            "[ptk] /!\\ No hook installed — run `ptk init -g` for automatic token savings"
         }
-        HookStatus::Outdated => "[rtk] /!\\ Hook outdated — run `rtk init -g` to update",
+        HookStatus::Outdated => "[ptk] /!\\ Hook outdated — run `ptk init -g` to update",
     };
 
     // Rate limit: warn once per day
@@ -122,7 +122,7 @@ fn check_and_warn() -> Option<()> {
 pub fn parse_hook_version(content: &str) -> u8 {
     // Version tag must be in the first 5 lines (shebang + header convention)
     for line in content.lines().take(5) {
-        if let Some(rest) = line.strip_prefix("# rtk-hook-version:")
+        if let Some(rest) = line.strip_prefix("# ptk-hook-version:")
             && let Ok(v) = rest.trim().parse::<u8>()
         {
             return v;
@@ -138,7 +138,7 @@ fn hook_installed_path() -> Option<PathBuf> {
 }
 
 fn warn_marker_path() -> Option<PathBuf> {
-    let data_dir = dirs::data_local_dir()?.join(RTK_DATA_DIR);
+    let data_dir = dirs::data_local_dir()?.join(PTK_DATA_DIR);
     Some(data_dir.join(".hook_warn_last"))
 }
 
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_parse_hook_version_present() {
-        let content = "#!/usr/bin/env bash\n# rtk-hook-version: 2\n# some comment\n";
+        let content = "#!/usr/bin/env bash\n# ptk-hook-version: 2\n# some comment\n";
         assert_eq!(parse_hook_version(content), 2);
     }
 
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_parse_hook_version_future() {
-        let content = "#!/usr/bin/env bash\n# rtk-hook-version: 5\n";
+        let content = "#!/usr/bin/env bash\n# ptk-hook-version: 5\n";
         assert_eq!(parse_hook_version(content), 5);
     }
 
@@ -207,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_hook_registered_accepts_absolute_rtk_path() {
+    fn test_binary_hook_registered_accepts_absolute_ptk_path() {
         let tmp = tempfile::tempdir().expect("tempdir");
         std::fs::write(
             tmp.path().join(SETTINGS_JSON),
@@ -217,7 +217,7 @@ mod tests {
                         "matcher": "Bash",
                         "hooks": [{
                             "type": "command",
-                            "command": "/opt/homebrew/bin/rtk hook claude",
+                            "command": "/opt/homebrew/bin/ptk hook claude",
                             "timeout": 5
                         }]
                     }]

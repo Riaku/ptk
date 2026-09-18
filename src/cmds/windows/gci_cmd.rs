@@ -56,13 +56,12 @@ pub fn filter_gci_output(raw: &str) -> String {
             } else if parts.len() >= 5 {
                 // File: parts are [Mode, Date, Time, AM/PM, Length, ...Name]
                 // or without AM/PM: [Mode, Date, Time, Length, ...Name]
-                let (len_idx, name_idx) = if parts[3].eq_ignore_ascii_case("am")
-                    || parts[3].eq_ignore_ascii_case("pm")
-                {
-                    (4, 5)
-                } else {
-                    (3, 4)
-                };
+                let (len_idx, name_idx) =
+                    if parts[3].eq_ignore_ascii_case("am") || parts[3].eq_ignore_ascii_case("pm") {
+                        (4, 5)
+                    } else {
+                        (3, 4)
+                    };
 
                 if len_idx < parts.len() && name_idx <= parts.len() {
                     let len_str = parts[len_idx];
@@ -102,9 +101,16 @@ pub fn filter_gci_output(raw: &str) -> String {
         if entries.is_empty() {
             continue;
         }
-        let trimmed_entries: Vec<String> = entries.into_iter().map(|e| e.trim_end().to_string()).collect();
+        let trimmed_entries: Vec<String> = entries
+            .into_iter()
+            .map(|e| e.trim_end().to_string())
+            .collect();
         if let Some(d) = dir {
-            formatted_sections.push(format!("{}:\n  {}", d.trim_end(), trimmed_entries.join("\n  ")));
+            formatted_sections.push(format!(
+                "{}:\n  {}",
+                d.trim_end(),
+                trimmed_entries.join("\n  ")
+            ));
         } else {
             formatted_sections.push(trimmed_entries.join("\n  "));
         }

@@ -60,10 +60,10 @@ fn dotnet_test_reuses_users_double_dash_for_report_trx_injection() {
         .current_dir(dir.path())
         .args(["dotnet", "test", "--", "FullyQualifiedName=MyFilter"])
         .output()
-        .expect("spawn rtk");
+        .expect("spawn ptk");
     assert!(
         out.status.success(),
-        "rtk dotnet test failed: stdout={} stderr={}",
+        "ptk dotnet test failed: stdout={} stderr={}",
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );

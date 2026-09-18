@@ -65,7 +65,7 @@ Best for: production                Best for: learning / auditing
 
 Phase 1: PARSE
 ──────────────
-$ PTK git log --oneline -5 -v
+$ ptk git log --oneline -5 -v
 
 Clap Parser extracts:
   • Command: Commands::Git
@@ -124,7 +124,7 @@ Phase 6: TRACK
 ──────────────
 tracking::track(
     original_cmd: "git log --oneline -5",
-    RTK_cmd: "PTK git log --oneline -5",
+    RTK_cmd: "ptk git log --oneline -5",
     input: &raw_output,    // 500 chars
     output: &filtered      // 20 chars
 )
@@ -137,7 +137,7 @@ SQLite INSERT:
   • savings_pct: 96.0
   • timestamp: now()
 
-Database: ~/.local/share/PTK/history.db
+Database: ~/.local/share/ptk/history.db
 ```
 
 ### Verbosity Levels
@@ -659,7 +659,7 @@ Flow:
    INSERT INTO commands (
        timestamp,      -- RFC3339 format
        original_cmd,   -- "git log --oneline -5"
-       RTK_cmd,        -- "PTK git log --oneline -5"
+       RTK_cmd,        -- "ptk git log --oneline -5"
        input_tokens,   -- 125
        output_tokens,  -- 5
        saved_tokens,   -- 120
@@ -671,7 +671,7 @@ Flow:
 
 4. STORAGE
    ───────
-   Database: ~/.local/share/PTK/history.db
+   Database: ~/.local/share/ptk/history.db
 
    Schema:
    ┌─────────────────────────────────────────┐
@@ -705,7 +705,7 @@ Flow:
 
 6. REPORTING (gain.rs)
    ────────
-   $ PTK gain
+   $ ptk gain
 
    Query:
    SELECT
@@ -727,9 +727,9 @@ Flow:
    │ Total exec time:    8m50s (573ms)   │
    │                                      │
    │ Top commands:                       │
-   │   • PTK git status    (234 uses)    │
-   │   • PTK lint          (156 uses)    │
-   │   • PTK test          (89 uses)     │
+   │   • ptk git status    (234 uses)    │
+   │   • ptk lint          (156 uses)    │
+   │   • ptk test          (89 uses)     │
    └──────────────────────────────────────┘
 
    Note: Time column shows average execution
@@ -880,19 +880,19 @@ Modules with Exit Code Preservation:
 
 > For config file format, recall/tee settings, tracking database path, and TOML filter tiers, see [src/core/README.md](../../src/core/README.md).
 
-Two tiers: **User settings** (`~/.config/PTK/config.toml`) and **LLM integration** (CLAUDE.md via `PTK init`).
+Two tiers: **User settings** (`~/.config/ptk/config.toml`) and **LLM integration** (CLAUDE.md via `ptk init`).
 
 ### Initialization Flow
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                      PTK init Workflow                                 │
+│                      ptk init Workflow                                 │
 └────────────────────────────────────────────────────────────────────────┘
 
-$ PTK init [--global]
+$ ptk init [--global]
       ↓
 Check existing CLAUDE.md:
-  • --global? → ~/.config/PTK/CLAUDE.md
+  • --global? → ~/.config/ptk/CLAUDE.md
   • else      → ./CLAUDE.md
       ↓
       ├─ Exists? → Warn user, ask to overwrite
@@ -905,9 +905,9 @@ Write template:
 │ # CLAUDE.md                         │
 │                                     │
 │ Use `PTK` prefix for commands:      │
-│ - PTK git status                    │
-│ - PTK lint                          │
-│ - PTK test                          │
+│ - ptk git status                    │
+│ - ptk lint                          │
+│ - ptk test                          │
 │                                     │
 │ Benefits: 60-90% token reduction    │
 └─────────────────────────────────────┘
@@ -983,10 +983,10 @@ Runtime Overhead (estimated):
 ┌──────────────────────┬──────────────┬──────────────┐
 │ Operation            │ PTK Overhead │ Total Time   │
 ├──────────────────────┼──────────────┼──────────────┤
-│ PTK git status       │ +8ms         │ 58ms         │
-│ PTK grep "pattern"   │ +12ms        │ 145ms        │
-│ PTK read file.rs     │ +5ms         │ 15ms         │
-│ PTK lint             │ +15ms        │ 2.5s         │
+│ ptk git status       │ +8ms         │ 58ms         │
+│ ptk grep "pattern"   │ +12ms        │ 145ms        │
+│ ptk read file.rs     │ +5ms         │ 15ms         │
+│ ptk lint             │ +15ms        │ 2.5s         │
 └──────────────────────┴──────────────┴──────────────┘
 
 Note: Overhead measurements are estimates. Actual performance varies

@@ -1,5 +1,5 @@
 #![cfg(unix)]
-//! For un-capped searches `rtk grep X` must be byte-identical to `grep X`.
+//! For un-capped searches `ptk grep X` must be byte-identical to `grep X`.
 //! Every scenario runs twice, with and without `-n`, so both the presence and
 //! the absence of the line number are pinned: grep prints one only when asked,
 //! and the filename only when it would itself. Covers content and regex edge
@@ -9,13 +9,13 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-fn rtk_grep(args: &[&str]) -> (String, Option<i32>) {
+fn ptk_grep(args: &[&str]) -> (String, Option<i32>) {
     let mut a = vec!["grep"];
     a.extend_from_slice(args);
     let out = Command::new(env!("CARGO_BIN_EXE_ptk"))
         .args(&a)
         .output()
-        .expect("rtk");
+        .expect("ptk");
     (
         String::from_utf8_lossy(&out.stdout).into_owned(),
         out.status.code(),
@@ -31,9 +31,9 @@ fn grep_plain(args: &[&str]) -> (String, Option<i32>) {
 }
 
 fn assert_eq_grep(args: &[&str]) {
-    let (rtk, rc) = rtk_grep(args);
+    let (ptk, rc) = ptk_grep(args);
     let (grep, gc) = grep_plain(args);
-    assert_eq!(rtk, grep, "stdout mismatch for {args:?}");
+    assert_eq!(ptk, grep, "stdout mismatch for {args:?}");
     assert_eq!(rc, gc, "exit code mismatch for {args:?}");
 }
 
@@ -177,17 +177,17 @@ fn piped_stdin_matches_grep() {
         String::from_utf8_lossy(&c.wait_with_output().unwrap().stdout).into_owned()
     };
     for args in [vec!["apple"], vec!["-n", "apple"]] {
-        let mut rtk_args = vec!["grep"];
-        rtk_args.extend_from_slice(&args);
-        let rtk = feed(Command::new(env!("CARGO_BIN_EXE_ptk")).args(&rtk_args));
+        let mut ptk_args = vec!["grep"];
+        ptk_args.extend_from_slice(&args);
+        let ptk = feed(Command::new(env!("CARGO_BIN_EXE_ptk")).args(&ptk_args));
         let grep = feed(Command::new("grep").args(&args));
-        assert_eq!(rtk, grep, "piped stdin mismatch for {args:?}");
+        assert_eq!(ptk, grep, "piped stdin mismatch for {args:?}");
     }
 }
 
-// Regression: `-m` is GNU grep's --max-count (stop after N matches), not RTK's
-// --max display cap. RTK must forward `-m N` to grep so the scan actually stops
-// at N — i.e. `rtk grep -m N` equals `grep -m N` (checked with and without -n).
+// Regression: `-m` is GNU grep's --max-count (stop after N matches), not PTK's
+// --max display cap. PTK must forward `-m N` to grep so the scan actually stops
+// at N — i.e. `ptk grep -m N` equals `grep -m N` (checked with and without -n).
 // Covers `-m` leading and trailing. With the short bound to --max, `-m` was
 // swallowed and never reached grep, so the output diverged.
 #[test]
@@ -210,9 +210,9 @@ fn dash_m_max_count_is_per_file_like_grep_n() {
     assert_eq_grep_with_and_without_n(&["-m", "2", "hit", &f1, &f2]); // 2 per file, both files
 }
 
-// Regression: the `-l` short used to be bound to RTK's --max-len, so `grep -l PAT`
+// Regression: the `-l` short used to be bound to PTK's --max-len, so `grep -l PAT`
 // made clap read PAT as a usize and error out (0% savings via raw fallback).
-// `-l` is GNU grep's --files-with-matches; `rtk grep -l` must match `grep -l`
+// `-l` is GNU grep's --files-with-matches; `ptk grep -l` must match `grep -l`
 // byte-for-byte (explicit file args => deterministic order). Also covers `-l`
 // trailing (arg-order sensitivity) and `-L` (--files-without-match).
 #[test]
@@ -228,7 +228,7 @@ fn dash_l_and_dash_cap_l_match_grep() {
     assert_eq_grep(&["-L", "tenant_id", &f1, &f2, &f3]); // -L files-without-match
 
     // A numeric pattern is the only form that failed silently: bound to `usize`,
-    // `-l` swallowed it as max_len and read the first path as the pattern, so rtk
+    // `-l` swallowed it as max_len and read the first path as the pattern, so ptk
     // printed nothing and exited 1 while grep listed the file. A non-numeric
     // pattern stops at clap's parse error and falls back to raw grep, which is
     // byte-identical here and so invisible to the assertions above.

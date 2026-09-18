@@ -1,4 +1,4 @@
-//! Shows users how many tokens RTK has saved them over time.
+//! Shows users how many tokens PTK has saved them over time.
 
 use crate::core::display_helpers::{format_duration, print_period_table};
 use crate::core::tracking::{DayStats, MonthStats, Tracker, WeekStats};
@@ -87,14 +87,14 @@ pub fn run(
     if crate::core::tee_file::legacy_tee_migration_pending() {
         eprintln!(
             "{}",
-            format!("[rtk] {}", crate::core::tee_file::LEGACY_TEE_NOTICE).yellow()
+            format!("[ptk] {}", crate::core::tee_file::LEGACY_TEE_NOTICE).yellow()
         );
         eprintln!();
     }
 
     if summary.total_commands == 0 {
         println!("No tracking data yet.");
-        println!("Run some rtk commands to start tracking savings.");
+        println!("Run some ptk commands to start tracking savings.");
         return Ok(());
     }
 
@@ -102,9 +102,9 @@ pub fn run(
     if !daily && !weekly && !monthly && !all {
         // added: scope-aware styled header // changed: merged upstream styled + project scope
         let title = if project_scope.is_some() {
-            "RTK Token Savings (Project Scope)"
+            "PTK Token Savings (Project Scope)"
         } else {
-            "RTK Token Savings (Global Scope)"
+            "PTK Token Savings (Global Scope)"
         };
         println!("{}", styled(title, true));
         println!("{}", "═".repeat(60));
@@ -142,7 +142,7 @@ pub fn run(
             hook_check::HookStatus::Missing => {
                 eprintln!(
                     "{}",
-                    "[warn] No hook installed — run `rtk init -g` for automatic token savings"
+                    "[warn] No hook installed — run `ptk init -g` for automatic token savings"
                         .yellow()
                 );
                 eprintln!();
@@ -150,15 +150,15 @@ pub fn run(
             hook_check::HookStatus::Outdated => {
                 eprintln!(
                     "{}",
-                    "[warn] Hook outdated — run `rtk init -g` to update".yellow()
+                    "[warn] Hook outdated — run `ptk init -g` to update".yellow()
                 );
                 eprintln!();
             }
             hook_check::HookStatus::Ok => {}
         }
 
-        // Lightweight RTK_DISABLED bypass check (best-effort, silent on failure)
-        if let Some(warning) = check_rtk_disabled_bypass() {
+        // Lightweight PTK_DISABLED bypass check (best-effort, silent on failure)
+        if let Some(warning) = check_ptk_disabled_bypass() {
             eprintln!("{}", warning.yellow());
             eprintln!();
         }
@@ -168,7 +168,7 @@ pub fn run(
             eprintln!(
                 "{}",
                 format!(
-                    "[rtk] {untrusted_filters} untrusted custom filter(s) not applied — run `rtk trust`"
+                    "[ptk] {untrusted_filters} untrusted custom filter(s) not applied — run `ptk trust`"
                 )
                 .yellow()
             );
@@ -282,7 +282,7 @@ pub fn run(
                 println!("──────────────────────────────────────────────────────────");
                 for rec in recent {
                     let time = rec.timestamp.with_timezone(&Local).format("%m-%d %H:%M");
-                    let cmd_short = truncate(&rec.rtk_cmd, 25);
+                    let cmd_short = truncate(&rec.ptk_cmd, 25);
                     // added: tier indicators by savings level
                     let sign = if rec.savings_pct >= 70.0 {
                         "▲"
@@ -445,7 +445,7 @@ fn print_efficiency_meter(pct: f64) {
 
 const VERDICT_MIN_ELISIONS: i64 = 5;
 const VERDICT_WIDTH: usize = 14;
-const ISSUES_URL: &str = "https://github.com/rtk-ai/rtk/issues";
+const ISSUES_URL: &str = "https://github.com/Riaku/ptk/issues";
 
 /// Bands match `colorize_recall_rate` so the colour and the wording never disagree.
 fn recall_verdict(elisions: i64, recalls: i64) -> &'static str {
@@ -486,7 +486,7 @@ fn show_recall_stats() -> Result<()> {
     };
     let stats = crate::core::retriever::stats_snapshot()?;
 
-    println!("{}", styled("RTK Recall Efficiency", true));
+    println!("{}", styled("PTK Recall Efficiency", true));
     println!("{}", "═".repeat(60));
     println!("Mode: {mode_label}");
     println!();
@@ -536,7 +536,7 @@ fn show_recall_stats() -> Result<()> {
         println!();
     };
 
-    render("Sqlite (exact — reads go through rtk recall)", "sqlite", "");
+    render("Sqlite (exact — reads go through ptk recall)", "sqlite", "");
     render("Tee (approximate — bash-observed reads only)", "tee", "≥");
 
     println!("\"too aggressive\" means the filter hides output the agent comes back for.");
@@ -778,12 +778,12 @@ fn export_csv(
     Ok(())
 }
 
-/// Lightweight scan of recent Claude Code sessions for RTK_DISABLED= overuse.
+/// Lightweight scan of recent Claude Code sessions for PTK_DISABLED= overuse.
 /// Returns a warning string if bypass rate exceeds 10%, None otherwise.
 /// Silently returns None on any error (missing dirs, permission issues, etc.).
-fn check_rtk_disabled_bypass() -> Option<String> {
+fn check_ptk_disabled_bypass() -> Option<String> {
     use crate::discover::provider::{ClaudeProvider, SessionProvider};
-    use crate::discover::registry::cmd_has_rtk_disabled_prefix;
+    use crate::discover::registry::cmd_has_ptk_disabled_prefix;
 
     let provider = ClaudeProvider;
 
@@ -806,7 +806,7 @@ fn check_rtk_disabled_bypass() -> Option<String> {
 
         for ext_cmd in &extracted {
             total_bash += 1;
-            if cmd_has_rtk_disabled_prefix(&ext_cmd.command) {
+            if cmd_has_ptk_disabled_prefix(&ext_cmd.command) {
                 bypassed += 1;
             }
         }
@@ -819,7 +819,7 @@ fn check_rtk_disabled_bypass() -> Option<String> {
     let pct = (bypassed as f64 / total_bash as f64) * 100.0;
     if pct > 10.0 {
         Some(format!(
-            "[warn] {} commands ({:.0}%) used RTK_DISABLED=1 unnecessarily — run `rtk discover` for details",
+            "[warn] {} commands ({:.0}%) used PTK_DISABLED=1 unnecessarily — run `ptk discover` for details",
             bypassed, pct
         ))
     } else {
@@ -838,7 +838,7 @@ fn show_failures(tracker: &Tracker) -> Result<()> {
         return Ok(());
     }
 
-    println!("{}", styled("RTK Parse Failures", true));
+    println!("{}", styled("PTK Parse Failures", true));
     println!("{}", "═".repeat(60));
     println!();
 

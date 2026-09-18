@@ -5,7 +5,7 @@ Follow-up to PR #3372 (`fix(awareness): slim awareness text`, branch `clean/awar
 #3372 replaces the 29-line `hooks/claude/PTK-awareness.md` with an 8-line agent-neutral
 `hooks/PTK-awareness.md` and points `RTK_SLIM` at it. That slim file becomes `level = "default"`.
 This doc prepares the `[awareness]` config table, the three awareness files, the wiring in
-`PTK init`, and the exact content of `high` and `full`.
+`ptk init`, and the exact content of `high` and `full`.
 
 ## Principles
 
@@ -24,7 +24,7 @@ This doc prepares the `[awareness]` config table, the three awareness files, the
 
 ## Config
 
-File: `~/.config/PTK/config.toml` (`src/core/config.rs`).
+File: `~/.config/ptk/config.toml` (`src/core/config.rs`).
 
 ```toml
 [awareness]
@@ -67,8 +67,8 @@ Worth a warning on stderr in the same PR, since a typo in `level` would otherwis
 silently install `default` and the user would not know why.
 
 No CLI flag in phase 1. Config is the source of truth; switching level = edit config, re-run
-`PTK init -g`. `write_if_changed` already rewrites `@@PTKMD@@` when content differs.
-Optional phase 2: `PTK init --awareness high` as a one-run override (no persistence).
+`ptk init -g`. `write_if_changed` already rewrites `@@PTKMD@@` when content differs.
+Optional phase 2: `ptk init --awareness high` as a one-run override (no persistence).
 
 ## Wiring in `src/hooks/init.rs`
 
@@ -92,7 +92,7 @@ Load the level once in `run()` / the mode entry points and thread it through `In
 ### Hook agents vs rules-only agents
 
 - **Hook agents** (Claude Code, Gemini, Copilot VS Code Chat, OpenCode, Pi, Hermes, Droid, Cursor):
-  commands are rewritten by `PTK hook`. They get `awareness_content(level)` as configured.
+  commands are rewritten by `ptk hook`. They get `awareness_content(level)` as configured.
 - **Rules-only agents** (Codex, Windsurf, Cline, Kilocode, Antigravity, Copilot CLI, Kimi):
   no hook, the LLM must type `PTK` itself. Writing `default` or `high` there would silently
   disable PTK. They always get `RTK_AWARENESS_FULL`, regardless of `level`. Document it; do not
@@ -102,10 +102,10 @@ Load the level once in `run()` / the mode entry points and thread it through `In
 
 | Init mode | File written | Today | Phase 1 | Notes |
 |---|---|---|---|---|
-| `PTK init -g` (Claude Code) | `~/.claude/@@PTKMD@@` | `RTK_SLIM` | `awareness_content(level)` | line 1163; fix the hardcoded `(10 lines)` in the success message |
-| `PTK init --gemini` | `~/.gemini/GEMINI.md` | `RTK_SLIM` | `awareness_content(level)` | line 4238 |
-| `PTK init --codex` | `@@PTKMD@@` + `AGENTS.md` ref | `RTK_SLIM_CODEX` | `RTK_AWARENESS_FULL` | rules-only; drops `hooks/codex/PTK-awareness.md` |
-| `PTK init` (local) / `--claude-md` / kimi | `CLAUDE.md` / `AGENTS.md` block | `RTK_INSTRUCTIONS` (legacy full table) | unchanged | legacy mode, keep as is |
+| `ptk init -g` (Claude Code) | `~/.claude/@@PTKMD@@` | `RTK_SLIM` | `awareness_content(level)` | line 1163; fix the hardcoded `(10 lines)` in the success message |
+| `ptk init --gemini` | `~/.gemini/GEMINI.md` | `RTK_SLIM` | `awareness_content(level)` | line 4238 |
+| `ptk init --codex` | `@@PTKMD@@` + `AGENTS.md` ref | `RTK_SLIM_CODEX` | `RTK_AWARENESS_FULL` | rules-only; drops `hooks/codex/PTK-awareness.md` |
+| `ptk init` (local) / `--claude-md` / kimi | `CLAUDE.md` / `AGENTS.md` block | `RTK_INSTRUCTIONS` (legacy full table) | unchanged | legacy mode, keep as is |
 | `--copilot` | `copilot-instructions.md` | `COPILOT_INSTRUCTIONS` | unchanged phase 1 | Copilot CLI deny-with-suggestion; phase 2 → `full` inside the marker block |
 | windsurf / cline / kilocode / antigravity | `rules.md` | per-agent rules files | unchanged phase 1 | phase 2 → `RTK_AWARENESS_FULL`, delete four ~750-byte duplicates |
 
@@ -132,20 +132,20 @@ Command output here is condensed to save tokens, keeping every signal and
 dropping costly noise. Treat it as the complete result: run commands
 normally, and batch related commands into one call to avoid extra turns.
 Truncated results state their recovery path in their own output. Re-run a
-command as `PTK proxy <cmd>` only when its result is unusable: empty when
+command as `ptk proxy <cmd>` only when its result is unusable: empty when
 output was clearly expected, contradicting its exit code, or garbled.
 
 ## About PTK
 
 The condensing is done by PTK (Rust Token Killer), a CLI proxy. A hook
-rewrites each shell command to `PTK <cmd>` before it runs; behavior and
+rewrites each shell command to `ptk <cmd>` before it runs; behavior and
 exit code are unchanged, only the output is filtered. Commands PTK has no
 filter for run as-is.
 
-- `PTK gain` / `PTK gain --history` — token savings, overall and per command.
-- `PTK proxy <cmd>` — run a command unfiltered, still tracked.
+- `ptk gain` / `ptk gain --history` — token savings, overall and per command.
+- `ptk proxy <cmd>` — run a command unfiltered, still tracked.
 - `RTK_DISABLED=1 <cmd>` — skip the hook for one command.
-- `PTK discover` — find past commands PTK could have condensed.
+- `ptk discover` — find past commands PTK could have condensed.
 ```
 
 ## `hooks/PTK-awareness-full.md` — draft content
@@ -157,9 +157,9 @@ meta list is the same as `high`.
 ```markdown
 # PTK
 
-Prefix every shell command with `PTK`: `PTK git status`, `PTK cargo test`,
-`PTK npm run build`, `PTK ls src/`. Keep the prefix inside chains:
-`PTK git add . && PTK git commit -m "msg"`. Commands PTK has no filter for
+Prefix every shell command with `PTK`: `ptk git status`, `ptk cargo test`,
+`ptk npm run build`, `ptk ls src/`. Keep the prefix inside chains:
+`ptk git add . && ptk git commit -m "msg"`. Commands PTK has no filter for
 run as-is, so the prefix is always safe.
 
 # Command output
@@ -168,7 +168,7 @@ Command output here is condensed to save tokens, keeping every signal and
 dropping costly noise. Treat it as the complete result: run commands
 normally, and batch related commands into one call to avoid extra turns.
 Truncated results state their recovery path in their own output. Re-run a
-command as `PTK proxy <cmd>` only when its result is unusable: empty when
+command as `ptk proxy <cmd>` only when its result is unusable: empty when
 output was clearly expected, contradicting its exit code, or garbled.
 
 ## About PTK
@@ -176,30 +176,30 @@ output was clearly expected, contradicting its exit code, or garbled.
 PTK (Rust Token Killer) is a CLI proxy that filters command output to save
 tokens; behavior and exit code are unchanged.
 
-- `PTK gain` / `PTK gain --history` — token savings, overall and per command.
-- `PTK proxy <cmd>` — run a command unfiltered, still tracked.
+- `ptk gain` / `ptk gain --history` — token savings, overall and per command.
+- `ptk proxy <cmd>` — run a command unfiltered, still tracked.
 - `RTK_DISABLED=1 <cmd>` — skip PTK for one command.
-- `PTK discover` — find past commands PTK could have condensed.
+- `ptk discover` — find past commands PTK could have condensed.
 ```
 
 ### Left out of every level, on purpose
 
 - The per-command savings table from `RTK_INSTRUCTIONS`. The hook decides coverage; the LLM
   gains nothing from knowing `gh pr view` saves 87%. Still available via `--claude-md`.
-- Install verification (`PTK --version`, `which PTK`, name-collision warning). Operator
-  debugging; belongs in `PTK init` output or `PTK diagnose`.
+- Install verification (`ptk --version`, `which PTK`, name-collision warning). Operator
+  debugging; belongs in `ptk init` output or `PTK diagnose`.
 - Recovery marker formats. Filters print them; the `default` paragraph tells the LLM to follow them.
 - PTK-native commands (`summary`, `err`, `test`, `log`, `json`). Not awareness; if ever wanted,
   that is a separate "PTK toolbox" section the operator opts into, not part of a level.
 
 ### Verified while drafting
 
-- `PTK <unknown>` runs the command raw: `main.rs:1283` `run_fallback` executes any non-meta unknown
+- `ptk <unknown>` runs the command raw: `main.rs:1283` `run_fallback` executes any non-meta unknown
   subcommand (after TOML filter lookup). "Prefix is always safe" in `full` holds.
 - `RTK_DISABLED=1` is honored by the hook (`registry::cmd_has_RTK_disabled_prefix`) and documented
   in `docs/guide/getting-started/configuration.md`.
-- `PTK proxy` records the command in tracking with 0% reduction (CLAUDE.md, Proxy Mode).
-- `PTK discover` reads Claude Code history (`src/discover/`). For non-Claude agents the line is
+- `ptk proxy` records the command in tracking with 0% reduction (CLAUDE.md, Proxy Mode).
+- `ptk discover` reads Claude Code history (`src/discover/`). For non-Claude agents the line is
   harmless but useless; acceptable cost for one shared file, or drop it in phase 2 if per-agent
   variants come back.
 
@@ -209,14 +209,14 @@ tokens; behavior and exit code are unchanged.
 - `[awareness] level = "high"` → `High`; `"full"` → `Full`.
 - Missing table → `Default`. Empty `[awareness]` → `Default`.
 - `level = "max"` → `Err`.
-- Round-trip: `Config::default()` serializes `[awareness]\nlevel = "default"` (so `PTK config` shows it).
+- Round-trip: `Config::default()` serializes `[awareness]\nlevel = "default"` (so `ptk config` shows it).
 
 `src/hooks/init.rs`:
 - `awareness_content` maps each variant to its constant.
 - `HIGH.starts_with(DEFAULT.trim_end())` — `high` is `default` plus a tail.
 - `FULL.contains(DEFAULT.trim_end())` — the output contract is verbatim in `full`.
 - `DEFAULT` and `HIGH` do not contain `Prefix every shell command`; `FULL` does.
-- All three contain `PTK proxy <cmd>`; `HIGH` and `FULL` contain `RTK_DISABLED=1` and `PTK gain`.
+- All three contain `ptk proxy <cmd>`; `HIGH` and `FULL` contain `RTK_DISABLED=1` and `ptk gain`.
 - Line budgets: `HIGH.lines().count() <= 21`, `FULL.lines().count() <= 25` — bloat guards.
 - Default-mode init with `level = "high"` writes `@@PTKMD@@` == `RTK_AWARENESS_HIGH`; with
   `"full"` == `RTK_AWARENESS_FULL` (mirror of the existing test at ~4867).

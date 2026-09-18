@@ -69,30 +69,30 @@ Ces drapeaux s'appliquent a **toutes** les sous-commandes :
 **Exemples :**
 
 ```bash
-PTK -v git status          # Status compact + details de filtrage sur stderr
+ptk -v git status          # Status compact + details de filtrage sur stderr
 PTK -vvv cargo test        # Verbosite maximale (debug)
-PTK -u git log             # Log ultra-compact, icones ASCII
-PTK --skip-env next build  # Desactive la validation d'env de Next.js
+ptk -u git log             # Log ultra-compact, icones ASCII
+ptk --skip-env next build  # Desactive la validation d'env de Next.js
 ```
 
 ---
 
 ## Commandes Fichiers
 
-### `PTK ls` -- Listage de repertoire
+### `ptk ls` -- Listage de repertoire
 
 **Objectif :** Remplace `ls` et `tree` avec une sortie optimisee en tokens.
 
 **Syntaxe :**
 ```bash
-PTK ls [args...]
+ptk ls [args...]
 ```
 
 Tous les drapeaux natifs de `ls` sont supportes (`-l`, `-a`, `-h`, `-R`, etc.).
 
 **Avant / Apres :**
 ```
-# ls -la (45 lignes, ~800 tokens)          # PTK ls (12 lignes, ~150 tokens)
+# ls -la (45 lignes, ~800 tokens)          # ptk ls (12 lignes, ~150 tokens)
 drwxr-xr-x  15 user staff 480 ...          my-project/
 -rw-r--r--   1 user staff 1234 ...          +-- src/ (8 files)
 -rw-r--r--   1 user staff 567 ...           |   +-- main.rs
@@ -102,27 +102,27 @@ drwxr-xr-x  15 user staff 480 ...          my-project/
 
 ---
 
-### `PTK tree` -- Arbre de repertoire
+### `ptk tree` -- Arbre de repertoire
 
 **Objectif :** Proxy vers `tree` natif avec sortie filtree.
 
 **Syntaxe :**
 ```bash
-PTK tree [args...]
+ptk tree [args...]
 ```
 
 Supporte tous les drapeaux natifs de `tree` (`-L`, `-d`, `-a`, etc.).
 
 ---
 
-### `PTK read` -- Lecture de fichier
+### `ptk read` -- Lecture de fichier
 
 **Objectif :** Remplace `cat`, `head`, `tail` avec un filtrage intelligent du contenu.
 
 **Syntaxe :**
 ```bash
-PTK read <fichier> [options]
-PTK read - [options]          # Lecture depuis stdin
+ptk read <fichier> [options]
+ptk read - [options]          # Lecture depuis stdin
 ```
 
 **Options :**
@@ -145,7 +145,7 @@ PTK read - [options]          # Lecture depuis stdin
 
 **Avant / Apres (mode aggressive) :**
 ```
-# cat main.rs (~200 lignes)                # PTK read main.rs -l aggressive (~50 lignes)
+# cat main.rs (~200 lignes)                # ptk read main.rs -l aggressive (~50 lignes)
 fn main() -> Result<()> {                   fn main() -> Result<()> { ... }
     let config = Config::load()?;           fn process_data(input: &str) -> Vec<u8> { ... }
     let data = process_data(&input);        struct Config { ... }
@@ -161,38 +161,38 @@ fn main() -> Result<()> {                   fn main() -> Result<()> { ... }
 
 ---
 
-### `PTK smart` -- Resume heuristique
+### `ptk smart` -- Resume heuristique
 
 **Objectif :** Genere un resume technique de 2 lignes pour un fichier source.
 
 **Syntaxe :**
 ```bash
-PTK smart <fichier> [--model heuristic] [--force-download]
+ptk smart <fichier> [--model heuristic] [--force-download]
 ```
 
 **Exemple :**
 ```
-$ PTK smart src/tracking.rs
+$ ptk smart src/tracking.rs
 SQLite-based token tracking system for command executions.
 Records input/output tokens, savings %, execution times with 90-day retention.
 ```
 
 ---
 
-### `PTK find` -- Recherche de fichiers
+### `ptk find` -- Recherche de fichiers
 
 **Objectif :** Remplace `find` et `fd` avec une sortie compacte groupee par repertoire.
 
 **Syntaxe :**
 ```bash
-PTK find [args...]
+ptk find [args...]
 ```
 
 Supporte a la fois la syntaxe PTK et la syntaxe native `find` (`-name`, `-type`, etc.).
 
 **Avant / Apres :**
 ```
-# find . -name "*.rs" (30 lignes)           # PTK find "*.rs" . (8 lignes)
+# find . -name "*.rs" (30 lignes)           # ptk find "*.rs" . (8 lignes)
 ./src/main.rs                                src/ (12 .rs)
 ./src/git.rs                                   main.rs, git.rs, config.rs
 ./src/config.rs                                tracking.rs, filter.rs, utils.rs
@@ -204,13 +204,13 @@ Supporte a la fois la syntaxe PTK et la syntaxe native `find` (`-name`, `-type`,
 
 ---
 
-### `PTK grep` -- Recherche dans le contenu
+### `ptk grep` -- Recherche dans le contenu
 
 **Objectif :** Remplace `grep` et `rg` avec une sortie groupee par fichier, tronquee.
 
 **Syntaxe :**
 ```bash
-PTK grep <pattern> [chemin] [options]
+ptk grep <pattern> [chemin] [options]
 ```
 
 **Options :**
@@ -223,13 +223,13 @@ PTK grep <pattern> [chemin] [options]
 
 Aucune de ces options n'a de raccourci : `-l`, `-m` et `-c` sont reserves aux flags natifs de meme lettre (`--files-with-matches`, `--max-count`, `--count`) et sont transmis au moteur.
 
-Les arguments supplementaires sont transmis au moteur reellement invoque -- `grep` pour `PTK grep`, `rg` pour `PTK rg`, PTK ne substituant jamais l'un a l'autre. Un flag propre a ripgrep (`--glob`, `-t`) n'est donc valide que sous `PTK rg`. Les flags qui changent le format de sortie (`-c`, `-l`, `-L`, `-o`, `-Z`) passent directement au moteur sans filtrage PTK.
+Les arguments supplementaires sont transmis au moteur reellement invoque -- `grep` pour `ptk grep`, `rg` pour `ptk rg`, PTK ne substituant jamais l'un a l'autre. Un flag propre a ripgrep (`--glob`, `-t`) n'est donc valide que sous `ptk rg`. Les flags qui changent le format de sortie (`-c`, `-l`, `-L`, `-o`, `-Z`) passent directement au moteur sans filtrage PTK.
 
-Il n'y a pas d'option `--file-type` : `PTK rg -t rust` filtre par type, `PTK grep -t rust` remonte l'erreur de grep (`invalid option -- 't'`).
+Il n'y a pas d'option `--file-type` : `ptk rg -t rust` filtre par type, `ptk grep -t rust` remonte l'erreur de grep (`invalid option -- 't'`).
 
 **Avant / Apres :**
 ```
-# grep -rn "fn run" (20 lignes)             # PTK grep -rn "fn run" (10 lignes)
+# grep -rn "fn run" (20 lignes)             # ptk grep -rn "fn run" (10 lignes)
 src/git.rs:45:pub fn run(...)                src/git.rs
 src/git.rs:120:fn run_status(...)              45: pub fn run(...)
 src/ls.rs:12:pub fn run(...)                   120: fn run_status(...)
@@ -240,13 +240,13 @@ src/ls.rs:25:fn run_tree(...)                src/ls.rs
 
 ---
 
-### `PTK ast-grep` -- Recherche structurelle (AST)
+### `ptk ast-grep` -- Recherche structurelle (AST)
 
 **Objectif :** Remplace `ast-grep` avec une sortie groupee par fichier, plafonnee.
 
 **Syntaxe :**
 ```bash
-PTK ast-grep run -p '<pattern>' [chemin] [options]
+ptk ast-grep run -p '<pattern>' [chemin] [options]
 ```
 
 Regroupe les correspondances par fichier, plafonnees a 5 par fichier et 50 au total ; le surplus est remplace par une note de comptage ("N more match line(s) in X" / "N more file(s) not shown"). ast-grep imprime une ligne par ligne source d'une correspondance, et une correspondance structurelle s'etend sur plusieurs lignes : le decompte porte donc sur les lignes, pas sur les correspondances. Les sorties que PTK ne sait pas decouper (`ast-grep scan`, `--heading`) passent telles quelles. Sur une recherche reelle dans ce depot, ~85% de reduction.
@@ -255,25 +255,25 @@ Regroupe les correspondances par fichier, plafonnees a 5 par fichier et 50 au to
 
 ---
 
-### `PTK diff` -- Diff condense
+### `ptk diff` -- Diff condense
 
 **Objectif :** Diff ultra-condense entre deux fichiers (uniquement les lignes modifiees).
 
 **Syntaxe :**
 ```bash
-PTK diff <fichier1> <fichier2>
-PTK diff <fichier1>              # Stdin comme second fichier
+ptk diff <fichier1> <fichier2>
+ptk diff <fichier1>              # Stdin comme second fichier
 ```
 
 ---
 
-### `PTK wc` -- Comptage compact
+### `ptk wc` -- Comptage compact
 
 **Objectif :** Remplace `wc` avec une sortie compacte (supprime les chemins et le padding).
 
 **Syntaxe :**
 ```bash
-PTK wc [args...]
+ptk wc [args...]
 ```
 
 Supporte tous les drapeaux natifs de `wc` (`-l`, `-w`, `-c`, etc.).
@@ -301,15 +301,15 @@ Toutes les sous-commandes git sont supportees. Les commandes non reconnues sont 
 
 ---
 
-### `PTK git status` -- Status compact
+### `ptk git status` -- Status compact
 
 ```bash
-PTK git status [args...]    # Supporte tous les drapeaux git status
+ptk git status [args...]    # Supporte tous les drapeaux git status
 ```
 
 **Avant / Apres :**
 ```
-# git status (~20 lignes, ~400 tokens)      # PTK git status (~5 lignes, ~80 tokens)
+# git status (~20 lignes, ~400 tokens)      # ptk git status (~5 lignes, ~80 tokens)
 On branch main                               main | 3M 1? 1A
 Your branch is up to date with               M src/main.rs
   'origin/main'.                              M src/git.rs
@@ -323,15 +323,15 @@ Changes not staged for commit:                ? new_file.txt
 
 ---
 
-### `PTK git log` -- Historique compact
+### `ptk git log` -- Historique compact
 
 ```bash
-PTK git log [args...]    # Supporte --oneline, --graph, --all, -n, etc.
+ptk git log [args...]    # Supporte --oneline, --graph, --all, -n, etc.
 ```
 
 **Avant / Apres :**
 ```
-# git log (50+ lignes)                      # PTK git log -n 5 (5 lignes)
+# git log (50+ lignes)                      # ptk git log -n 5 (5 lignes)
 commit abc123def... (HEAD -> main)           abc123 Fix token counting bug
 Author: User <user@email.com>               def456 Add vitest support
 Date:   Mon Jan 15 10:30:00 2024            789abc Refactor filter engine
@@ -342,10 +342,10 @@ Date:   Mon Jan 15 10:30:00 2024            789abc Refactor filter engine
 
 ---
 
-### `PTK git diff` -- Diff compact
+### `ptk git diff` -- Diff compact
 
 ```bash
-PTK git diff [args...]    # Supporte --stat, --cached, --staged, etc.
+ptk git diff [args...]    # Supporte --stat, --cached, --staged, etc.
 ```
 
 **Avant / Apres :**
@@ -375,7 +375,7 @@ index 765936a..7abfb4f 100644
  }
 ```
 
-`PTK git diff`, 24 lignes :
+`ptk git diff`, 24 lignes :
 ```
 git.rs  | 2 +-
  main.rs | 4 ++--
@@ -408,10 +408,10 @@ filtres, soit 11 %. La compression vient des diffs ou les en-tetes par fichier
 et les plafonds par hunk pesent. Sur un diff de 4 fichiers dont un hunk de 300
 lignes changees, la sortie passe de 335 a 140 lignes et de 13 262 a 4 880
 octets, soit 63 % de reduction, avec la note de troncature et le rappel
-`[full diff: PTK git diff --no-compact]`.
+`[full diff: ptk git diff --no-compact]`.
 
 Les lignes de hunk et les en-tetes `@@` sortent en colonne 0, dans la forme
-unifiee de git, donc `PTK git diff | grep "^-"` fonctionne. Les annotations
+unifiee de git, donc `ptk git diff | grep "^-"` fonctionne. Les annotations
 propres a PTK restent indentees de deux espaces pour que ces memes greps ne
 les comptent pas : le total par fichier (`  +2 -2`) et la note de troncature
 (`  ... (30 deletions, 20 additions truncated)`).
@@ -424,58 +424,58 @@ conflit pendant un merge, rebase, cherry-pick ou stash pop), le marqueur peut
 occuper la deuxieme colonne : ` +ours` est compte dans le total `+N -M` mais
 reste invisible a `grep "^+"`. Et la sortie n'est pas un patch applicable :
 PTK supprime les en-tetes `diff --git` / `---` / `+++`. Utilisez
-`PTK proxy git diff` pour un patch fidele, ou `PTK gh pr diff --patch`, qui
+`ptk proxy git diff` pour un patch fidele, ou `ptk gh pr diff --patch`, qui
 passe sans filtrage.
 
 ---
 
-### `PTK git show` -- Show compact
+### `ptk git show` -- Show compact
 
 ```bash
-PTK git show [args...]
+ptk git show [args...]
 ```
 
 Affiche le resume du commit + stat + diff compact.
 
 > **Attention (redirection vers un fichier).** Pour un blob volumineux
-> (`PTK git show HEAD:gros-fichier`), la sortie est fenetree : seul un apercu
+> (`ptk git show HEAD:gros-fichier`), la sortie est fenetree : seul un apercu
 > est affiche, suivi d'un indice `[see remaining: git show 'HEAD:...' | tail -n +N]`.
-> Un `PTK git show HEAD:x > fichier` ecrit a la main peut donc tronquer
+> Un `ptk git show HEAD:x > fichier` ecrit a la main peut donc tronquer
 > silencieusement le contenu (le code de sortie reste 0). Pour capturer le
 > fichier complet, utilisez `git show` directement, ou suivez l'indice de
 > recuperation.
 
 ---
 
-### `PTK git add` -- Add ultra-compact
+### `ptk git add` -- Add ultra-compact
 
 ```bash
-PTK git add [args...]    # Supporte -A, -p, --all, etc.
+ptk git add [args...]    # Supporte -A, -p, --all, etc.
 ```
 
 **Sortie :** `ok` (un seul mot)
 
 ---
 
-### `PTK git commit` -- Commit ultra-compact
+### `ptk git commit` -- Commit ultra-compact
 
 ```bash
-PTK git commit -m "message" [args...]    # Supporte -a, --amend, --allow-empty, etc.
+ptk git commit -m "message" [args...]    # Supporte -a, --amend, --allow-empty, etc.
 ```
 
 **Sortie :** `ok abc1234` (confirmation + hash court)
 
 ---
 
-### `PTK git push` -- Push ultra-compact
+### `ptk git push` -- Push ultra-compact
 
 ```bash
-PTK git push [args...]    # Supporte -u, remote, branch, etc.
+ptk git push [args...]    # Supporte -u, remote, branch, etc.
 ```
 
 **Avant / Apres :**
 ```
-# git push (15 lignes, ~200 tokens)         # PTK git push (1 ligne, ~10 tokens)
+# git push (15 lignes, ~200 tokens)         # ptk git push (1 ligne, ~10 tokens)
 Enumerating objects: 5, done.                ok main
 Counting objects: 100% (5/5), done.
 Delta compression using up to 8 threads
@@ -484,48 +484,48 @@ Delta compression using up to 8 threads
 
 ---
 
-### `PTK git pull` -- Pull ultra-compact
+### `ptk git pull` -- Pull ultra-compact
 
 ```bash
-PTK git pull [args...]
+ptk git pull [args...]
 ```
 
 **Sortie :** `ok 3 files +10 -2`
 
 ---
 
-### `PTK git branch` -- Branches compact
+### `ptk git branch` -- Branches compact
 
 ```bash
-PTK git branch [args...]    # Supporte -d, -D, -m, etc.
+ptk git branch [args...]    # Supporte -d, -D, -m, etc.
 ```
 
 Affiche branche courante, branches locales, branches distantes de facon compacte.
 
 ---
 
-### `PTK git fetch` -- Fetch compact
+### `ptk git fetch` -- Fetch compact
 
 ```bash
-PTK git fetch [args...]
+ptk git fetch [args...]
 ```
 
 **Sortie :** `ok fetched (N new refs)`
 
 ---
 
-### `PTK git stash` -- Stash compact
+### `ptk git stash` -- Stash compact
 
 ```bash
-PTK git stash [list|show|pop|apply|drop|push] [args...]
+ptk git stash [list|show|pop|apply|drop|push] [args...]
 ```
 
 ---
 
-### `PTK git worktree` -- Worktree compact
+### `ptk git worktree` -- Worktree compact
 
 ```bash
-PTK git worktree [add|remove|prune|list] [args...]
+ptk git worktree [add|remove|prune|list] [args...]
 ```
 
 ---
@@ -535,38 +535,38 @@ PTK git worktree [add|remove|prune|list] [args...]
 Toute sous-commande git non listee ci-dessus est executee directement :
 
 ```bash
-PTK git rebase main        # Execute git rebase main
-PTK git cherry-pick abc    # Execute git cherry-pick abc
-PTK git tag v1.0.0         # Execute git tag v1.0.0
+ptk git rebase main        # Execute git rebase main
+ptk git cherry-pick abc    # Execute git cherry-pick abc
+ptk git tag v1.0.0         # Execute git tag v1.0.0
 ```
 
 ---
 
 ## Commandes GitHub CLI
 
-### `PTK gh` -- GitHub CLI compact
+### `ptk gh` -- GitHub CLI compact
 
 **Objectif :** Remplace `gh` avec une sortie optimisee.
 
 **Syntaxe :**
 ```bash
-PTK gh <sous-commande> [args...]
+ptk gh <sous-commande> [args...]
 ```
 
 **Sous-commandes supportees :**
 
 | Commande | Description | Reduction sortie bash |
 |----------|-------------|-----------|
-| `PTK gh pr list` | Liste des PRs compacte | ~80% |
-| `PTK gh pr view <num>` | Details d'une PR + checks | ~87% |
-| `PTK gh pr checks` | Status des checks CI | ~79% |
-| `PTK gh issue list` | Liste des issues compacte | ~80% |
-| `PTK gh run list` | Status des workflow runs | ~82% |
-| `PTK gh api <endpoint>` | Reponse API compacte | ~26% |
+| `ptk gh pr list` | Liste des PRs compacte | ~80% |
+| `ptk gh pr view <num>` | Details d'une PR + checks | ~87% |
+| `ptk gh pr checks` | Status des checks CI | ~79% |
+| `ptk gh issue list` | Liste des issues compacte | ~80% |
+| `ptk gh run list` | Status des workflow runs | ~82% |
+| `ptk gh api <endpoint>` | Reponse API compacte | ~26% |
 
 **Avant / Apres :**
 ```
-# gh pr list (~30 lignes)                   # PTK gh pr list (~10 lignes)
+# gh pr list (~30 lignes)                   # ptk gh pr list (~10 lignes)
 Showing 10 of 15 pull requests in org/repo   #42 feat: add vitest (open, 2d)
                                               #41 fix: git diff crash (open, 3d)
 #42  feat: add vitest support                 #40 chore: update deps (merged, 5d)
@@ -579,26 +579,26 @@ Showing 10 of 15 pull requests in org/repo   #42 feat: add vitest (open, 2d)
 
 ## Commandes Test
 
-### `PTK test` -- Wrapper de tests generique
+### `ptk test` -- Wrapper de tests generique
 
 **Objectif :** Execute n'importe quelle commande de test et affiche uniquement les echecs.
 
 **Syntaxe :**
 ```bash
-PTK test <commande...>
+ptk test <commande...>
 ```
 
 **Exemple :**
 ```bash
-PTK test cargo test
-PTK test npm test
-PTK test bun test
-PTK test pytest
+ptk test cargo test
+ptk test npm test
+ptk test bun test
+ptk test pytest
 ```
 
 **Avant / Apres :**
 ```
-# cargo test (200+ lignes en cas d'echec)   # PTK test cargo test (~20 lignes)
+# cargo test (200+ lignes en cas d'echec)   # ptk test cargo test (~20 lignes)
 running 15 tests                             FAILED: 2/15 tests
 test utils::test_parse ... ok                  test_edge_case: assertion failed
 test utils::test_format ... ok                 test_overflow: panic at utils.rs:18
@@ -608,56 +608,56 @@ test utils::test_edge_case ... FAILED
 
 ---
 
-### `PTK err` -- Erreurs/avertissements uniquement
+### `ptk err` -- Erreurs/avertissements uniquement
 
 **Objectif :** Execute une commande et ne montre que les erreurs et avertissements.
 
 **Syntaxe :**
 ```bash
-PTK err <commande...>
+ptk err <commande...>
 ```
 
 **Exemple :**
 ```bash
-PTK err npm run build
-PTK err cargo build
+ptk err npm run build
+ptk err cargo build
 ```
 
 ---
 
-### `PTK cargo test` -- Tests Rust
+### `ptk cargo test` -- Tests Rust
 
 ```bash
-PTK cargo test [args...]
+ptk cargo test [args...]
 ```
 
 N'affiche que les echecs. Supporte tous les arguments de `cargo test`.
 
 ---
 
-### `PTK cargo nextest` -- Tests Rust (nextest)
+### `ptk cargo nextest` -- Tests Rust (nextest)
 
 ```bash
-PTK cargo nextest [run|list|--lib] [args...]
+ptk cargo nextest [run|list|--lib] [args...]
 ```
 
 Filtre la sortie de `cargo nextest` pour n'afficher que les echecs.
 
 ---
 
-### `PTK jest` / `PTK vitest` -- Tests Jest/Vitest
+### `ptk jest` / `ptk vitest` -- Tests Jest/Vitest
 
 ```bash
-PTK jest [args...]
-PTK vitest [args...]
+ptk jest [args...]
+ptk vitest [args...]
 ```
 
 ---
 
-### `PTK playwright test` -- Tests E2E Playwright
+### `ptk playwright test` -- Tests E2E Playwright
 
 ```bash
-PTK playwright [args...]
+ptk playwright [args...]
 ```
 
 ---
@@ -682,57 +682,57 @@ Utilise le streaming JSON NDJSON de Go pour un filtrage precis.
 
 ## Commandes Build et Lint
 
-### `PTK cargo build` -- Build Rust
+### `ptk cargo build` -- Build Rust
 
 ```bash
-PTK cargo build [args...]
+ptk cargo build [args...]
 ```
 
 Supprime les lignes "Compiling...", ne conserve que les erreurs et le resultat final.
 
 ---
 
-### `PTK cargo check` -- Check Rust
+### `ptk cargo check` -- Check Rust
 
 ```bash
-PTK cargo check [args...]
+ptk cargo check [args...]
 ```
 
 Supprime les lignes "Checking...", ne conserve que les erreurs.
 
 ---
 
-### `PTK cargo clippy` -- Clippy Rust
+### `ptk cargo clippy` -- Clippy Rust
 
 ```bash
-PTK cargo clippy [args...]
+ptk cargo clippy [args...]
 ```
 
 Regroupe les avertissements par regle de lint.
 
 ---
 
-### `PTK cargo install` -- Install Rust
+### `ptk cargo install` -- Install Rust
 
 ```bash
-PTK cargo install [args...]
+ptk cargo install [args...]
 ```
 
 Supprime la compilation des dependances, ne conserve que le resultat d'installation et les erreurs.
 
 ---
 
-### `PTK tsc` -- TypeScript Compiler
+### `ptk tsc` -- TypeScript Compiler
 
 ```bash
-PTK tsc [args...]
+ptk tsc [args...]
 ```
 
 Regroupe les erreurs TypeScript par fichier et par code d'erreur.
 
 **Avant / Apres :**
 ```
-# tsc --noEmit (50 lignes)                  # PTK tsc (15 lignes)
+# tsc --noEmit (50 lignes)                  # ptk tsc (15 lignes)
 src/api.ts(12,5): error TS2345: ...          src/api.ts (3 errors)
 src/api.ts(15,10): error TS2345: ...           TS2345: Argument type mismatch (x2)
 src/api.ts(20,3): error TS7006: ...            TS7006: Parameter implicitly has 'any'
@@ -742,41 +742,41 @@ src/utils.ts(5,1): error TS2304: ...         src/utils.ts (1 error)
 
 ---
 
-### `PTK lint` -- ESLint / Biome
+### `ptk lint` -- ESLint / Biome
 
 ```bash
-PTK lint [args...]
-PTK lint biome [args...]
+ptk lint [args...]
+ptk lint biome [args...]
 ```
 
 Regroupe les violations par regle et par fichier. Auto-detecte le linter.
 
 ---
 
-### `PTK prettier` -- Verification du formatage
+### `ptk prettier` -- Verification du formatage
 
 ```bash
-PTK prettier [args...]    # ex: PTK prettier --check .
+ptk prettier [args...]    # ex: ptk prettier --check .
 ```
 
 Affiche uniquement les fichiers necessitant un formatage.
 
 ---
 
-### `PTK format` -- Formateur universel
+### `ptk format` -- Formateur universel
 
 ```bash
-PTK format [args...]
+ptk format [args...]
 ```
 
 Auto-detecte le formateur du projet (prettier, black, ruff format) et applique un filtre compact.
 
 ---
 
-### `PTK next build` -- Build Next.js
+### `ptk next build` -- Build Next.js
 
 ```bash
-PTK next [args...]
+ptk next [args...]
 ```
 
 Sortie compacte avec metriques de routes.
@@ -816,19 +816,19 @@ Sortie JSON compressee.
 
 ## Commandes Formatage
 
-### `PTK prettier` -- Prettier
+### `ptk prettier` -- Prettier
 
 ```bash
-PTK prettier --check .
-PTK prettier --write src/
+ptk prettier --check .
+ptk prettier --write src/
 ```
 
 ---
 
-### `PTK format` -- Detecteur universel
+### `ptk format` -- Detecteur universel
 
 ```bash
-PTK format [args...]
+ptk format [args...]
 ```
 
 Detecte automatiquement : prettier, black, ruff format, rustfmt. Applique un filtre compact unifie.
@@ -837,40 +837,40 @@ Detecte automatiquement : prettier, black, ruff format, rustfmt. Applique un fil
 
 ## Gestionnaires de paquets
 
-### `PTK pnpm` -- pnpm
+### `ptk pnpm` -- pnpm
 
 | Commande | Description | Reduction sortie bash |
 |----------|-------------|-----------|
-| `PTK pnpm list [-d N]` | Arbre de dependances compact | ~70% |
-| `PTK pnpm outdated` | Paquets obsoletes : `pkg: old -> new` | ~80% |
-| `PTK pnpm install` | Filtre les barres de progression | ~60% |
-| `PTK pnpm build` | Delegue au filtre Next.js | ~87% |
-| `PTK pnpm typecheck` | Delegue au filtre tsc | ~83% |
+| `ptk pnpm list [-d N]` | Arbre de dependances compact | ~70% |
+| `ptk pnpm outdated` | Paquets obsoletes : `pkg: old -> new` | ~80% |
+| `ptk pnpm install` | Filtre les barres de progression | ~60% |
+| `ptk pnpm build` | Delegue au filtre Next.js | ~87% |
+| `ptk pnpm typecheck` | Delegue au filtre tsc | ~83% |
 
 Les sous-commandes non reconnues sont transmises directement a pnpm (passthrough).
 
 ---
 
-### `PTK npm` -- npm
+### `ptk npm` -- npm
 
 ```bash
-PTK npm [args...]    # ex: PTK npm run build
+ptk npm [args...]    # ex: ptk npm run build
 ```
 
 Filtre le boilerplate npm (barres de progression, en-tetes, etc.).
 
 ---
 
-### `PTK npx` -- npx avec routage intelligent
+### `ptk npx` -- npx avec routage intelligent
 
 ```bash
-PTK npx [args...]
+ptk npx [args...]
 ```
 
 Route intelligemment vers les filtres specialises :
-- `PTK npx tsc` -> filtre tsc
-- `PTK npx eslint` -> filtre lint
-- `PTK npx prisma` -> filtre prisma
+- `ptk npx tsc` -> filtre tsc
+- `ptk npx eslint` -> filtre lint
+- `ptk npx prisma` -> filtre prisma
 - Autres -> passthrough filtre
 
 ---
@@ -887,48 +887,48 @@ Auto-detecte `uv` si disponible et l'utilise a la place de `pip`.
 
 ---
 
-### `PTK deps` -- Resume des dependances
+### `ptk deps` -- Resume des dependances
 
 **Objectif :** Resume compact des dependances du projet.
 
 ```bash
-PTK deps [chemin]    # Defaut: repertoire courant
+ptk deps [chemin]    # Defaut: repertoire courant
 ```
 
 Auto-detecte : `Cargo.toml`, `package.json`, `pyproject.toml`, `go.mod`, `Gemfile`, etc.
 
 ---
 
-### `PTK prisma` -- ORM Prisma
+### `ptk prisma` -- ORM Prisma
 
 | Commande | Description |
 |----------|-------------|
-| `PTK prisma generate` | Generation du client (supprime l'ASCII art) |
-| `PTK prisma migrate dev [--name N]` | Creer et appliquer une migration |
-| `PTK prisma migrate status` | Status des migrations |
-| `PTK prisma migrate deploy` | Deployer en production |
-| `PTK prisma db-push` | Push du schema |
+| `ptk prisma generate` | Generation du client (supprime l'ASCII art) |
+| `ptk prisma migrate dev [--name N]` | Creer et appliquer une migration |
+| `ptk prisma migrate status` | Status des migrations |
+| `ptk prisma migrate deploy` | Deployer en production |
+| `ptk prisma db-push` | Push du schema |
 
 ---
 
 ## Conteneurs et orchestration
 
-### `PTK docker` -- Docker
+### `ptk docker` -- Docker
 
 | Commande | Description | Reduction sortie bash |
 |----------|-------------|-----------|
-| `PTK docker ps` | Liste compacte des conteneurs | ~80% |
-| `PTK docker images` | Liste compacte des images | ~80% |
-| `PTK docker logs <conteneur>` | Logs dedupliques | ~70% |
-| `PTK docker compose ps` | Services Compose compacts | ~80% |
-| `PTK docker compose logs [service]` | Logs Compose dedupliques | ~70% |
-| `PTK docker compose build [service]` | Resume du build | ~60% |
+| `ptk docker ps` | Liste compacte des conteneurs | ~80% |
+| `ptk docker images` | Liste compacte des images | ~80% |
+| `ptk docker logs <conteneur>` | Logs dedupliques | ~70% |
+| `ptk docker compose ps` | Services Compose compacts | ~80% |
+| `ptk docker compose logs [service]` | Logs Compose dedupliques | ~70% |
+| `ptk docker compose build [service]` | Resume du build | ~60% |
 
 Les sous-commandes non reconnues sont transmises directement (passthrough).
 
 **Avant / Apres :**
 ```
-# docker ps (lignes longues, ~30 tokens/ligne)    # PTK docker ps (~10 tokens/ligne)
+# docker ps (lignes longues, ~30 tokens/ligne)    # ptk docker ps (~10 tokens/ligne)
 CONTAINER ID   IMAGE          COMMAND     ...      web  nginx:1.25 Up 2d (healthy)
 abc123def456   nginx:1.25     "/dock..."  ...      db   postgres:16 Up 2d (healthy)
 789012345678   postgres:16    "docker..."           redis redis:7 Up 1d
@@ -936,13 +936,13 @@ abc123def456   nginx:1.25     "/dock..."  ...      db   postgres:16 Up 2d (healt
 
 ---
 
-### `PTK kubectl` -- Kubernetes
+### `ptk kubectl` -- Kubernetes
 
 | Commande | Description | Options |
 |----------|-------------|---------|
-| `PTK kubectl pods [-n ns] [-A]` | Liste compacte des pods | Namespace ou tous |
-| `PTK kubectl services [-n ns] [-A]` | Liste compacte des services | Namespace ou tous |
-| `PTK kubectl logs <pod> [-c container]` | Logs dedupliques | Container specifique |
+| `ptk kubectl pods [-n ns] [-A]` | Liste compacte des pods | Namespace ou tous |
+| `ptk kubectl services [-n ns] [-A]` | Liste compacte des services | Namespace ou tous |
+| `ptk kubectl logs <pod> [-c container]` | Logs dedupliques | Container specifique |
 
 Les sous-commandes non reconnues sont transmises directement (passthrough).
 
@@ -950,18 +950,18 @@ Les sous-commandes non reconnues sont transmises directement (passthrough).
 
 ## Donnees et reseau
 
-### `PTK json` -- Structure JSON
+### `ptk json` -- Structure JSON
 
 **Objectif :** Affiche la structure d'un fichier JSON sans les valeurs.
 
 ```bash
-PTK json <fichier> [--depth N]    # Defaut: profondeur 5
-PTK json -                         # Depuis stdin
+ptk json <fichier> [--depth N]    # Defaut: profondeur 5
+ptk json -                         # Depuis stdin
 ```
 
 **Avant / Apres :**
 ```
-# cat package.json (50 lignes)              # PTK json package.json (10 lignes)
+# cat package.json (50 lignes)              # ptk json package.json (10 lignes)
 {                                            {
   "name": "my-app",                            name: string
   "version": "1.0.0",                         version: string
@@ -976,12 +976,12 @@ PTK json -                         # Depuis stdin
 
 ---
 
-### `PTK env` -- Variables d'environnement
+### `ptk env` -- Variables d'environnement
 
 ```bash
-PTK env                    # Toutes les variables (sensibles masquees)
-PTK env -f AWS             # Filtrer par nom
-PTK env --show-all         # Inclure les valeurs sensibles
+ptk env                    # Toutes les variables (sensibles masquees)
+ptk env -f AWS             # Filtrer par nom
+ptk env --show-all         # Inclure les valeurs sensibles
 ```
 
 Les variables sensibles (tokens, secrets, mots de passe) sont masquees par defaut : `AWS_SECRET_ACCESS_KEY=***`.
@@ -1011,35 +1011,35 @@ Tronque les reponses longues et sauvegarde la sortie complete dans un fichier po
 
 ---
 
-### `PTK wget` -- Telechargement compact
+### `ptk wget` -- Telechargement compact
 
 ```bash
-PTK wget <url> [args...]
-PTK wget -O - <url>           # Sortie vers stdout
+ptk wget <url> [args...]
+ptk wget -O - <url>           # Sortie vers stdout
 ```
 
 Supprime les barres de progression et le bruit.
 
 ---
 
-### `PTK summary` -- Resume heuristique
+### `ptk summary` -- Resume heuristique
 
 **Objectif :** Execute une commande et genere un resume heuristique de la sortie.
 
 ```bash
-PTK summary <commande...>
+ptk summary <commande...>
 ```
 
 Utile pour les commandes longues dont la sortie n'a pas de filtre dedie.
 
 ---
 
-### `PTK proxy` -- Passthrough avec suivi
+### `ptk proxy` -- Passthrough avec suivi
 
 **Objectif :** Execute une commande **sans filtrage** mais enregistre l'utilisation pour le suivi.
 
 ```bash
-PTK proxy <commande...>
+ptk proxy <commande...>
 ```
 
 Utile pour le debug : comparer la sortie brute avec la sortie filtree.
@@ -1048,10 +1048,10 @@ Utile pour le debug : comparer la sortie brute avec la sortie filtree.
 
 ## Cloud et bases de donnees
 
-### `PTK aws` -- AWS CLI
+### `ptk aws` -- AWS CLI
 
 ```bash
-PTK aws <service> [args...]
+ptk aws <service> [args...]
 ```
 
 Force la sortie JSON et compresse le resultat. Supporte tous les services AWS (sts, s3, ec2, ecs, rds, cloudformation, etc.).
@@ -1091,27 +1091,27 @@ Les sous-commandes non reconnues sont transmises directement ou detectees comme 
 
 PTK enregistre chaque execution de commande dans une base SQLite :
 
-- **Emplacement :** `~/.local/share/PTK/tracking.db` (Linux), `~/Library/Application Support/PTK/tracking.db` (macOS)
+- **Emplacement :** `~/.local/share/ptk/tracking.db` (Linux), `~/Library/Application Support/ptk/tracking.db` (macOS)
 - **Retention :** 90 jours automatique
 - **Metriques :** tokens entree/sortie, pourcentage de reduction de sortie bash, temps d'execution, projet
 
 ---
 
-### `PTK gain` -- Statistiques de reduction de sortie bash
+### `ptk gain` -- Statistiques de reduction de sortie bash
 
 ```bash
-PTK gain                        # Resume global
-PTK gain -p                     # Filtre par projet courant
-PTK gain --graph                # Graphe ASCII (30 derniers jours)
-PTK gain --history              # Historique recent des commandes
-PTK gain --daily                # Ventilation jour par jour
-PTK gain --weekly               # Ventilation par semaine
-PTK gain --monthly              # Ventilation par mois
-PTK gain --all                  # Toutes les ventilations
-PTK gain --quota -t pro         # Estimation de la sortie bash economisee sur le quota mensuel
-PTK gain --failures             # Log des echecs de parsing (commandes en fallback)
-PTK gain --format json          # Export JSON (pour dashboards)
-PTK gain --format csv           # Export CSV
+ptk gain                        # Resume global
+ptk gain -p                     # Filtre par projet courant
+ptk gain --graph                # Graphe ASCII (30 derniers jours)
+ptk gain --history              # Historique recent des commandes
+ptk gain --daily                # Ventilation jour par jour
+ptk gain --weekly               # Ventilation par semaine
+ptk gain --monthly              # Ventilation par mois
+ptk gain --all                  # Toutes les ventilations
+ptk gain --quota -t pro         # Estimation de la sortie bash economisee sur le quota mensuel
+ptk gain --failures             # Log des echecs de parsing (commandes en fallback)
+ptk gain --format json          # Export JSON (pour dashboards)
+ptk gain --format csv           # Export CSV
 ```
 
 **Options :**
@@ -1132,7 +1132,7 @@ PTK gain --format csv           # Export CSV
 
 **Exemple de sortie :**
 ```
-$ PTK gain
+$ ptk gain
 PTK Token Savings Summary
   Total commands:     1,247
   Total input:        2,341,000 tokens
@@ -1148,16 +1148,16 @@ Top commands:
 
 ---
 
-### `PTK discover` -- Opportunites manquees
+### `ptk discover` -- Opportunites manquees
 
 **Objectif :** Analyse l'historique Claude Code pour trouver les commandes qui auraient pu etre optimisees par PTK.
 
 ```bash
-PTK discover                          # Projet courant, 30 derniers jours
-PTK discover --all --since 7          # Tous les projets, 7 derniers jours
-PTK discover -p /chemin/projet        # Filtrer par projet
-PTK discover --limit 20              # Max commandes par section
-PTK discover --format json            # Export JSON
+ptk discover                          # Projet courant, 30 derniers jours
+ptk discover --all --since 7          # Tous les projets, 7 derniers jours
+ptk discover -p /chemin/projet        # Filtrer par projet
+ptk discover --limit 20              # Max commandes par section
+ptk discover --format json            # Export JSON
 ```
 
 **Options :**
@@ -1187,29 +1187,29 @@ PTK learn --format json               # Export JSON
 
 ---
 
-### `PTK cc-economics` -- Analyse economique Claude Code
+### `ptk cc-economics` -- Analyse economique Claude Code
 
 **Objectif :** Compare les depenses Claude Code (via ccusage) avec la sortie bash economisee par PTK.
 
 ```bash
-PTK cc-economics                      # Resume
-PTK cc-economics --daily              # Ventilation quotidienne
-PTK cc-economics --weekly             # Ventilation hebdomadaire
-PTK cc-economics --monthly            # Ventilation mensuelle
-PTK cc-economics --all                # Toutes les ventilations
-PTK cc-economics --format json        # Export JSON
+ptk cc-economics                      # Resume
+ptk cc-economics --daily              # Ventilation quotidienne
+ptk cc-economics --weekly             # Ventilation hebdomadaire
+ptk cc-economics --monthly            # Ventilation mensuelle
+ptk cc-economics --all                # Toutes les ventilations
+ptk cc-economics --format json        # Export JSON
 ```
 
 ---
 
-### `PTK hook-audit` -- Metriques du hook
+### `ptk hook-audit` -- Metriques du hook
 
 **Prerequis :** Necessite `RTK_HOOK_AUDIT=1` dans l'environnement.
 
 ```bash
-PTK hook-audit                        # 7 derniers jours (defaut)
-PTK hook-audit --since 30             # 30 derniers jours
-PTK hook-audit --since 0              # Tout l'historique
+ptk hook-audit                        # 7 derniers jours (defaut)
+ptk hook-audit --since 30             # 30 derniers jours
+ptk hook-audit --since 0              # Tout l'historique
 ```
 
 ---
@@ -1231,10 +1231,10 @@ settings.json -> PreToolUse hook
 rtk-rewrite.sh (bash)
     |
     v
-PTK rewrite "git status"  ->  "PTK git status"
+ptk rewrite "git status"  ->  "ptk git status"
     |
     v
-Claude Code execute "PTK git status"
+Claude Code execute "ptk git status"
     |
     v
 Sortie filtree retournee a Claude (~10 tokens vs ~200)
@@ -1242,7 +1242,7 @@ Sortie filtree retournee a Claude (~10 tokens vs ~200)
 
 **Points cles :**
 - Claude ne voit jamais la recriture -- il recoit simplement une sortie optimisee
-- Le hook est un delegateur leger (~50 lignes bash) qui appelle `PTK rewrite`
+- Le hook est un delegateur leger (~50 lignes bash) qui appelle `ptk rewrite`
 - Toute la logique de recriture est dans le registre Rust (`src/discover/registry.rs`)
 - Les commandes deja prefixees par `PTK` passent sans modification
 - Les heredocs (`<<`) ne sont pas modifies
@@ -1251,29 +1251,29 @@ Sortie filtree retournee a Claude (~10 tokens vs ~200)
 ### Installation
 
 ```bash
-PTK init -g                     # Installation recommandee (hook + @@PTKMD@@)
-PTK init -g --auto-patch        # Non-interactif (CI/CD)
-PTK init -g --hook-only         # Hook seul, sans @@PTKMD@@
-PTK init --show                 # Verifier l'installation
-PTK init -g --uninstall         # Desinstaller
+ptk init -g                     # Installation recommandee (hook + @@PTKMD@@)
+ptk init -g --auto-patch        # Non-interactif (CI/CD)
+ptk init -g --hook-only         # Hook seul, sans @@PTKMD@@
+ptk init --show                 # Verifier l'installation
+ptk init -g --uninstall         # Desinstaller
 ```
 
 ### Fichiers installes
 
 | Fichier | Description |
 |---------|-------------|
-| `~/.claude/hooks/rtk-rewrite.sh` | Script hook (delegue a `PTK rewrite`) |
+| `~/.claude/hooks/rtk-rewrite.sh` | Script hook (delegue a `ptk rewrite`) |
 | `~/.claude/@@PTKMD@@` | Instructions minimales pour le LLM |
 | `~/.claude/settings.json` | Enregistrement du hook PreToolUse |
 
-### `PTK rewrite` -- Recriture de commande
+### `ptk rewrite` -- Recriture de commande
 
 Commande interne utilisee par le hook. Imprime la commande reecrite sur stdout (exit 0) ou sort avec exit 1 si aucun equivalent PTK n'existe.
 
 ```bash
-PTK rewrite "git status"           # -> "PTK git status" (exit 0)
-PTK rewrite "terraform plan"       # -> (exit 1, pas de recriture)
-PTK rewrite "PTK git status"       # -> "PTK git status" (exit 0, inchange)
+ptk rewrite "git status"           # -> "ptk git status" (exit 0)
+ptk rewrite "terraform plan"       # -> (exit 1, pas de recriture)
+ptk rewrite "ptk git status"       # -> "ptk git status" (exit 0, inchange)
 ```
 
 ### `PTK verify` -- Verification d'integrite
@@ -1288,32 +1288,32 @@ PTK verify
 
 | Commande brute | Reecrite en |
 |----------------|-------------|
-| `git status/diff/log/add/commit/push/pull` | `PTK git ...` |
-| `gh pr/issue/run` | `PTK gh ...` |
-| `cargo test/build/clippy/check` | `PTK cargo ...` |
-| `cat/head/tail <fichier>` | `PTK read <fichier>` |
-| `rg/grep <pattern>` | `PTK grep <pattern>` |
-| `ast-grep run -p <pattern>` | `PTK ast-grep run -p <pattern>` |
-| `ls` | `PTK ls` |
-| `tree` | `PTK tree` |
-| `wc` | `PTK wc` |
-| `jest` | `PTK jest` |
-| `vitest` | `PTK vitest` |
-| `tsc` | `PTK tsc` |
-| `eslint/biome` | `PTK lint` |
-| `prettier` | `PTK prettier` |
-| `playwright` | `PTK playwright` |
-| `prisma` | `PTK prisma` |
+| `git status/diff/log/add/commit/push/pull` | `ptk git ...` |
+| `gh pr/issue/run` | `ptk gh ...` |
+| `cargo test/build/clippy/check` | `ptk cargo ...` |
+| `cat/head/tail <fichier>` | `ptk read <fichier>` |
+| `rg/grep <pattern>` | `ptk grep <pattern>` |
+| `ast-grep run -p <pattern>` | `ptk ast-grep run -p <pattern>` |
+| `ls` | `ptk ls` |
+| `tree` | `ptk tree` |
+| `wc` | `ptk wc` |
+| `jest` | `ptk jest` |
+| `vitest` | `ptk vitest` |
+| `tsc` | `ptk tsc` |
+| `eslint/biome` | `ptk lint` |
+| `prettier` | `ptk prettier` |
+| `playwright` | `ptk playwright` |
+| `prisma` | `ptk prisma` |
 | `ruff check/format` | `PTK ruff ...` |
 | `pytest` | `PTK pytest` |
 | `mypy` | `PTK mypy` |
 | `pip list/install` | `PTK pip ...` |
 | `go test/build/vet` | `PTK go ...` |
 | `golangci-lint` | `PTK golangci-lint` |
-| `docker ps/images/logs` | `PTK docker ...` |
-| `kubectl get/logs` | `PTK kubectl ...` |
+| `docker ps/images/logs` | `ptk docker ...` |
+| `kubectl get/logs` | `ptk kubectl ...` |
 | `curl` | `PTK curl` |
-| `pnpm list/outdated` | `PTK pnpm ...` |
+| `pnpm list/outdated` | `ptk pnpm ...` |
 
 ### Exclusion de commandes
 
@@ -1336,12 +1336,12 @@ englober `ls -la`.
 
 ### Fichier de configuration
 
-**Emplacement :** `~/.config/PTK/config.toml` (Linux) ou `~/Library/Application Support/PTK/config.toml` (macOS)
+**Emplacement :** `~/.config/ptk/config.toml` (Linux) ou `~/Library/Application Support/ptk/config.toml` (macOS)
 
 **Commandes :**
 ```bash
-PTK config                # Afficher la configuration actuelle
-PTK config --create       # Creer le fichier avec les valeurs par defaut
+ptk config                # Afficher la configuration actuelle
+ptk config --create       # Creer le fichier avec les valeurs par defaut
 ```
 
 ### Structure complete
@@ -1371,7 +1371,7 @@ retention_days = 30         # Retention des entrees
 
 [telemetry]
 enabled = false             # Telemetrie anonyme (1 ping/jour, requiert consentement)
-# consent_given = true      # Defini automatiquement par `PTK init` ou `PTK telemetry enable`
+# consent_given = true      # Defini automatiquement par `ptk init` ou `ptk telemetry enable`
 # consent_date = "..."      # Date du consentement (RFC 3339)
 
 [hooks]
@@ -1398,22 +1398,22 @@ Quand une commande echoue (ou qu'un filtre tronque une liste), PTK sauvegarde la
 
 **Fonctionnement :**
 1. La commande echoue (exit code != 0) ou la sortie est tronquee
-2. PTK stocke la sortie brute (gzip) dans `~/.local/share/PTK/recall.db`
-3. Un hint avec le hash est affiche : `[full output: PTK recall <hash>]` ou `[+N hidden: PTK recall <hash>]`
-4. `PTK recall <hash>` restitue la partie manquante (delta), `--full` la sortie complete
+2. PTK stocke la sortie brute (gzip) dans `~/.local/share/ptk/recall.db`
+3. Un hint avec le hash est affiche : `[full output: ptk recall <hash>]` ou `[+N hidden: ptk recall <hash>]`
+4. `ptk recall <hash>` restitue la partie manquante (delta), `--full` la sortie complete
 
 **Commandes :**
 ```bash
-PTK recall <hash>            # Partie non montree (delta)
-PTK recall <hash> --full     # Sortie complete
-PTK recall <hash> --grep RE  # Filtrer par regex
-PTK recall --list            # Lister les entrees
-PTK gain --recalls           # Taux de consultation par filtre (calibration des caps)
-PTK config recall <mode>     # Changer de mode sans editer la config (sqlite|tee|disabled)
+ptk recall <hash>            # Partie non montree (delta)
+ptk recall <hash> --full     # Sortie complete
+ptk recall <hash> --grep RE  # Filtrer par regex
+ptk recall --list            # Lister les entrees
+ptk gain --recalls           # Taux de consultation par filtre (calibration des caps)
+ptk config recall <mode>     # Changer de mode sans editer la config (sqlite|tee|disabled)
 ```
 
-`PTK gain --recalls` separe strictement les donnees par mode : taux exact en sqlite
-(la lecture passe par `PTK recall`), approximation (`≥`) en tee (seules les lectures
+`ptk gain --recalls` separe strictement les donnees par mode : taux exact en sqlite
+(la lecture passe par `ptk recall`), approximation (`≥`) en tee (seules les lectures
 bash sont detectables via le hook, pas l'outil Read). Un taux eleve signale un filtre
 qui cache des sorties que l'agent revient chercher.
 
@@ -1427,9 +1427,9 @@ qui cache des sorties que l'agent revient chercher.
 | `retriever.max_entry_bytes` | `10 Mo` | Troncature au-dela (a la derniere ligne complete) |
 | Taille min | 500 octets | Les echecs trop courts ne sont pas sauvegardes |
 
-Le mode `"tee"` conserve l'ancien comportement (fichiers `.log` dans `~/.local/share/PTK/tee/`, rotation `tee_max_files`). Une ancienne section `[tee]` en config est automatiquement mappee (voir plus haut).
+Le mode `"tee"` conserve l'ancien comportement (fichiers `.log` dans `~/.local/share/ptk/tee/`, rotation `tee_max_files`). Une ancienne section `[tee]` en config est automatiquement mappee (voir plus haut).
 
-Le mode se change avec `PTK config recall <sqlite|tee|disabled>` (edition chirurgicale de
+Le mode se change avec `ptk config recall <sqlite|tee|disabled>` (edition chirurgicale de
 config.toml, commentaires preserves, champs `[tee]` legacy migres) — le champ equivalent
 en edition manuelle est `[retriever] mode`.
 
@@ -1445,10 +1445,10 @@ PTK peut envoyer un ping anonyme une fois par jour (23h d'intervalle) pour des s
 
 **Gerer la telemetrie :**
 ```bash
-PTK telemetry status     # Voir l'etat du consentement
-PTK telemetry enable     # Donner son consentement (prompt interactif)
-PTK telemetry disable    # Retirer son consentement
-PTK telemetry forget     # Retirer + supprimer donnees locales + demande d'effacement serveur
+ptk telemetry status     # Voir l'etat du consentement
+ptk telemetry enable     # Donner son consentement (prompt interactif)
+ptk telemetry disable    # Retirer son consentement
+ptk telemetry forget     # Retirer + supprimer donnees locales + demande d'effacement serveur
 ```
 
 **Desactiver via variable d'environnement :**

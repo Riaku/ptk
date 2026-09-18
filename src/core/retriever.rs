@@ -1,4 +1,4 @@
-//! Content-addressed recall store backing `rtk recall`.
+//! Content-addressed recall store backing `ptk recall`.
 
 use super::constants::RECALL_DB;
 use crate::core::config::Config;
@@ -169,7 +169,7 @@ fn gunzip(data: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn db_path(cfg: &RetrieverConfig) -> Result<PathBuf> {
-    if let Ok(p) = std::env::var("RTK_RECALL_DB") {
+    if let Ok(p) = crate::core::env_compat::env_compat("RECALL_DB") {
         return Ok(PathBuf::from(p));
     }
     if let Some(ref p) = cfg.database_path {
@@ -178,11 +178,11 @@ fn db_path(cfg: &RetrieverConfig) -> Result<PathBuf> {
     // A test that names no store must never reach the developer's own: its rows
     // would ship as real usage through the telemetry ping.
     #[cfg(test)]
-    let base = std::env::temp_dir().join(format!("rtk-test-store-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("ptk-test-store-{}", std::process::id()));
     #[cfg(not(test))]
     let base = dirs::data_local_dir()
         .ok_or_else(|| anyhow::anyhow!("no local data directory available"))?
-        .join(super::constants::RTK_DATA_DIR);
+        .join(super::constants::PTK_DATA_DIR);
     Ok(base.join(RECALL_DB))
 }
 
@@ -422,8 +422,15 @@ fn record_tee_recall_on(conn: &Connection, slug: &str, path: &str) {
 }
 
 pub(crate) fn recovery_disabled_by_env() -> bool {
-    matches!(std::env::var("RTK_RECALL").ok().as_deref(), Some("0"))
-        || matches!(std::env::var("RTK_TEE").ok().as_deref(), Some("0"))
+    matches!(
+        crate::core::env_compat::env_compat("RECALL")
+            .ok()
+            .as_deref(),
+        Some("0")
+    ) || matches!(
+        crate::core::env_compat::env_compat("TEE").ok().as_deref(),
+        Some("0")
+    )
 }
 
 fn record_tee_recall_with(cfg: &RetrieverConfig, slug: &str, path: &str) {
@@ -632,7 +639,7 @@ pub struct RecallArgs<'a> {
 
 pub fn run_recall(args: RecallArgs) -> Result<i32> {
     if args.hash.is_none() && !args.list {
-        eprintln!("rtk recall: provide a <hash> (from a recovery hint) or --list");
+        eprintln!("ptk recall: provide a <hash> (from a recovery hint) or --list");
         return Ok(2);
     }
     let cfg = Config::load().unwrap_or_default().retriever;
@@ -643,11 +650,11 @@ pub fn run_recall(args: RecallArgs) -> Result<i32> {
                 println!("(no recall entries)");
                 return Ok(0);
             }
-            eprintln!("rtk recall: no matching entry (try `rtk recall --list`)");
+            eprintln!("ptk recall: no matching entry (try `ptk recall --list`)");
             return Ok(1);
         }
         Err(e) => {
-            eprintln!("rtk recall: store unavailable: {e}");
+            eprintln!("ptk recall: store unavailable: {e}");
             return Ok(1);
         }
     };
@@ -664,13 +671,13 @@ pub fn run_recall(args: RecallArgs) -> Result<i32> {
     let row = match load_by_hash(&conn, hash) {
         Ok(row) => row,
         Err(e) => {
-            eprintln!("rtk recall: {e}");
+            eprintln!("ptk recall: {e}");
             return Ok(1);
         }
     };
 
     let Some(row) = row else {
-        eprintln!("rtk recall: no matching entry (try `rtk recall --list`)");
+        eprintln!("ptk recall: no matching entry (try `ptk recall --list`)");
         return Ok(1);
     };
 
@@ -688,7 +695,7 @@ pub fn run_recall(args: RecallArgs) -> Result<i32> {
         Some(pat) => {
             if regex::bytes::Regex::new(pat).is_err() {
                 eprintln!(
-                    "rtk recall: note: --grep pattern is not a valid regex, matching it literally"
+                    "ptk recall: note: --grep pattern is not a valid regex, matching it literally"
                 );
             }
             grep_bytes(&sliced, pat)
@@ -698,7 +705,7 @@ pub fn run_recall(args: RecallArgs) -> Result<i32> {
 
     if out.is_empty() && row.truncated && args.grep.is_none() {
         eprintln!(
-            "rtk recall: the requested lines were lost — this entry was stored truncated at the cap in force at the time"
+            "ptk recall: the requested lines were lost — this entry was stored truncated at the cap in force at the time"
         );
         return Ok(1);
     }
@@ -708,7 +715,7 @@ pub fn run_recall(args: RecallArgs) -> Result<i32> {
 
     if row.truncated {
         eprintln!(
-            "rtk recall: note: this entry was stored truncated (output exceeded the cap in force at the time)"
+            "ptk recall: note: this entry was stored truncated (output exceeded the cap in force at the time)"
         );
     }
     Ok(0)
@@ -1266,12 +1273,12 @@ mod tests {
         let _guard = crate::core::utils::TEST_ENV_LOCK.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let cfg = temp_cfg(dir.path());
-        temp_env::with_var("RTK_RECALL", Some("0"), || {
+        temp_env::with_var("PTK_RECALL", Some("0"), || {
             record_tee_recall_with(&cfg, "grep", "/tee/1_grep.log");
         });
         assert!(
             !dir.path().join("recall_test.db").exists(),
-            "RTK_RECALL=0 must prevent any recall.db write from the hook path"
+            "PTK_RECALL=0 must prevent any recall.db write from the hook path"
         );
         let disabled = RetrieverConfig {
             mode: RecoveryMode::Disabled,

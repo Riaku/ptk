@@ -4,11 +4,11 @@
 
 ## Specifics
 
-- Native Rust `PreToolUse` processor: `PTK hook codex`
+- Native Rust `PreToolUse` processor: `ptk hook codex`
 - Transparently rewrites `tool_input.command` with Codex's `updatedInput` response
 - Registers a `Bash` matcher in `.codex/hooks.json` (project) or `$CODEX_HOME/hooks.json` (global)
 - Writes the shared awareness document selected by `awareness.level` to `@@PTKMD@@`, referenced from `AGENTS.md`
-- Installed by `PTK init --codex` (project) or `PTK init -g --codex` (global)
+- Installed by `ptk init --codex` (project) or `ptk init -g --codex` (global)
 - Uninstalled by adding `--uninstall` to the corresponding project or global command
 
 Codex requires `permissionDecision: "allow"` in the hook response for `updatedInput` to take effect. Codex applies the replacement before its normal command approval and sandbox checks, so those native checks still run on the rewritten command. Codex's command safety classifier does not currently unwrap the `PTK` binary, so classification is based on the rewritten command. This can add prompts for known-safe commands or obscure signals for wrapped mutating commands such as `git push`.
@@ -27,9 +27,9 @@ limitation described above.
 
 Command rewriting can work even when the sandbox prevents PTK from writing its
 SQLite history database. If recording reports `SQLITE_CANTOPEN`, run
-`PTK init --codex` outside the sandbox to see an optional Codex configuration
+`ptk init --codex` outside the sandbox to see an optional Codex configuration
 snippet using the actual database parent directory. The path follows
-`RTK_DB_PATH`, then `tracking.database_path`, then the platform default.
+`PTK_DB_PATH`, then `tracking.database_path`, then the platform default.
 
 To opt in, merge the printed `sandbox_workspace_write.writable_roots` entry into
 your Codex `config.toml`, preserving existing entries. SQLite needs directory

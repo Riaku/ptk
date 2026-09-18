@@ -36,7 +36,7 @@ pub fn run_file(file: &Path, verbose: u8) -> Result<()> {
     println!("{}", shown);
     timer.track(
         &format!("cat {}", file.display()),
-        "rtk log",
+        "ptk log",
         &content,
         shown,
     );
@@ -58,7 +58,7 @@ pub fn run_stdin(_verbose: u8) -> Result<()> {
     let shown = never_worse(&content, &result);
     println!("{}", shown);
 
-    timer.track("log (stdin)", "rtk log (stdin)", &content, shown);
+    timer.track("log (stdin)", "ptk log (stdin)", &content, shown);
 
     Ok(())
 }

@@ -6,7 +6,7 @@
 
 **Read-only dashboards** over the tracking database. Queries the recorded bash output reduction, correlates with external spending data, and surfaces adoption metrics. Never modifies the tracking DB.
 
-Owns: `PTK gain` (savings dashboard), `PTK cc-economics` (cost reduction), `PTK session` (adoption analysis), and Claude Code usage data parsing.
+Owns: `ptk gain` (savings dashboard), `ptk cc-economics` (cost reduction), `ptk session` (adoption analysis), and Claude Code usage data parsing.
 
 Does **not** own: recording token savings (that's `core/tracking` called by `cmds/`), or command filtering itself (that's `cmds/`).
 

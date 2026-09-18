@@ -19,8 +19,7 @@ pub fn filter_service_output(raw: &str) -> String {
         }
 
         // Strip headers and dash lines
-        if trimmed.starts_with("Status")
-            && trimmed.contains("DisplayName")
+        if trimmed.starts_with("Status") && trimmed.contains("DisplayName")
             || trimmed.chars().all(|c| c == '-' || c.is_whitespace())
         {
             continue;
@@ -32,11 +31,17 @@ pub fn filter_service_output(raw: &str) -> String {
         }
 
         // Typical format: Status Name DisplayName (3+ parts)
-        if parts.len() >= 3 && (parts[0] == "Running" || parts[0] == "Stopped" || parts[0] == "Paused") {
+        if parts.len() >= 3
+            && (parts[0] == "Running" || parts[0] == "Stopped" || parts[0] == "Paused")
+        {
             let status = parts[0];
             let name = parts[1];
             let display_name = parts[2..].join(" ");
-            entries.push(format!("{:<7}  {}  {}", status, name, display_name).trim_end().to_string());
+            entries.push(
+                format!("{:<7}  {}  {}", status, name, display_name)
+                    .trim_end()
+                    .to_string(),
+            );
         } else {
             entries.push(trimmed.trim_end().to_string());
         }
@@ -46,7 +51,9 @@ pub fn filter_service_output(raw: &str) -> String {
         return "(no services found)".trim_end().to_string();
     }
 
-    let header = format!("{:<7}  {}  {}", "STATUS", "NAME", "DISPLAY_NAME").trim_end().to_string();
+    let header = format!("{:<7}  {}  {}", "STATUS", "NAME", "DISPLAY_NAME")
+        .trim_end()
+        .to_string();
     let mut output = Vec::with_capacity(entries.len() + 1);
     output.push(header);
     for entry in entries {

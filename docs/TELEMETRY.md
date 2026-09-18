@@ -1,6 +1,6 @@
 # Telemetry
 
-PTK collects anonymous, aggregate usage metrics once per day to help improve the product. Telemetry is **disabled by default** and requires explicit consent during `PTK init` or `PTK telemetry enable`.
+PTK collects anonymous, aggregate usage metrics once per day to help improve the product. Telemetry is **disabled by default** and requires explicit consent during `ptk init` or `ptk telemetry enable`.
 
 ## Data Collector
 
@@ -34,7 +34,7 @@ This data directly drives our roadmap. For example, if telemetry shows that 40% 
 
 | Field | Example | Purpose |
 |-------|---------|---------|
-| `device_hash` | `a3f8c9...` (64 hex chars) | Count unique installations. SHA-256 of a per-device random salt stored locally (`~/.local/share/PTK/.device_salt`). Not reversible. No hostname or username included. |
+| `device_hash` | `a3f8c9...` (64 hex chars) | Count unique installations. SHA-256 of a per-device random salt stored locally (`~/.local/share/ptk/.device_salt`). Not reversible. No hostname or username included. |
 
 ### Environment
 
@@ -62,7 +62,7 @@ This data directly drives our roadmap. For example, if telemetry shows that 40% 
 |-------|---------|---------|
 | `passthrough_top` | `["git:15", "npm:8"]` | Top 5 commands with 0% savings — these need filters |
 | `parse_failures_24h` | `3` | Filter fragility — high count means filters are breaking |
-| `low_savings_commands` | `["PTK docker ps:25%"]` | Commands with weighted savings rate <30%, net-negative ones included — filters to improve. Rate is `SUM(saved)/SUM(input)` over every call of the command, the same figure as the `PTK gain` By Command table, so high-volume calls are not diluted by passthrough calls. Exact 0% is left to `passthrough_top`. |
+| `low_savings_commands` | `["ptk docker ps:25%"]` | Commands with weighted savings rate <30%, net-negative ones included — filters to improve. Rate is `SUM(saved)/SUM(input)` over every call of the command, the same figure as the `ptk gain` By Command table, so high-volume calls are not diluted by passthrough calls. Exact 0% is left to `passthrough_top`. |
 | `avg_savings_per_command` | `68.5` | Unweighted average across distinct command names (each filter counts once regardless of invocation volume). Each command's individual rate is weighted by volume before the outer average; commands that never had any input are skipped. |
 | `recall_mode` | `sqlite` | Which recovery mode is active (`sqlite`/`tee`/`disabled`) |
 | `recall_stats` | `[{"filter":"grep","mode":"sqlite","elisions":142,"recalls":9}]` | Per-filter counters: how often elided output is retrieved — calibrates filter caps. Filter names come from a fixed allowlist of PTK filter families; anything else is folded into `other`. No hashes, no paths, no command arguments, no output content. |
@@ -98,7 +98,7 @@ This data directly drives our roadmap. For example, if telemetry shows that 40% 
 
 | Field | Example | Purpose |
 |-------|---------|---------|
-| `has_config_toml` | `true` | Whether user has customized PTK config |
+| `has_config_toml` | `true` | Whether user has customized ptk config |
 | `exclude_commands_count` | `2` | Commands excluded from rewriting — high count may indicate frustration |
 | `projects_count` | `5` | Distinct project paths — multi-project = power user |
 
@@ -120,13 +120,13 @@ This data directly drives our roadmap. For example, if telemetry shows that 40% 
 
 ## Consent
 
-Telemetry requires explicit opt-in consent (GDPR Art. 6, 7). Consent is requested during `PTK init` or via `PTK telemetry enable`. Without consent, no data is sent.
+Telemetry requires explicit opt-in consent (GDPR Art. 6, 7). Consent is requested during `ptk init` or via `ptk telemetry enable`. Without consent, no data is sent.
 
 ```bash
-PTK telemetry status     # Check current consent state
-PTK telemetry enable     # Give consent (interactive prompt)
-PTK telemetry disable    # Withdraw consent
-PTK telemetry forget     # Withdraw consent + delete local data + request server erasure
+ptk telemetry status     # Check current consent state
+ptk telemetry enable     # Give consent (interactive prompt)
+ptk telemetry disable    # Withdraw consent
+ptk telemetry forget     # Withdraw consent + delete local data + request server erasure
 ```
 
 Environment variable override (blocks telemetry regardless of consent):
@@ -138,22 +138,22 @@ export RTK_TELEMETRY_DISABLED=1
 
 - **Server-side**: telemetry records are retained for a maximum of **12 months**, then automatically purged (periodic task every 24 hours).
 - **Server-side (erasure log)**: IP addresses in the erasure audit log are **anonymized after 6 months** (GDPR — IP is personal data).
-- **Client-side**: the local SQLite database (`~/.local/share/PTK/tracking.db`) retains data for **90 days** by default (configurable via `tracking.history_days` in `config.toml`). Deleted entirely by `PTK telemetry forget`.
+- **Client-side**: the local SQLite database (`~/.local/share/ptk/tracking.db`) retains data for **90 days** by default (configurable via `tracking.history_days` in `config.toml`). Deleted entirely by `ptk telemetry forget`.
 
 ## Your Rights (GDPR)
 
 Under the EU General Data Protection Regulation, you have the right to:
 
-- **Access** your data: `PTK telemetry status` shows your device hash; the telemetry payload is fully documented above.
+- **Access** your data: `ptk telemetry status` shows your device hash; the telemetry payload is fully documented above.
 - **Rectification**: since data is anonymous and aggregate, rectification is not applicable.
-- **Erasure** (Art. 17): run `PTK telemetry forget` to delete local data and send an erasure request to the server. Alternatively, email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) with your device hash.
-- **Restriction of processing**: `PTK telemetry disable` stops all data collection immediately.
-- **Portability**: the local SQLite database at `~/.local/share/PTK/tracking.db` contains all locally stored data.
-- **Objection**: `PTK telemetry disable` or `export RTK_TELEMETRY_DISABLED=1`.
+- **Erasure** (Art. 17): run `ptk telemetry forget` to delete local data and send an erasure request to the server. Alternatively, email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) with your device hash.
+- **Restriction of processing**: `ptk telemetry disable` stops all data collection immediately.
+- **Portability**: the local SQLite database at `~/.local/share/ptk/tracking.db` contains all locally stored data.
+- **Objection**: `ptk telemetry disable` or `export RTK_TELEMETRY_DISABLED=1`.
 
 ## Erasure Procedure
 
-1. Run `PTK telemetry forget` — this disables telemetry, deletes your device salt, ping marker, and local tracking database (`history.db`), then sends an erasure request to the server.
+1. Run `ptk telemetry forget` — this disables telemetry, deletes your device salt, ping marker, and local tracking database (`history.db`), then sends an erasure request to the server.
 2. If the server is unreachable, the CLI prints your full device hash and fallback instructions to email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) for manual erasure.
 3. You can also email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) directly to request manual erasure.
 

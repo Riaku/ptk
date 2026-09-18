@@ -1,6 +1,6 @@
-//! Never-worse output guard: RTK never emits more tokens than the raw command.
+//! Never-worse output guard: PTK never emits more tokens than the raw command.
 //!
-//! One caller is allowed past it. `rtk diff` prints a one-line message for a
+//! One caller is allowed past it. `ptk diff` prints a one-line message for a
 //! difference `str::lines()` cannot render — CRLF against LF, or a missing
 //! final newline — where the raw fallback is two blobs that look identical and
 //! answer the question worse at any size. The exception is bounded by the case

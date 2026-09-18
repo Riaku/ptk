@@ -8,7 +8,7 @@ use std::os::unix::fs::symlink;
 
 use tempfile::TempDir;
 
-fn run_rtk(cwd: &Path, agent_dir: &Path, args: &[&str]) -> Output {
+fn run_ptk(cwd: &Path, agent_dir: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("LC_ALL", "C")
         .env("HOME", cwd.join("home"))
@@ -16,11 +16,11 @@ fn run_rtk(cwd: &Path, agent_dir: &Path, args: &[&str]) -> Output {
         .args(args)
         .current_dir(cwd)
         .output()
-        .expect("spawn rtk")
+        .expect("spawn ptk")
 }
 
 #[cfg(unix)]
-fn run_rtk_without_agent_dir(cwd: &Path, args: &[&str]) -> Output {
+fn run_ptk_without_agent_dir(cwd: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("LC_ALL", "C")
         .env("HOME", cwd.join("home"))
@@ -28,7 +28,7 @@ fn run_rtk_without_agent_dir(cwd: &Path, args: &[&str]) -> Output {
         .args(args)
         .current_dir(cwd)
         .output()
-        .expect("spawn rtk")
+        .expect("spawn ptk")
 }
 
 fn stdout(output: &Output) -> String {
@@ -44,7 +44,7 @@ fn omp_dry_run_missing_includes_footer() {
     let project = tempfile::tempdir().unwrap();
     let agent_dir = project.path().join("omp-agent");
 
-    let output = run_rtk(
+    let output = run_ptk(
         project.path(),
         &agent_dir,
         &[
@@ -74,7 +74,7 @@ fn omp_dry_run_stock_includes_footer_and_real_uninstall_mentions_restart() {
     let project = tempfile::tempdir().unwrap();
     let agent_dir = project.path().join("omp-agent");
 
-    let pi_install = run_rtk(
+    let pi_install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global"],
@@ -85,7 +85,7 @@ fn omp_dry_run_stock_includes_footer_and_real_uninstall_mentions_restart() {
         stderr(&pi_install)
     );
 
-    let install = run_rtk(
+    let install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global"],
@@ -97,7 +97,7 @@ fn omp_dry_run_stock_includes_footer_and_real_uninstall_mentions_restart() {
     );
     assert!(stderr(&install).contains("share the global extension path"));
 
-    let dry_run = run_rtk(
+    let dry_run = run_ptk(
         project.path(),
         &agent_dir,
         &[
@@ -119,7 +119,7 @@ fn omp_dry_run_stock_includes_footer_and_real_uninstall_mentions_restart() {
     );
     assert!(stdout(&dry_run).contains("[dry-run] Nothing written."));
 
-    let skipped = run_rtk(
+    let skipped = run_ptk(
         project.path(),
         &agent_dir,
         &[
@@ -138,9 +138,9 @@ fn omp_dry_run_stock_includes_footer_and_real_uninstall_mentions_restart() {
     );
     assert!(!stdout(&skipped).contains("Skipped removal of shared Pi/OMP extension"));
     assert!(stderr(&skipped).contains("was not removed"));
-    assert!(agent_dir.join("extensions/rtk.ts").exists());
+    assert!(agent_dir.join("extensions/ptk.ts").exists());
 
-    let uninstall = run_rtk(
+    let uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &[
@@ -159,7 +159,7 @@ fn omp_dry_run_stock_includes_footer_and_real_uninstall_mentions_restart() {
     );
     assert!(stdout(&uninstall).contains("Restart OMP to apply changes."));
     assert!(stderr(&uninstall).contains("share the global extension path"));
-    assert!(!agent_dir.join("extensions/rtk.ts").exists());
+    assert!(!agent_dir.join("extensions/ptk.ts").exists());
 }
 
 #[test]
@@ -168,11 +168,11 @@ fn pi_dry_run_modified_extension_previews_confirmation_without_error() {
     let agent_dir = project.path().join("pi-agent");
     let extension_dir = project.path().join(".pi/extensions");
     std::fs::create_dir_all(&extension_dir).unwrap();
-    let extension = extension_dir.join("rtk.ts");
+    let extension = extension_dir.join("ptk.ts");
     let original = "// user-modified extension\nexport default () => {}\n";
     std::fs::write(&extension, original).unwrap();
 
-    let output = run_rtk(
+    let output = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--dry-run"],
@@ -187,7 +187,7 @@ fn pi_dry_run_modified_extension_previews_confirmation_without_error() {
     assert!(stdout(&output).contains("[dry-run] Nothing written."));
     assert_eq!(std::fs::read_to_string(&extension).unwrap(), original);
 
-    let auto_dry_run = run_rtk(
+    let auto_dry_run = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--auto-patch", "--dry-run"],
@@ -201,7 +201,7 @@ fn pi_dry_run_modified_extension_previews_confirmation_without_error() {
     assert!(stdout(&auto_dry_run).contains("[dry-run] would update Pi extension"));
     assert_eq!(std::fs::read_to_string(&extension).unwrap(), original);
 
-    let auto = run_rtk(
+    let auto = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--auto-patch"],
@@ -213,7 +213,7 @@ fn pi_dry_run_modified_extension_previews_confirmation_without_error() {
     );
     assert_eq!(
         std::fs::read_to_string(extension).unwrap(),
-        include_str!("../hooks/pi/rtk.ts")
+        include_str!("../hooks/pi/ptk.ts")
     );
 }
 
@@ -222,7 +222,7 @@ fn pi_relocated_global_ignores_project_omp_config_when_sidecar_is_definitive() {
     let project = tempfile::tempdir().unwrap();
     let agent_dir = project.path().join("pi-agent");
 
-    let install = run_rtk(
+    let install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global"],
@@ -235,7 +235,7 @@ fn pi_relocated_global_ignores_project_omp_config_when_sidecar_is_definitive() {
     assert!(!stderr(&install).contains("share the global extension path"));
     std::fs::create_dir_all(project.path().join(".omp")).unwrap();
 
-    let uninstall = run_rtk(
+    let uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -245,17 +245,17 @@ fn pi_relocated_global_ignores_project_omp_config_when_sidecar_is_definitive() {
         "Pi global uninstall unexpectedly prompted or failed: {}",
         stderr(&uninstall)
     );
-    assert!(!agent_dir.join("extensions/rtk.ts").exists());
+    assert!(!agent_dir.join("extensions/ptk.ts").exists());
 }
 
 #[test]
 fn relocated_omp_ownership_is_tracked_symmetrically() {
     let project = tempfile::tempdir().unwrap();
     let agent_dir = project.path().join("omp-agent");
-    let extension = agent_dir.join("extensions/rtk.ts");
-    let ownership = agent_dir.join("extensions/.rtk-agents");
+    let extension = agent_dir.join("extensions/ptk.ts");
+    let ownership = agent_dir.join("extensions/.ptk-agents");
 
-    let omp_install = run_rtk(
+    let omp_install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global"],
@@ -268,7 +268,7 @@ fn relocated_omp_ownership_is_tracked_symmetrically() {
     assert!(!stderr(&omp_install).contains("share the global extension path"));
     assert_eq!(std::fs::read_to_string(&ownership).unwrap(), "omp\n");
 
-    let pi_uninstall = run_rtk(
+    let pi_uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -281,7 +281,7 @@ fn relocated_omp_ownership_is_tracked_symmetrically() {
     assert!(stderr(&pi_uninstall).contains("share the global extension path"));
     assert!(extension.exists());
 
-    let omp_uninstall = run_rtk(
+    let omp_uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global", "--uninstall"],
@@ -301,12 +301,12 @@ fn relocated_global_legacy_fallback_warns_but_proceeds() {
     let project = tempfile::tempdir().unwrap();
     let agent_dir = project.path().join("pi-agent");
     let extension_dir = agent_dir.join("extensions");
-    let extension = extension_dir.join("rtk.ts");
+    let extension = extension_dir.join("ptk.ts");
     std::fs::create_dir_all(&extension_dir).unwrap();
-    std::fs::write(&extension, include_str!("../hooks/pi/rtk.ts")).unwrap();
+    std::fs::write(&extension, include_str!("../hooks/pi/ptk.ts")).unwrap();
     std::fs::create_dir_all(project.path().join(".omp")).unwrap();
 
-    let uninstall = run_rtk(
+    let uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -319,9 +319,9 @@ fn relocated_global_legacy_fallback_warns_but_proceeds() {
     assert!(!stderr(&uninstall).contains("share the global extension path"));
     assert!(!extension.exists());
 
-    std::fs::write(&extension, include_str!("../hooks/pi/rtk.ts")).unwrap();
+    std::fs::write(&extension, include_str!("../hooks/pi/ptk.ts")).unwrap();
     std::fs::create_dir_all(project.path().join("home/.omp")).unwrap();
-    let fallback = run_rtk(
+    let fallback = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -340,12 +340,12 @@ fn relocated_global_legacy_fallback_warns_but_proceeds() {
 fn preexisting_shared_extension_without_sidecar_stays_uncertain() {
     let project = TempDir::new().unwrap();
     let agent_dir = project.path().join("pi-agent");
-    let extension = agent_dir.join("extensions/rtk.ts");
-    let ownership = agent_dir.join("extensions/.rtk-agents");
+    let extension = agent_dir.join("extensions/ptk.ts");
+    let ownership = agent_dir.join("extensions/.ptk-agents");
     std::fs::create_dir_all(extension.parent().unwrap()).unwrap();
-    std::fs::write(&extension, include_str!("../hooks/pi/rtk.ts")).unwrap();
+    std::fs::write(&extension, include_str!("../hooks/pi/ptk.ts")).unwrap();
 
-    let install = run_rtk(
+    let install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global"],
@@ -361,7 +361,7 @@ fn preexisting_shared_extension_without_sidecar_stays_uncertain() {
         "a pre-existing extension without ownership must not become OMP-only"
     );
 
-    let uninstall = run_rtk(
+    let uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -379,10 +379,10 @@ fn preexisting_shared_extension_without_sidecar_stays_uncertain() {
 fn unreadable_ownership_sidecar_warns_without_erasing_state() {
     let project = TempDir::new().unwrap();
     let agent_dir = project.path().join("omp-agent");
-    let extension = agent_dir.join("extensions/rtk.ts");
-    let ownership = agent_dir.join("extensions/.rtk-agents");
+    let extension = agent_dir.join("extensions/ptk.ts");
+    let ownership = agent_dir.join("extensions/.ptk-agents");
 
-    let pi_install = run_rtk(
+    let pi_install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global"],
@@ -394,7 +394,7 @@ fn unreadable_ownership_sidecar_warns_without_erasing_state() {
     );
     std::fs::write(&ownership, [0xff, 0xfe, 0xfd]).unwrap();
 
-    let omp_install = run_rtk(
+    let omp_install = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global"],
@@ -410,7 +410,7 @@ fn unreadable_ownership_sidecar_warns_without_erasing_state() {
     assert_eq!(std::fs::read(&ownership).unwrap(), [0xff, 0xfe, 0xfd]);
     assert!(extension.exists());
 
-    let pi_uninstall = run_rtk(
+    let pi_uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -430,11 +430,11 @@ fn unreadable_ownership_sidecar_warns_without_erasing_state() {
 fn relocated_install_reconciles_stale_ownership_after_manual_delete() {
     let project = TempDir::new().unwrap();
     let agent_dir = project.path().join("omp-agent");
-    let extension = agent_dir.join("extensions/rtk.ts");
-    let ownership = agent_dir.join("extensions/.rtk-agents");
+    let extension = agent_dir.join("extensions/ptk.ts");
+    let ownership = agent_dir.join("extensions/.ptk-agents");
 
     for agent in ["pi", "omp"] {
-        let install = run_rtk(
+        let install = run_ptk(
             project.path(),
             &agent_dir,
             &["init", "--agent", agent, "--global"],
@@ -448,7 +448,7 @@ fn relocated_install_reconciles_stale_ownership_after_manual_delete() {
     assert_eq!(std::fs::read_to_string(&ownership).unwrap(), "omp\npi\n");
 
     std::fs::remove_file(&extension).unwrap();
-    let reinstall = run_rtk(
+    let reinstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global"],
@@ -460,7 +460,7 @@ fn relocated_install_reconciles_stale_ownership_after_manual_delete() {
     );
     assert_eq!(std::fs::read_to_string(&ownership).unwrap(), "pi\n");
 
-    let uninstall = run_rtk(
+    let uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--global", "--uninstall"],
@@ -481,17 +481,17 @@ fn pi_modified_uninstall_dry_run_is_non_failing_preview() {
     let agent_dir = project.path().join("pi-agent");
     let extension_dir = project.path().join(".pi/extensions");
     std::fs::create_dir_all(&extension_dir).unwrap();
-    let extension = extension_dir.join("rtk.ts");
+    let extension = extension_dir.join("ptk.ts");
     std::fs::write(
         &extension,
         format!(
             "{}\n// user modification\n",
-            include_str!("../hooks/pi/rtk.ts")
+            include_str!("../hooks/pi/ptk.ts")
         ),
     )
     .unwrap();
 
-    let output = run_rtk(
+    let output = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "pi", "--uninstall", "--dry-run"],
@@ -513,17 +513,17 @@ fn omp_modified_uninstall_dry_run_is_non_failing_preview() {
     let agent_dir = project.path().join("omp-agent");
     let extension_dir = project.path().join(".omp/extensions");
     std::fs::create_dir_all(&extension_dir).unwrap();
-    let extension = extension_dir.join("rtk.ts");
+    let extension = extension_dir.join("ptk.ts");
     std::fs::write(
         &extension,
         format!(
             "{}\n// user modification\n",
-            include_str!("../hooks/pi/rtk.ts")
+            include_str!("../hooks/pi/ptk.ts")
         ),
     )
     .unwrap();
 
-    let output = run_rtk(
+    let output = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--uninstall", "--dry-run"],
@@ -546,15 +546,15 @@ fn omp_show_distinguishes_modified_and_unrelated_content() {
     let extension_dir = agent_dir.join("extensions");
     std::fs::create_dir_all(&extension_dir).unwrap();
     std::fs::write(
-        extension_dir.join("rtk.ts"),
+        extension_dir.join("ptk.ts"),
         format!(
             "{}\n// user modification\n",
-            include_str!("../hooks/pi/rtk.ts")
+            include_str!("../hooks/pi/ptk.ts")
         ),
     )
     .unwrap();
 
-    let output = run_rtk(
+    let output = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global", "--show"],
@@ -566,20 +566,20 @@ fn omp_show_distinguishes_modified_and_unrelated_content() {
         stderr(&output)
     );
     assert!(stdout(&output).contains(
-        "modified RTK content - rtk init will ask before overwriting; use --auto-patch to replace"
+        "modified PTK content - ptk init will ask before overwriting; use --auto-patch to replace"
     ));
     assert!(!stdout(&output).contains("will refuse to overwrite"));
     assert!(stdout(&output).contains(&format!(
         "# Configure {}",
-        extension_dir.join("rtk.ts").display()
+        extension_dir.join("ptk.ts").display()
     )));
 
     std::fs::write(
-        extension_dir.join("rtk.ts"),
+        extension_dir.join("ptk.ts"),
         "// unrelated user file\nexport default () => {}\n",
     )
     .unwrap();
-    let unrelated = run_rtk(
+    let unrelated = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global", "--show"],
@@ -590,7 +590,7 @@ fn omp_show_distinguishes_modified_and_unrelated_content() {
         stderr(&unrelated)
     );
     assert!(stdout(&unrelated).contains(
-        "unrelated content - rtk init will ask before overwriting; use --auto-patch to replace"
+        "unrelated content - ptk init will ask before overwriting; use --auto-patch to replace"
     ));
 }
 
@@ -600,9 +600,9 @@ fn omp_show_reports_unreadable_extension_and_continues() {
     let agent_dir = project.path().join("omp-agent");
     let extension_dir = agent_dir.join("extensions");
     std::fs::create_dir_all(&extension_dir).unwrap();
-    std::fs::write(extension_dir.join("rtk.ts"), [0xff, 0xfe, 0xfd]).unwrap();
+    std::fs::write(extension_dir.join("ptk.ts"), [0xff, 0xfe, 0xfd]).unwrap();
 
-    let output = run_rtk(
+    let output = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global", "--show"],
@@ -623,12 +623,12 @@ fn omp_unreadable_install_is_recoverable_with_auto_patch() {
     let project = TempDir::new().unwrap();
     let agent_dir = project.path().join("omp-agent");
     let extension_dir = agent_dir.join("extensions");
-    let extension = extension_dir.join("rtk.ts");
+    let extension = extension_dir.join("ptk.ts");
     std::fs::create_dir_all(&extension_dir).unwrap();
     let original = [0xff, 0xfe, 0xfd];
     std::fs::write(&extension, original).unwrap();
 
-    let dry_run = run_rtk(
+    let dry_run = run_ptk(
         project.path(),
         &agent_dir,
         &[
@@ -649,7 +649,7 @@ fn omp_unreadable_install_is_recoverable_with_auto_patch() {
     assert!(stdout(&dry_run).contains("[dry-run] would update OMP extension"));
     assert_eq!(std::fs::read(&extension).unwrap(), original);
 
-    let auto = run_rtk(
+    let auto = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global", "--auto-patch"],
@@ -661,7 +661,7 @@ fn omp_unreadable_install_is_recoverable_with_auto_patch() {
     );
     assert_eq!(
         std::fs::read_to_string(&extension).unwrap(),
-        include_str!("../hooks/pi/rtk.ts")
+        include_str!("../hooks/pi/ptk.ts")
     );
 }
 
@@ -670,11 +670,11 @@ fn omp_unreadable_uninstall_is_dry_run_preview_but_normal_failure() {
     let project = TempDir::new().unwrap();
     let agent_dir = project.path().join("omp-agent");
     let extension_dir = agent_dir.join("extensions");
-    let extension = extension_dir.join("rtk.ts");
+    let extension = extension_dir.join("ptk.ts");
     std::fs::create_dir_all(&extension_dir).unwrap();
     std::fs::write(&extension, [0xff, 0xfe, 0xfd]).unwrap();
 
-    let dry_run = run_rtk(
+    let dry_run = run_ptk(
         project.path(),
         &agent_dir,
         &[
@@ -695,7 +695,7 @@ fn omp_unreadable_uninstall_is_dry_run_preview_but_normal_failure() {
     assert!(stdout(&dry_run).contains("[dry-run] Nothing written."));
     assert!(extension.exists());
 
-    let uninstall = run_rtk(
+    let uninstall = run_ptk(
         project.path(),
         &agent_dir,
         &["init", "--agent", "omp", "--global", "--uninstall"],
@@ -715,15 +715,15 @@ fn symlinked_global_agent_directories_are_detected_as_shared() {
     let home = project.path().join("home");
     let pi_agent = home.join(".pi/agent");
     let omp_agent = home.join(".omp/agent");
-    let extension = pi_agent.join("extensions/rtk.ts");
-    let ownership = pi_agent.join("extensions/.rtk-agents");
+    let extension = pi_agent.join("extensions/ptk.ts");
+    let ownership = pi_agent.join("extensions/.ptk-agents");
 
     std::fs::create_dir_all(extension.parent().unwrap()).unwrap();
     std::fs::create_dir_all(omp_agent.parent().unwrap()).unwrap();
     symlink(&pi_agent, &omp_agent).unwrap();
 
     let install =
-        run_rtk_without_agent_dir(project.path(), &["init", "--agent", "omp", "--global"]);
+        run_ptk_without_agent_dir(project.path(), &["init", "--agent", "omp", "--global"]);
     assert!(
         install.status.success(),
         "OMP install through a symlinked agent directory failed: {}",
@@ -732,7 +732,7 @@ fn symlinked_global_agent_directories_are_detected_as_shared() {
     assert!(stderr(&install).contains("resolve to the same global extension path"));
     assert_eq!(std::fs::read_to_string(&ownership).unwrap(), "omp\n");
 
-    let uninstall = run_rtk_without_agent_dir(
+    let uninstall = run_ptk_without_agent_dir(
         project.path(),
         &["init", "--agent", "pi", "--global", "--uninstall"],
     );
@@ -749,19 +749,19 @@ fn symlinked_global_agent_directories_are_detected_as_shared() {
 fn symlinked_global_extension_files_share_one_ownership_state() {
     let project = TempDir::new().unwrap();
     let home = project.path().join("home");
-    let pi_extension = home.join(".pi/agent/extensions/rtk.ts");
-    let omp_extension = home.join(".omp/agent/extensions/rtk.ts");
-    let pi_ownership = pi_extension.with_file_name(".rtk-agents");
-    let omp_ownership = omp_extension.with_file_name(".rtk-agents");
+    let pi_extension = home.join(".pi/agent/extensions/ptk.ts");
+    let omp_extension = home.join(".omp/agent/extensions/ptk.ts");
+    let pi_ownership = pi_extension.with_file_name(".ptk-agents");
+    let omp_ownership = omp_extension.with_file_name(".ptk-agents");
 
     std::fs::create_dir_all(pi_extension.parent().unwrap()).unwrap();
     std::fs::create_dir_all(omp_extension.parent().unwrap()).unwrap();
-    std::fs::write(&pi_extension, include_str!("../hooks/pi/rtk.ts")).unwrap();
+    std::fs::write(&pi_extension, include_str!("../hooks/pi/ptk.ts")).unwrap();
     std::fs::write(&pi_ownership, "pi\n").unwrap();
     symlink(&pi_extension, &omp_extension).unwrap();
 
     let omp_install =
-        run_rtk_without_agent_dir(project.path(), &["init", "--agent", "omp", "--global"]);
+        run_ptk_without_agent_dir(project.path(), &["init", "--agent", "omp", "--global"]);
     assert!(
         omp_install.status.success(),
         "OMP install through a file symlink failed: {}",
@@ -770,7 +770,7 @@ fn symlinked_global_extension_files_share_one_ownership_state() {
     assert!(stderr(&omp_install).contains("share the global extension path"));
 
     let pi_install =
-        run_rtk_without_agent_dir(project.path(), &["init", "--agent", "pi", "--global"]);
+        run_ptk_without_agent_dir(project.path(), &["init", "--agent", "pi", "--global"]);
     assert!(
         pi_install.status.success(),
         "Pi install through a file symlink failed: {}",
@@ -782,7 +782,7 @@ fn symlinked_global_extension_files_share_one_ownership_state() {
         "file-level aliases must not split ownership state"
     );
 
-    let uninstall = run_rtk_without_agent_dir(
+    let uninstall = run_ptk_without_agent_dir(
         project.path(),
         &["init", "--agent", "pi", "--global", "--uninstall"],
     );
@@ -794,7 +794,7 @@ fn symlinked_global_extension_files_share_one_ownership_state() {
     assert!(pi_extension.exists());
     assert!(omp_extension.exists());
 
-    let omp_uninstall = run_rtk_without_agent_dir(
+    let omp_uninstall = run_ptk_without_agent_dir(
         project.path(),
         &[
             "init",
@@ -825,13 +825,13 @@ fn symlinked_project_agent_directories_are_detected_as_shared() {
     let project = TempDir::new().unwrap();
     let pi_dir = project.path().join(".pi");
     let omp_dir = project.path().join(".omp");
-    let pi_extension = pi_dir.join("extensions/rtk.ts");
-    let ownership = pi_dir.join("extensions/.rtk-agents");
+    let pi_extension = pi_dir.join("extensions/ptk.ts");
+    let ownership = pi_dir.join("extensions/.ptk-agents");
 
     std::fs::create_dir_all(pi_extension.parent().unwrap()).unwrap();
     symlink(&pi_dir, &omp_dir).unwrap();
 
-    let omp_install = run_rtk_without_agent_dir(project.path(), &["init", "--agent", "omp"]);
+    let omp_install = run_ptk_without_agent_dir(project.path(), &["init", "--agent", "omp"]);
     assert!(
         omp_install.status.success(),
         "project-local OMP install through a symlink failed: {}",
@@ -839,7 +839,7 @@ fn symlinked_project_agent_directories_are_detected_as_shared() {
     );
     assert!(stderr(&omp_install).contains("resolve to the same project extension path"));
 
-    let pi_install = run_rtk_without_agent_dir(project.path(), &["init", "--agent", "pi"]);
+    let pi_install = run_ptk_without_agent_dir(project.path(), &["init", "--agent", "pi"]);
     assert!(
         pi_install.status.success(),
         "project-local Pi install through a symlink failed: {}",
@@ -848,7 +848,7 @@ fn symlinked_project_agent_directories_are_detected_as_shared() {
     assert!(stderr(&pi_install).contains("share the project extension path"));
     assert_eq!(std::fs::read_to_string(&ownership).unwrap(), "omp\npi\n");
 
-    let pi_uninstall = run_rtk_without_agent_dir(
+    let pi_uninstall = run_ptk_without_agent_dir(
         project.path(),
         &["init", "--agent", "pi", "--uninstall", "--no-patch"],
     );

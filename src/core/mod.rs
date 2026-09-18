@@ -1,10 +1,11 @@
-//! Building blocks shared across all RTK modules.
+//! Building blocks shared across all PTK modules.
 
 pub mod arg_tokenizer;
 pub mod args_utils;
 pub mod config;
 pub mod constants;
 pub mod display_helpers;
+pub mod env_compat;
 pub mod filter;
 pub mod guard;
 pub mod retriever;

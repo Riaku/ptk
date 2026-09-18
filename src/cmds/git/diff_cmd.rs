@@ -47,12 +47,12 @@ pub fn run(file1: &Path, file2: &Path, verbose: u8) -> Result<i32> {
 
     let comparison = compare_files(&content1, &content2);
     let fallback = classic_fallback(&comparison);
-    let (rtk, exit_code) = render_diff(file1, file2, &comparison);
-    let shown = select_file_diff_output(&comparison, &fallback, &both_files, &rtk);
+    let (ptk, exit_code) = render_diff(file1, file2, &comparison);
+    let shown = select_file_diff_output(&comparison, &fallback, &both_files, &ptk);
     print!("{}", shown);
     timer.track(
         &format!("diff {} {}", file1.display(), file2.display()),
-        "rtk diff",
+        "ptk diff",
         tracking_baseline(&fallback, &both_files, shown),
         shown,
     );
@@ -186,7 +186,7 @@ fn render_diff(file1: &Path, file2: &Path, comparison: &FileComparison) -> (Stri
             };
             return (
                 format!(
-                    "{} {}, {}; use `rtk proxy diff` for the full text\n",
+                    "{} {}, {}; use `ptk proxy diff` for the full text\n",
                     count_lines(*count),
                     verb,
                     reason
@@ -208,7 +208,7 @@ fn render_diff(file1: &Path, file2: &Path, comparison: &FileComparison) -> (Stri
             // like one invites reading it as the amount of change.
             return (
                 format!(
-                    "at least {} lines differ, too different to align line by line\ndifferences fall between lines {}-{} of {} and {}-{} of {}; use `rtk proxy diff` for the full text\n",
+                    "at least {} lines differ, too different to align line by line\ndifferences fall between lines {}-{} of {} and {}-{} of {}; use `ptk proxy diff` for the full text\n",
                     differing_floor,
                     first,
                     last1,
@@ -243,7 +243,7 @@ fn render_diff(file1: &Path, file2: &Path, comparison: &FileComparison) -> (Stri
             };
             return (
                 format!(
-                    "{} changed in {}, {} changed in {}; {}, use `rtk proxy diff` for the full text\n",
+                    "{} changed in {}, {} changed in {}; {}, use `ptk proxy diff` for the full text\n",
                     count_lines(*removed),
                     file1.display(),
                     count_lines(*added),
@@ -262,9 +262,9 @@ fn render_diff(file1: &Path, file2: &Path, comparison: &FileComparison) -> (Stri
     // is long enough to need a summary; below that it is the whole margin.
     // It keeps its indent so it cannot be mistaken for a listed line.
     let listing = format_diff_changes(diff);
-    let mut rtk = String::new();
+    let mut ptk = String::new();
     if listing.lines().count() >= COUNTS_MIN_LISTED_LINES {
-        rtk.push_str(&format!(
+        ptk.push_str(&format!(
             "   +{} added, -{} removed, ~{} modified\n",
             diff.added, diff.removed, diff.modified
         ));
@@ -272,13 +272,13 @@ fn render_diff(file1: &Path, file2: &Path, comparison: &FileComparison) -> (Stri
     if diff.positional {
         // The pairing is by line position, not by alignment. Saying so is the
         // difference between a non-minimal diff and a misleading one.
-        rtk.push_str("   paired by line position: too different to align\n");
+        ptk.push_str("   paired by line position: too different to align\n");
     }
     if let Some(legend) = frame_legend(diff) {
-        rtk.push_str(&legend);
+        ptk.push_str(&legend);
     }
-    rtk.push_str(&listing);
-    (rtk, 1)
+    ptk.push_str(&listing);
+    (ptk, 1)
 }
 
 /// Listed lines from which the render opens with the counts line.
@@ -464,7 +464,7 @@ pub fn run_stdin(_verbose: u8) -> Result<()> {
             println!("{}", condensed);
             timer.track(
                 "diff (stdin)",
-                "rtk diff (stdin)",
+                "ptk diff (stdin)",
                 &String::from_utf8_lossy(&bytes),
                 &condensed,
             );
@@ -480,7 +480,7 @@ pub fn run_stdin(_verbose: u8) -> Result<()> {
                 writeln!(out).context("Failed to write raw diff to stdout")?;
             }
             let raw = String::from_utf8_lossy(&bytes);
-            timer.track("diff (stdin)", "rtk diff (stdin)", &raw, &raw);
+            timer.track("diff (stdin)", "ptk diff (stdin)", &raw, &raw);
         }
     }
 
@@ -853,7 +853,7 @@ enum Op {
 /// slot, since a round computes one parity and the backtrack reads the other —
 /// is what buys half of that reach at no cost in memory.
 ///
-/// The remaining headroom is bounded by RTK's own budgets rather than by the
+/// The remaining headroom is bounded by PTK's own budgets rather than by the
 /// algorithm. 4MB of trace against the 5MB in CLAUDE.md, and the search that
 /// fills it costs ~7ms of user time against the 10ms there. Both are spent
 /// only by a pair that actually changed that much; a typical diff never
@@ -3891,7 +3891,7 @@ mod tests {
             "got:\n{}",
             out
         );
-        assert!(out.contains("rtk proxy diff"), "got:\n{}", out);
+        assert!(out.contains("ptk proxy diff"), "got:\n{}", out);
         assert!(
             out.lines().count() <= 2,
             "the refusal must not grow with the input, got:\n{}",
@@ -4150,8 +4150,8 @@ mod tests {
         let content1 = "a,b\nc,d\ne,f\n";
         let content2 = "a,b\r\nc,d\r\ne,f\r\n";
         let (shown, _) = shown_for(
-            "/home/user/projects/rtk/tests/fixtures/expected_output.csv",
-            "/home/user/projects/rtk/tests/fixtures/actual_output.csv",
+            "/home/user/projects/ptk/tests/fixtures/expected_output.csv",
+            "/home/user/projects/ptk/tests/fixtures/actual_output.csv",
             content1,
             content2,
         );
@@ -5777,7 +5777,7 @@ diff --git a/b.rs b/b.rs
         // Escapes that are the *content* (snapshot fixtures of colouring
         // tools) were stripped along with git's decoration, so a reviewer
         // could not see whether the escapes were what changed. The file
-        // path (`rtk diff a b`) was already byte-faithful on the same
+        // path (`ptk diff a b`) was already byte-faithful on the same
         // content; the stdin path now is too.
         let diff = "diff --git a/s b/s\n--- a/s\n+++ b/s\n@@ -1 +1 @@\n-\u{1b}[31merror\u{1b}[0m old\n+\u{1b}[31merror\u{1b}[0m new\n";
         let out = condense_stdin(diff.as_bytes()).expect("must parse");
@@ -7382,7 +7382,7 @@ diff --git a/b.rs b/b.rs
         // are pre-pairing, and these two lines are 99.99991% identical.
         assert_eq!(
             out,
-            "1 line changed in a.txt, 1 line changed in b.txt; 2.2MB of text, too large to list, use `rtk proxy diff` for the full text\n"
+            "1 line changed in a.txt, 1 line changed in b.txt; 2.2MB of text, too large to list, use `ptk proxy diff` for the full text\n"
         );
 
         // The one-sided path reaches the same budget through `DifferingLines`.
@@ -7391,7 +7391,7 @@ diff --git a/b.rs b/b.rs
         assert_eq!(code, 1);
         assert_eq!(
             out,
-            "1 line differs, 3.0MB of text, too large to list; use `rtk proxy diff` for the full text\n"
+            "1 line differs, 3.0MB of text, too large to list; use `ptk proxy diff` for the full text\n"
         );
     }
 }

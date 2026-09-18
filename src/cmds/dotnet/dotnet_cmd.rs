@@ -64,7 +64,7 @@ pub fn run_format(args: &[String], verbose: u8) -> Result<i32> {
 
     timer.track(
         &format!("dotnet format {}", args.join(" ")),
-        &format!("rtk dotnet format {}", args.join(" ")),
+        &format!("ptk dotnet format {}", args.join(" ")),
         &raw,
         shown,
     );
@@ -105,7 +105,7 @@ pub fn run_passthrough(args: &[OsString], verbose: u8) -> Result<i32> {
 
     timer.track(
         &format!("dotnet {}", subcommand),
-        &format!("rtk dotnet {}", subcommand),
+        &format!("ptk dotnet {}", subcommand),
         &raw,
         &raw,
     );
@@ -251,7 +251,7 @@ fn run_dotnet_with_binlog(subcommand: &str, args: &[String], verbose: u8) -> Res
 
     timer.track(
         &format!("dotnet {} {}", subcommand, args.join(" ")),
-        &format!("rtk dotnet {} {}", subcommand, args.join(" ")),
+        &format!("ptk dotnet {} {}", subcommand, args.join(" ")),
         &raw,
         shown,
     );
@@ -270,14 +270,14 @@ fn run_dotnet_with_binlog(subcommand: &str, args: &[String], verbose: u8) -> Res
 
 fn build_binlog_path(subcommand: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
-        "rtk_dotnet_{}_{}.binlog",
+        "ptk_dotnet_{}_{}.binlog",
         subcommand,
         unique_temp_suffix()
     ))
 }
 
 fn build_trx_results_dir() -> PathBuf {
-    std::env::temp_dir().join(format!("rtk_dotnet_testresults_{}", unique_temp_suffix()))
+    std::env::temp_dir().join(format!("ptk_dotnet_testresults_{}", unique_temp_suffix()))
 }
 
 fn unique_temp_suffix() -> String {
@@ -309,7 +309,7 @@ fn resolve_trx_results_dir(
 }
 
 fn build_format_report_path() -> PathBuf {
-    std::env::temp_dir().join(format!("rtk_dotnet_format_{}.json", unique_temp_suffix()))
+    std::env::temp_dir().join(format!("ptk_dotnet_format_{}.json", unique_temp_suffix()))
 }
 
 fn resolve_format_report_path(tokens: &[Token<'_>]) -> (Option<PathBuf>, bool) {
@@ -339,7 +339,7 @@ fn build_effective_dotnet_format_args(
 
     // Injected flags go before the user's own `--`: dotnet parks everything past it in
     // UnparsedTokens, so a `--verify-no-changes` after the boundary never applies and format
-    // rewrites the tree while RTK still reports check mode.
+    // rewrites the tree while PTK still reports check mode.
     let boundary = arg_tokenizer::injection_point(tokens, args.len());
     let write_args: Vec<usize> = write_override_tokens(tokens)
         .map(|t| t.source_index)
@@ -588,7 +588,7 @@ fn build_effective_dotnet_args(
 }
 
 fn has_binlog_arg(tokens: &[Token<'_>]) -> bool {
-    // Unscoped: wherever the user put `-bl`, that is the binlog that gets written, and RTK
+    // Unscoped: wherever the user put `-bl`, that is the binlog that gets written, and PTK
     // adding its own would give MSBuild two binary loggers and parse the wrong one.
     arg_tokenizer::has_flag(tokens, Dialect::Msbuild, "bl")
 }
@@ -792,7 +792,7 @@ fn detect_test_runner_mode_in_dir(tokens: &[Token<'_>], scan_dir: &Path) -> Test
     TestRunnerMode::Classic
 }
 
-/// The value-taking flags that matter for RTK's own decisions, not every flag dotnet accepts:
+/// The value-taking flags that matter for PTK's own decisions, not every flag dotnet accepts:
 /// a missing entry leaves the value as a free positional, which `detect_test_runner_mode`'s
 /// project-path scan then has to filter by extension for exactly that reason.
 fn dotnet_takes_value(kind: TokenKind, name: &str) -> Option<ValueSpec> {
@@ -874,7 +874,7 @@ fn has_trx_logger_arg(tokens: &[Token<'_>]) -> bool {
     //
     // Scoped to dotnet's own region, unlike the results-directory lookups below: `dotnet test
     // --help` says the arguments after `--` go "to the application that is being run", so a
-    // `--logger` there is the test app's, not VSTest's, and RTK still owes it a trx logger.
+    // `--logger` there is the test app's, not VSTest's, and PTK still owes it a trx logger.
     let own = dotnet_own_tokens(tokens);
     arg_tokenizer::double_dash_flag_values(own, Dialect::Msbuild, "logger")
         .chain(
@@ -956,15 +956,15 @@ fn has_verify_no_changes_arg(tokens: &[Token<'_>]) -> bool {
     dotnet_has_flag(tokens, "verify-no-changes")
 }
 
-/// The `--write` tokens RTK owns: its own pseudo-flag, stripped before forwarding to real
+/// The `--write` tokens PTK owns: its own pseudo-flag, stripped before forwarding to real
 /// dotnet (which has no `--write`). Detection and stripping both go through here so they
-/// cannot drift -- an attached `--write=true` is not RTK's flag and must pass through, while
-/// one past `--` is still RTK's, since no dotnet option of that name exists for the boundary
+/// cannot drift -- an attached `--write=true` is not PTK's flag and must pass through, while
+/// one past `--` is still PTK's, since no dotnet option of that name exists for the boundary
 /// to be forwarding it to.
 fn write_override_tokens<'t, 'a>(
     tokens: &'t [Token<'a>],
 ) -> impl Iterator<Item = &'t Token<'a>> + 't {
-    // Unscoped: `--write` is RTK's own pseudo-flag, so it has no dotnet counterpart that the
+    // Unscoped: `--write` is PTK's own pseudo-flag, so it has no dotnet counterpart that the
     // `--` boundary could be forwarding it to -- past the boundary it would be neither
     // honored nor stripped, and real dotnet would choke on it.
     tokens.iter().filter(|t| {
@@ -1544,7 +1544,7 @@ mod tests {
         assert!(!has_binlog_arg(&tokenize_dotnet_args(&args)));
 
         // `/r` is MSBuild's boolean restore, not dotnet's `-r <rid>`: if it swallowed the next
-        // arg, RTK would inject a second -bl on top of the user's own.
+        // arg, PTK would inject a second -bl on top of the user's own.
         let args = vec!["/r".to_string(), "-bl:my.binlog".to_string()];
         assert!(has_binlog_arg(&tokenize_dotnet_args(&args)));
     }
@@ -2308,7 +2308,7 @@ mod tests {
     #[test]
     fn test_single_segment_absolute_project_is_a_path_not_a_switch() {
         // `/Other.csproj` tokenizes as a slash flag (structure alone can't tell it from an
-        // MSBuild switch), and being missed from the explicit projects made RTK scan the cwd
+        // MSBuild switch), and being missed from the explicit projects made PTK scan the cwd
         // and adopt an unrelated project's runner mode.
         let temp_dir = tempfile::tempdir().expect("create temp dir");
         fs::write(
@@ -2340,14 +2340,14 @@ mod tests {
     #[test]
     fn test_forwarded_args_do_not_suppress_injection() {
         // Everything past `--` goes to the test runner, not to dotnet, so a `--logger` there
-        // is not the user asking dotnet for a logger -- RTK still has to inject its own.
+        // is not the user asking dotnet for a logger -- PTK still has to inject its own.
         let args = vec!["--".to_string(), "--logger".to_string(), "trx".to_string()];
         let injected = build_dotnet_args_for_test("test", &args, true);
         let boundary = injected.iter().position(|a| a == "--").expect("boundary");
         let logger = injected
             .windows(2)
             .position(|w| w == ["--logger", "trx"])
-            .expect("RTK's own logger");
+            .expect("PTK's own logger");
         assert!(logger < boundary, "{injected:?}");
 
         let args = vec!["--".to_string(), "--nologo".to_string()];
@@ -2373,7 +2373,7 @@ mod tests {
             );
         }
 
-        // MSBuild's `/l:` attaches a logger *assembly*, not VSTest's trx logger, so RTK's own
+        // MSBuild's `/l:` attaches a logger *assembly*, not VSTest's trx logger, so PTK's own
         // injection still has to happen.
         let args = vec!["/l:trx".to_string()];
         let injected = build_dotnet_args_for_test("test", &args, true);
@@ -3088,7 +3088,7 @@ mod tests {
     fn test_results_directory_past_the_boundary_is_the_apps_in_classic_mode() {
         // Verified against the real SDK 9: with `dotnet test -- --results-directory X`, a
         // Classic/VSTest run writes its TRX to ./TestResults and the flag reaches the test app
-        // instead. Reading it as dotnet's own suppressed RTK's injection and left that TRX
+        // instead. Reading it as dotnet's own suppressed PTK's injection and left that TRX
         // behind in the user's project, unclaimed and never cleaned up.
         let args = vec![
             "--".to_string(),
@@ -3103,7 +3103,7 @@ mod tests {
             None
         );
         let (dir, cleanup) = resolve_trx_results_dir("test", &tokens, TestRunnerMode::Classic);
-        assert!(cleanup, "RTK's own temp dir, so RTK cleans it up");
+        assert!(cleanup, "PTK's own temp dir, so PTK cleans it up");
         assert_ne!(dir, Some(PathBuf::from("/tmp/rd2")));
 
         // The bridge runner really does read its own copy from past the `--`.
@@ -3203,7 +3203,7 @@ mod tests {
     fn test_format_injects_before_the_users_double_dash() {
         // dotnet parks everything past `--` in UnparsedTokens, so an injected
         // `--verify-no-changes` after the boundary never applies -- format would rewrite the
-        // tree while RTK reported check mode.
+        // tree while PTK reported check mode.
         let args = vec!["--".to_string(), "./src".to_string()];
 
         let tokens = tokenize_dotnet_args(&args);
@@ -3227,7 +3227,7 @@ mod tests {
     fn test_write_override_detection_and_stripping_agree_on_attached_values() {
         // Detection must agree with stripping: an attached-value spelling ("--write=true") isn't
         // recognized as the --write pseudo-flag at all, so it passes through untouched instead
-        // of being silently swallowed while RTK's own injection still fires.
+        // of being silently swallowed while PTK's own injection still fires.
         let args = vec!["--write=true".to_string()];
         let tokens = tokenize_dotnet_args(&args);
         assert!(!has_write_mode_override(&tokens));
@@ -3237,7 +3237,7 @@ mod tests {
             effective.contains(&"--write=true".to_string()),
             "an unrecognized flag must pass through untouched, not be silently dropped: {effective:?}"
         );
-        // Since it wasn't recognized as an override, RTK still defaults to its own safe
+        // Since it wasn't recognized as an override, PTK still defaults to its own safe
         // check-only mode.
         assert!(effective.contains(&"--verify-no-changes".to_string()));
 

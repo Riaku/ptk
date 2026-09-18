@@ -1,8 +1,8 @@
 //! End-to-end coverage of the hook decision entry points.
 //!
-//! `rtk rewrite`'s exit-code protocol is a public contract consumed entirely
-//! outside this crate -- `hooks/hermes/rtk-rewrite/__init__.py`,
-//! `hooks/opencode/rtk.ts`, `hooks/pi/rtk.ts` and `openclaw/index.ts` all
+//! `ptk rewrite`'s exit-code protocol is a public contract consumed entirely
+//! outside this crate -- `hooks/hermes/ptk-rewrite/__init__.py`,
+//! `hooks/opencode/ptk.ts`, `hooks/pi/ptk.ts` and `openclaw/index.ts` all
 //! branch on it -- and `rewrite_cmd`'s in-module `exit_code_protocol` asserts
 //! against a hand-copied `expected_exit_code()` table without ever calling
 //! `run()`. These tests spawn the real binary in a sandboxed
@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// An isolated machine: no developer settings, no user rtk config, no real HOME.
+/// An isolated machine: no developer settings, no user ptk config, no real HOME.
 struct Sandbox {
     _root: TempDir,
     home: PathBuf,
@@ -75,18 +75,18 @@ impl Sandbox {
             .env("HOME", &self.home)
             .env("XDG_CONFIG_HOME", self.home.join(".config"))
             .env("CLAUDE_CONFIG_DIR", &self.claude_home)
-            .env("RTK_DB_PATH", self.project.join("rtk.db"))
-            .env("RTK_TEE_DIR", self.tee_dir())
-            .env("RTK_RECALL_DB", self.recall_db())
+            .env("PTK_DB_PATH", self.project.join("ptk.db"))
+            .env("PTK_TEE_DIR", self.tee_dir())
+            .env("PTK_RECALL_DB", self.recall_db())
             .env("LC_ALL", "C")
             .output()
-            .expect("spawn rtk");
+            .expect("spawn ptk");
         let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
         // A crash produces empty stdout too, which would let every "expect no
         // output" assertion below pass vacuously.
         assert!(
             !stderr.contains("panicked"),
-            "rtk panicked on {args:?}: {stderr}"
+            "ptk panicked on {args:?}: {stderr}"
         );
         (
             out.status.code().expect("exit code"),
@@ -140,29 +140,29 @@ impl Sandbox {
             .env("HOME", &self.home)
             .env("XDG_CONFIG_HOME", self.home.join(".config"))
             .env("CLAUDE_CONFIG_DIR", &self.claude_home)
-            .env("RTK_DB_PATH", self.project.join("rtk.db"))
-            .env("RTK_TEE_DIR", self.tee_dir())
-            .env("RTK_RECALL_DB", self.recall_db())
+            .env("PTK_DB_PATH", self.project.join("ptk.db"))
+            .env("PTK_TEE_DIR", self.tee_dir())
+            .env("PTK_RECALL_DB", self.recall_db())
             .env("LC_ALL", "C")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .expect("spawn rtk hook claude");
+            .expect("spawn ptk hook claude");
         child
             .stdin
             .take()
             .expect("stdin")
             .write_all(payload.as_bytes())
             .expect("write payload");
-        let out = child.wait_with_output().expect("wait rtk");
+        let out = child.wait_with_output().expect("wait ptk");
         // The hook protocol requires exit 0 whatever it decides; without this a
         // crash is indistinguishable from a deliberate defer, and every
         // `assert_eq!(..., None)` below would pass vacuously.
         assert_eq!(
             out.status.code(),
             Some(0),
-            "rtk hook claude exited non-zero for {cmd:?}: {}",
+            "ptk hook claude exited non-zero for {cmd:?}: {}",
             String::from_utf8_lossy(&out.stderr)
         );
         String::from_utf8_lossy(&out.stdout).into_owned()
@@ -181,7 +181,7 @@ impl Sandbox {
     }
 }
 
-/// `rtk rewrite`'s four documented exit codes, against real permission rules.
+/// `ptk rewrite`'s four documented exit codes, against real permission rules.
 ///
 /// The table in `rewrite_cmd`'s doc comment is the contract every delegate
 /// branches on; this is the only place it is checked end to end.
@@ -191,13 +191,13 @@ mod rewrite_exit_codes {
     #[test]
     fn allow_rule_exits_zero_with_the_rewrite() {
         let sb = Sandbox::with_rules(&[], &[], &["git status"]);
-        assert_eq!(sb.rewrite("git status"), (0, "rtk git status".into()));
+        assert_eq!(sb.rewrite("git status"), (0, "ptk git status".into()));
     }
 
     #[test]
     fn ask_rule_exits_three_with_the_rewrite() {
         let sb = Sandbox::with_rules(&[], &["git status"], &[]);
-        assert_eq!(sb.rewrite("git status"), (3, "rtk git status".into()));
+        assert_eq!(sb.rewrite("git status"), (3, "ptk git status".into()));
     }
 
     #[test]
@@ -231,7 +231,7 @@ mod rewrite_exit_codes {
         let sb = Sandbox::bare();
         let (code, stdout) = sb.rewrite("git status");
         assert_eq!(code, 3, "Default verdict must exit 3 (ask), not 0 (allow)");
-        assert_eq!(stdout, "rtk git status");
+        assert_eq!(stdout, "ptk git status");
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod rewrite_exit_codes {
         let sb = Sandbox::bare();
         assert_eq!(
             sb.rewrite("git status && cargo test"),
-            (3, "rtk git status && rtk cargo test".into())
+            (3, "ptk git status && ptk cargo test".into())
         );
     }
 
@@ -249,7 +249,7 @@ mod rewrite_exit_codes {
         let sb = Sandbox::bare();
         assert_eq!(
             sb.rewrite("git status 2>&1"),
-            (3, "rtk git status 2>&1".into())
+            (3, "ptk git status 2>&1".into())
         );
     }
 
@@ -278,8 +278,8 @@ mod rewrite_exit_codes {
 /// Reading back a tee artefact records a recall, and a denied command does not.
 ///
 /// Both entry points perform that bookkeeping themselves rather than through the
-/// shared decision, because the `rtk hook check` diagnostic must not write
-/// counters that `rtk gain` reports. Two hand-written copies of one rule is
+/// shared decision, because the `ptk hook check` diagnostic must not write
+/// counters that `ptk gain` reports. Two hand-written copies of one rule is
 /// exactly what drifts, and nothing else asserts it.
 mod recall_tracking {
     use super::Sandbox;
@@ -328,7 +328,7 @@ mod recall_tracking {
 
 /// The two decision paths, side by side on one corpus.
 ///
-/// `rtk rewrite` (subprocess path) and `rtk hook claude` (in-process path)
+/// `ptk rewrite` (subprocess path) and `ptk hook claude` (in-process path)
 /// answer the same question for the same command. Asserting both against one
 /// corpus keeps a change to either from silently moving them apart.
 ///
@@ -342,13 +342,13 @@ mod decision_consistency {
     fn both_paths_agree_on_the_corpus() {
         let sb = Sandbox::bare();
         let cases: [(&str, Option<&str>); 9] = [
-            ("git status", Some("rtk git status")),
+            ("git status", Some("ptk git status")),
             (
                 "git status && cargo test",
-                Some("rtk git status && rtk cargo test"),
+                Some("ptk git status && ptk cargo test"),
             ),
-            ("git status 2>&1", Some("rtk git status 2>&1")),
-            ("git log | head", Some("rtk git log | head")),
+            ("git status 2>&1", Some("ptk git status 2>&1")),
+            ("git log | head", Some("ptk git log | head")),
             ("htop", None),
             ("git status $(rm -rf /tmp/x)", None),
             ("git status `rm -rf /tmp/x`", None),
@@ -366,20 +366,20 @@ mod decision_consistency {
             assert_eq!(
                 via_rewrite.as_deref(),
                 expected,
-                "rtk rewrite disagreed with the pinned corpus for: {cmd}"
+                "ptk rewrite disagreed with the pinned corpus for: {cmd}"
             );
             assert_eq!(
                 via_hook.as_deref(),
                 expected,
-                "rtk hook claude disagreed with the pinned corpus for: {cmd}"
+                "ptk hook claude disagreed with the pinned corpus for: {cmd}"
             );
         }
     }
 
     /// The one place the two paths differ.
     ///
-    /// A command that is already RTK-prefixed rewrites to itself. Every hook
-    /// discards that; `rtk rewrite` reports it, exiting 3 with the command
+    /// A command that is already PTK-prefixed rewrites to itself. Every hook
+    /// discards that; `ptk rewrite` reports it, exiting 3 with the command
     /// unchanged on stdout. The plugins that shell out to it gate on
     /// `rewritten != command` for exactly this reason.
     #[test]
@@ -388,21 +388,21 @@ mod decision_consistency {
 
         // Subprocess path: reported as an ask-rewrite, output identical to input.
         assert_eq!(
-            sb.rewrite("rtk git status"),
-            (3, "rtk git status".into()),
-            "rtk rewrite reports the no-op rewrite"
+            sb.rewrite("ptk git status"),
+            (3, "ptk git status".into()),
+            "ptk rewrite reports the no-op rewrite"
         );
 
         // In-process path: nothing to say.
         assert_eq!(
-            sb.hook_claude_rewrite("rtk git status"),
+            sb.hook_claude_rewrite("ptk git status"),
             None,
-            "rtk hook claude defers on the no-op rewrite"
+            "ptk hook claude defers on the no-op rewrite"
         );
     }
 }
 
-/// `rtk hook check` answers the same question the hooks answer.
+/// `ptk hook check` answers the same question the hooks answer.
 ///
 /// A diagnostic that reported a rewrite the hooks refuse to apply would be
 /// worse than none, so it routes through the shared decision and is pinned
@@ -414,7 +414,7 @@ mod hook_check {
     fn reports_the_rewrite_for_a_plain_command() {
         let sb = Sandbox::bare();
         let (code, stdout, _) = sb.run(&["hook", "check", "git status"]);
-        assert_eq!((code, stdout.trim()), (0, "rtk git status"));
+        assert_eq!((code, stdout.trim()), (0, "ptk git status"));
     }
 
     #[test]
@@ -437,26 +437,26 @@ mod hook_check {
             let (code, stdout, _) = sb.run(&["hook", "check", cmd]);
             assert_eq!((code, stdout.trim()), (1, ""), "hook check on: {cmd}");
             assert_eq!(sb.hook_claude_rewrite(cmd), None, "hook claude on: {cmd}");
-            assert_eq!(sb.rewrite(cmd).0, 1, "rtk rewrite on: {cmd}");
+            assert_eq!(sb.rewrite(cmd).0, 1, "ptk rewrite on: {cmd}");
         }
     }
 
-    /// An already-RTK-prefixed command rewrites to itself, and no agent applies
+    /// An already-PTK-prefixed command rewrites to itself, and no agent applies
     /// that: the in-process hosts discard it in `hook_cmd`, and the ones whose
-    /// plugin shells out to `rtk rewrite` discard it themselves. Only the bare
-    /// `rtk rewrite` CLI reports it -- see `decision_consistency`.
+    /// plugin shells out to `ptk rewrite` discard it themselves. Only the bare
+    /// `ptk rewrite` CLI reports it -- see `decision_consistency`.
     #[test]
     fn no_agent_applies_a_rewrite_that_changed_nothing() {
         let sb = Sandbox::bare();
 
         for agent in ["claude", "pi", "kimi"] {
-            let (code, stdout, _) = sb.run(&["hook", "check", "--agent", agent, "rtk git status"]);
+            let (code, stdout, _) = sb.run(&["hook", "check", "--agent", agent, "ptk git status"]);
             assert_eq!((code, stdout.trim()), (1, ""), "agent: {agent}");
         }
-        assert_eq!(sb.hook_claude_rewrite("rtk git status"), None);
+        assert_eq!(sb.hook_claude_rewrite("ptk git status"), None);
 
         // The CLI itself still reports it, which is what the delegates guard against.
-        assert_eq!(sb.rewrite("rtk git status"), (3, "rtk git status".into()));
+        assert_eq!(sb.rewrite("ptk git status"), (3, "ptk git status".into()));
     }
 
     /// Every install target answers; only a genuine typo is rejected.
@@ -485,7 +485,7 @@ mod hook_check {
             let (code, stdout, _) = sb.run(&["hook", "check", "--agent", agent, "git status"]);
             assert_eq!(
                 (code, stdout.trim()),
-                (0, "rtk git status"),
+                (0, "ptk git status"),
                 "agent: {agent}"
             );
         }
@@ -505,7 +505,7 @@ mod hook_check {
         let (code, stdout, _) = sb.run(&["hook", "check", "--agent", "gemini", "git status"]);
         assert_eq!(
             (code, stdout.trim()),
-            (0, "rtk git status"),
+            (0, "ptk git status"),
             "gemini has no deny rule here, so the rewrite stands"
         );
     }

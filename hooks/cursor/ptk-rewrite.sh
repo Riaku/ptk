@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# rtk-hook-version: 1
-# RTK Cursor Agent hook — rewrites shell commands to use rtk for token savings.
+# ptk-hook-version: 1
+# PTK Cursor Agent hook — rewrites shell commands to use ptk for token savings.
 # Works with both Cursor editor and cursor-cli (they share ~/.cursor/hooks.json).
 # Cursor preToolUse hook format: receives JSON on stdin, returns JSON on stdout.
-# Requires: rtk >= 0.23.0, jq
+# Requires: ptk >= 0.23.0, jq
 #
-# This is a thin delegating hook: all rewrite logic lives in `rtk rewrite`,
+# This is a thin delegating hook: all rewrite logic lives in `ptk rewrite`,
 # which is the single source of truth (src/discover/registry.rs).
 # To add or change rewrite rules, edit the Rust registry — not this file.
 
 if ! command -v jq &>/dev/null; then
-  echo "[rtk] WARNING: jq is not installed. Hook cannot rewrite commands. Install jq: https://jqlang.github.io/jq/download/" >&2
+  echo "[ptk] WARNING: jq is not installed. Hook cannot rewrite commands. Install jq: https://jqlang.github.io/jq/download/" >&2
   exit 0
 fi
 
-if ! command -v rtk &>/dev/null; then
-  echo "[rtk] WARNING: rtk is not installed or not in PATH. Hook cannot rewrite commands. Install: https://github.com/Riaku/ptk/blob/develop/INSTALL.md" >&2
+if ! command -v ptk &>/dev/null; then
+  echo "[ptk] WARNING: ptk is not installed or not in PATH. Hook cannot rewrite commands. Install: https://github.com/Riaku/ptk/blob/develop/INSTALL.md" >&2
   exit 0
 fi
 
-# Version guard: rtk rewrite was added in 0.23.0.
-RTK_VERSION=$(rtk --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-if [ -n "$RTK_VERSION" ]; then
-  MAJOR=$(echo "$RTK_VERSION" | cut -d. -f1)
-  MINOR=$(echo "$RTK_VERSION" | cut -d. -f2)
+# Version guard: ptk rewrite was added in 0.23.0.
+PTK_VERSION=$(ptk --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+if [ -n "$PTK_VERSION" ]; then
+  MAJOR=$(echo "$PTK_VERSION" | cut -d. -f1)
+  MINOR=$(echo "$PTK_VERSION" | cut -d. -f2)
   if [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 23 ]; then
-    echo "[rtk] WARNING: rtk $RTK_VERSION is too old (need >= 0.23.0). Upgrade: cargo install rtk" >&2
+    echo "[ptk] WARNING: ptk $PTK_VERSION is too old (need >= 0.23.0). Upgrade: cargo install ptk" >&2
     exit 0
   fi
 fi
@@ -41,7 +41,7 @@ fi
 # Delegate all rewrite logic to the Rust binary.
 # Exit codes: 0 = allow rewrite, 1 = no rewrite (passthrough),
 #             2 = deny, 3 = ask.
-REWRITTEN=$(rtk rewrite "$CMD" 2>/dev/null)
+REWRITTEN=$(ptk rewrite "$CMD" 2>/dev/null)
 RC=$?
 if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
   echo '{}'

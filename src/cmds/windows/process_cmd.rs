@@ -50,7 +50,11 @@ pub fn filter_process_output(raw: &str) -> String {
                 (pid, mem, "-", name)
             };
 
-            entries.push(format!("{:>7}  {:>7}  {:>7}  {}", pid, mem, cpu, name).trim_end().to_string());
+            entries.push(
+                format!("{:>7}  {:>7}  {:>7}  {}", pid, mem, cpu, name)
+                    .trim_end()
+                    .to_string(),
+            );
         } else {
             entries.push(trimmed.trim_end().to_string());
         }
@@ -63,7 +67,9 @@ pub fn filter_process_output(raw: &str) -> String {
     let total = entries.len();
     let take = total.min(MAX_DEFAULT_PROCESSES);
 
-    let header = format!("{:>7}  {:>7}  {:>7}  {}", "PID", "MEM(M)", "CPU(s)", "NAME").trim_end().to_string();
+    let header = format!("{:>7}  {:>7}  {:>7}  {}", "PID", "MEM(M)", "CPU(s)", "NAME")
+        .trim_end()
+        .to_string();
     let mut output = Vec::with_capacity(take + 2);
     output.push(header);
 

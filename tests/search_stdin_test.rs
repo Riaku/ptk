@@ -5,7 +5,7 @@
 
 use std::process::{Command, Stdio};
 
-fn rtk() -> Command {
+fn ptk() -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_ptk"));
     cmd.env("LC_ALL", "C");
     cmd
@@ -26,7 +26,7 @@ fn rg_shows_filenames_when_stdin_is_not_a_pipe() {
     if !engine_available("rg") {
         return;
     }
-    // `rtk rg -z foo < /dev/null` in a multi-file dir used to drop filenames: stdin being a
+    // `ptk rg -z foo < /dev/null` in a multi-file dir used to drop filenames: stdin being a
     // non-terminal, non-pipe redirect was misread as "the engine reads stdin," routing into the
     // streaming path, which can't discover "multiple files" the way the buffered path does.
     // Real rg searches the cwd here, not stdin.
@@ -34,12 +34,12 @@ fn rg_shows_filenames_when_stdin_is_not_a_pipe() {
     std::fs::write(dir.path().join("a.txt"), "foo one\n").expect("test setup");
     std::fs::write(dir.path().join("b.txt"), "foo two\n").expect("test setup");
 
-    let output = rtk()
+    let output = ptk()
         .args(["rg", "-z", "foo"])
         .current_dir(dir.path())
         .stdin(Stdio::null())
         .output()
-        .expect("failed to run rtk rg");
+        .expect("failed to run ptk rg");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("a.txt"), "filename missing: {stdout}");
@@ -57,12 +57,12 @@ fn a_single_matching_file_still_gets_its_name() {
     std::fs::write(dir.path().join("only.txt"), "foo here\n").expect("test setup");
     std::fs::write(dir.path().join("other.txt"), "nothing\n").expect("test setup");
 
-    let output = rtk()
+    let output = ptk()
         .args(["rg", "foo"])
         .current_dir(dir.path())
         .stdin(Stdio::null())
         .output()
-        .expect("failed to run rtk rg");
+        .expect("failed to run ptk rg");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("only.txt"), "filename missing: {stdout}");
@@ -85,12 +85,12 @@ fn both_engines_read_a_redirected_file_on_stdin() {
         if !engine_available(engine) {
             continue;
         }
-        let output = rtk()
+        let output = ptk()
             .args([engine, "foo"])
             .current_dir(dir.path())
             .stdin(std::fs::File::open(&piped).expect("test setup"))
             .output()
-            .expect("failed to run rtk");
+            .expect("failed to run ptk");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(

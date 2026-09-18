@@ -1,13 +1,13 @@
-//! The single place RTK decides what a hook should do with a command.
+//! The single place PTK decides what a hook should do with a command.
 //!
 //! Three entry points ask the same question — may this command be rewritten,
 //! and may the rewrite be auto-allowed?
 //!
 //! | Entry point | Verdict source | Identity rewrite |
 //! |---|---|---|
-//! | `rtk hook <agent>` (`hook_cmd`) | `check_command_for(cmd, host)` | suppressed |
-//! | `rtk rewrite` (`rewrite_cmd`, run as a subprocess by the shell/TS/Python delegates) | `check_command` (always `Host::Claude`) | reported |
-//! | `rtk hook check` (`main.rs`) | whatever the named `--agent` consults, via [`AgentPath`] | suppressed |
+//! | `ptk hook <agent>` (`hook_cmd`) | `check_command_for(cmd, host)` | suppressed |
+//! | `ptk rewrite` (`rewrite_cmd`, run as a subprocess by the shell/TS/Python delegates) | `check_command` (always `Host::Claude`) | reported |
+//! | `ptk hook check` (`main.rs`) | whatever the named `--agent` consults, via [`AgentPath`] | suppressed |
 //!
 //! [`decide`] is the shared answer. What legitimately differs between callers
 //! stays outside it: the verdict is passed in rather than looked up, so each
@@ -56,7 +56,7 @@ pub(crate) enum HookDecision {
 ///    `AllowRewrite`: that would auto-approve every rewritable command on a
 ///    machine with no permission rules configured (#1155).
 ///
-/// An identity rewrite (`cmd` was already RTK-prefixed) is reported here as a
+/// An identity rewrite (`cmd` was already PTK-prefixed) is reported here as a
 /// normal rewrite. Callers that want it suppressed apply [`suppress_identity`].
 pub(crate) fn decide(cmd: &str, verdict: PermissionVerdict) -> HookDecision {
     let (excluded, transparent_prefixes) = crate::core::config::hook_rewrite_params();
@@ -99,7 +99,7 @@ pub(crate) fn decide_with_params(
 /// [`decide`], plus the no-op suppression every agent applies.
 ///
 /// This is the composition every *hook* wants, as opposed to [`decide`] alone,
-/// which is what the `rtk rewrite` CLI renders. Every hook entry point goes
+/// which is what the `ptk rewrite` CLI renders. Every hook entry point goes
 /// through here so they cannot drift apart.
 pub(crate) fn decide_for_agent(cmd: &str, verdict: PermissionVerdict) -> HookDecision {
     suppress_identity(cmd, decide(cmd, verdict))
@@ -107,14 +107,14 @@ pub(crate) fn decide_for_agent(cmd: &str, verdict: PermissionVerdict) -> HookDec
 
 /// Turn a rewrite that changed nothing into a [`HookDecision::Defer`].
 ///
-/// A command that is already RTK-prefixed rewrites to itself, and a hook that
+/// A command that is already PTK-prefixed rewrites to itself, and a hook that
 /// reports that is asking its host to apply an edit with no effect. What that
 /// costs is per host: Copilot IDE renders a rewrite as a deny-with-suggestion,
 /// so it refuses the command and tells the user to re-run the very thing they
 /// ran; Cursor raises a permission prompt for it. The plugins that shell out to
-/// `rtk rewrite` reach the same outcome in their own code --
-/// `hooks/opencode/rtk.ts`, `hooks/pi/rtk.ts` (shared with omp),
-/// `hooks/hermes/rtk-rewrite/__init__.py` and `openclaw/index.ts` all gate on
+/// `ptk rewrite` reach the same outcome in their own code --
+/// `hooks/opencode/ptk.ts`, `hooks/pi/ptk.ts` (shared with omp),
+/// `hooks/hermes/ptk-rewrite/__init__.py` and `openclaw/index.ts` all gate on
 /// `rewritten != command`.
 ///
 /// `Defer` is not uniformly neutral, though: Gemini renders it as `ask_user`,
@@ -125,8 +125,8 @@ pub(crate) fn decide_for_agent(cmd: &str, verdict: PermissionVerdict) -> HookDec
 /// continuation-collapsed string, so a command differing only in leading or
 /// trailing whitespace is not suppressed.
 ///
-/// `rtk rewrite` itself reports the no-op as a normal rewrite, exit 0 or 3 with
-/// the command unchanged on stdout. It answers "what is the RTK form of this
+/// `ptk rewrite` itself reports the no-op as a normal rewrite, exit 0 or 3 with
+/// the command unchanged on stdout. It answers "what is the PTK form of this
 /// command", and for an already-prefixed one that form is itself; whether that
 /// counts as a change is the caller's question, which is why those plugins
 /// compare. `decision_consistency` in `tests/hook_decision_protocol_test.rs`
@@ -142,25 +142,25 @@ pub(crate) fn suppress_identity(cmd: &str, decision: HookDecision) -> HookDecisi
     }
 }
 
-/// How the hook RTK installs for a given `--agent` actually reaches a decision.
+/// How the hook PTK installs for a given `--agent` actually reaches a decision.
 ///
-/// `rtk init` supports more agents than [`Host`] has variants, because they
+/// `ptk init` supports more agents than [`Host`] has variants, because they
 /// differ in *whose* permission rules their hook consults — not all of them
 /// consult any. A diagnostic that ignores that reports the wrong hook's answer.
 ///
 /// They do not differ on a rewrite that changed nothing: every agent discards
 /// it. The in-process hosts do so in `hook_cmd`; the ones that shell out to
-/// `rtk rewrite` do so in their own plugin, because `rtk rewrite` reports the
+/// `ptk rewrite` do so in their own plugin, because `ptk rewrite` reports the
 /// no-op rather than suppressing it (see [`suppress_identity`]).
 pub(crate) enum AgentPath {
-    /// `rtk hook <agent>` — decides in this process, against the host's own
+    /// `ptk hook <agent>` — decides in this process, against the host's own
     /// permission rules.
     InProcess(Host),
-    /// A plugin or shell script that shells out to `rtk rewrite`. That entry
+    /// A plugin or shell script that shells out to `ptk rewrite`. That entry
     /// point has no way to be told which host is asking, so it always reads
     /// Claude Code's rules.
     ViaRewrite,
-    /// A rules-file install — RTK ships instructions telling the agent to
+    /// A rules-file install — PTK ships instructions telling the agent to
     /// prefix commands itself. There is no hook and no permission surface, so
     /// only the rewrite rules apply.
     RulesOnly,
@@ -171,10 +171,10 @@ impl AgentPath {
     /// when there is no such install target.
     ///
     /// Every [`crate::AgentTarget`] must resolve, plus the targets installed by
-    /// a flag rather than an enum variant — `rtk init --copilot`, `--gemini`,
+    /// a flag rather than an enum variant — `ptk init --copilot`, `--gemini`,
     /// `--codex`, `--opencode`, and OpenClaw's own installer — pinned by
     /// `agent_path_covers_every_install_target`.
-    // Reached only from `rtk hook check`, never from a hook's own stream.
+    // Reached only from `ptk hook check`, never from a hook's own stream.
     #[allow(clippy::print_stderr)]
     pub(crate) fn from_agent(agent: &str) -> Option<Self> {
         let path = Self::lookup(agent);
@@ -230,7 +230,7 @@ impl AgentPath {
     fn verdict(&self, cmd: &str) -> PermissionVerdict {
         match self {
             Self::InProcess(host) => check_command_for(cmd, *host),
-            // `rtk rewrite` always reads Claude Code's rules.
+            // `ptk rewrite` always reads Claude Code's rules.
             Self::ViaRewrite => check_command_for(cmd, Host::Claude),
             // No hook, so no rules to consult.
             Self::RulesOnly => PermissionVerdict::Default,
@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn command_without_an_rtk_equivalent_defers() {
+    fn command_without_an_ptk_equivalent_defers() {
         assert_eq!(
             decide_with_params("htop", PermissionVerdict::Default, &[], &[]),
             HookDecision::Defer
@@ -324,11 +324,11 @@ mod tests {
     }
 
     /// `decide` itself reports a no-op rewrite as a normal one; only
-    /// `suppress_identity` turns it into a defer. `rtk rewrite` depends on the
+    /// `suppress_identity` turns it into a defer. `ptk rewrite` depends on the
     /// former, the in-process hosts on the latter.
     #[test]
     fn identity_rewrite_is_reported_and_only_suppressed_on_request() {
-        let cmd = "rtk git status";
+        let cmd = "ptk git status";
         let decided = decide_with_params(cmd, PermissionVerdict::Default, &[], &[]);
         assert_eq!(decided, HookDecision::AskRewrite(cmd.to_string()));
         assert_eq!(suppress_identity(cmd, decided), HookDecision::Defer);
@@ -340,7 +340,7 @@ mod tests {
         let decided = decide_with_params("git status", PermissionVerdict::Allow, &[], &[]);
         assert_eq!(
             suppress_identity("git status", decided),
-            HookDecision::AllowRewrite("rtk git status".to_string())
+            HookDecision::AllowRewrite("ptk git status".to_string())
         );
     }
 
@@ -358,7 +358,7 @@ mod tests {
         );
     }
 
-    /// Every install target `rtk` supports must resolve, or `rtk hook check`
+    /// Every install target `ptk` supports must resolve, or `ptk hook check`
     /// rejects an agent the user really installed. Derived from `AgentTarget`
     /// so a new variant fails here instead of silently going unanswerable.
     #[test]

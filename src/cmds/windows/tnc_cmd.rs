@@ -104,7 +104,13 @@ pub fn filter_tnc_output(raw: &str) -> String {
     if clean.trim().is_empty() {
         "(no network test results)".trim_end().to_string()
     } else {
-        clean.lines().map(|l| l.trim_end()).collect::<Vec<_>>().join("\n").trim_end().to_string()
+        clean
+            .lines()
+            .map(|l| l.trim_end())
+            .collect::<Vec<_>>()
+            .join("\n")
+            .trim_end()
+            .to_string()
     }
 }
 

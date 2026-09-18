@@ -27,56 +27,56 @@ pub fn run(path: &Path, verbose: u8) -> Result<()> {
     }
 
     let mut found = false;
-    let mut rtk = String::new();
+    let mut ptk = String::new();
     let mut raw = String::new();
 
     let cargo_path = dir.join("Cargo.toml");
     if cargo_path.exists() {
         found = true;
         raw.push_str(&fs::read_to_string(&cargo_path).unwrap_or_default());
-        rtk.push_str("Rust (Cargo.toml):\n");
-        rtk.push_str(&summarize_cargo_str(&cargo_path)?);
+        ptk.push_str("Rust (Cargo.toml):\n");
+        ptk.push_str(&summarize_cargo_str(&cargo_path)?);
     }
 
     let package_path = dir.join("package.json");
     if package_path.exists() {
         found = true;
         raw.push_str(&fs::read_to_string(&package_path).unwrap_or_default());
-        rtk.push_str("Node.js (package.json):\n");
-        rtk.push_str(&summarize_package_json_str(&package_path)?);
+        ptk.push_str("Node.js (package.json):\n");
+        ptk.push_str(&summarize_package_json_str(&package_path)?);
     }
 
     let requirements_path = dir.join("requirements.txt");
     if requirements_path.exists() {
         found = true;
         raw.push_str(&fs::read_to_string(&requirements_path).unwrap_or_default());
-        rtk.push_str("Python (requirements.txt):\n");
-        rtk.push_str(&summarize_requirements_str(&requirements_path)?);
+        ptk.push_str("Python (requirements.txt):\n");
+        ptk.push_str(&summarize_requirements_str(&requirements_path)?);
     }
 
     let pyproject_path = dir.join("pyproject.toml");
     if pyproject_path.exists() {
         found = true;
         raw.push_str(&fs::read_to_string(&pyproject_path).unwrap_or_default());
-        rtk.push_str("Python (pyproject.toml):\n");
-        rtk.push_str(&summarize_pyproject_str(&pyproject_path)?);
+        ptk.push_str("Python (pyproject.toml):\n");
+        ptk.push_str(&summarize_pyproject_str(&pyproject_path)?);
     }
 
     let gomod_path = dir.join("go.mod");
     if gomod_path.exists() {
         found = true;
         raw.push_str(&fs::read_to_string(&gomod_path).unwrap_or_default());
-        rtk.push_str("Go (go.mod):\n");
-        rtk.push_str(&summarize_gomod_str(&gomod_path)?);
+        ptk.push_str("Go (go.mod):\n");
+        ptk.push_str(&summarize_gomod_str(&gomod_path)?);
     }
 
     if !found {
-        rtk.push_str(&format!("No dependency files found in {}", dir.display()));
+        ptk.push_str(&format!("No dependency files found in {}", dir.display()));
     }
 
-    let shown = never_worse(&raw, &rtk);
+    let shown = never_worse(&raw, &ptk);
     print!("{}", shown);
-    timer.track("cat */deps", "rtk deps", &raw, shown);
+    timer.track("cat */deps", "ptk deps", &raw, shown);
     Ok(())
 }
 

@@ -105,7 +105,9 @@ pub fn filter_convertfrom_csv(raw: &str) -> String {
 pub fn filter_export_csv_output(raw: &str, target_file: Option<&str>) -> String {
     let clean = crate::core::utils::strip_ansi(raw);
     if let Some(target) = target_file {
-        format!("+ Exported CSV -> {}", target).trim_end().to_string()
+        format!("+ Exported CSV -> {}", target)
+            .trim_end()
+            .to_string()
     } else if clean.trim().is_empty() {
         "+ Exported CSV successfully".trim_end().to_string()
     } else {
@@ -160,7 +162,9 @@ pub fn run_export_csv(args: &[String], _verbose: u8) -> Result<i32> {
     let mut target_file = None;
     for i in 0..args.len() {
         let arg = &args[i];
-        if (arg.eq_ignore_ascii_case("-Path") || arg.eq_ignore_ascii_case("-LiteralPath")) && i + 1 < args.len() {
+        if (arg.eq_ignore_ascii_case("-Path") || arg.eq_ignore_ascii_case("-LiteralPath"))
+            && i + 1 < args.len()
+        {
             target_file = Some(args[i + 1].as_str());
             break;
         } else if !arg.starts_with('-') && target_file.is_none() {

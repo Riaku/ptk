@@ -10,8 +10,8 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::LazyLock;
 
-/// Cap on the non-empty lines kept when RTK cannot parse failure output. With
-/// tee disabled (`RTK_TEE=0`, `config.tee.enabled = false`) these lines are the
+/// Cap on the non-empty lines kept when PTK cannot parse failure output. With
+/// tee disabled (`PTK_TEE=0`, `config.tee.enabled = false`) these lines are the
 /// only surviving copy of the failure.
 const MAX_UNPARSED_LINES: usize = CAP_WARNINGS;
 /// tsc and npx print the cause first (`Unknown compiler option`, `This is not
@@ -77,12 +77,12 @@ fn clean_line(line: &str) -> Cow<'_, str> {
 }
 
 /// `runner` is the package runner the user named (`bunx tsc`, `npx tsc`), or
-/// None for a bare `rtk tsc` where nothing was specified and detection applies.
+/// None for a bare `ptk tsc` where nothing was specified and detection applies.
 pub fn run(runner: Option<&str>, args: &[String], verbose: u8) -> Result<i32> {
     let tsc_exists = tool_exists("tsc");
 
     // Fetch, not Fail: `npx tsc` fetched before this routing existed, and
-    // rtk filters output rather than changing what a command does.
+    // ptk filters output rather than changing what a command does.
     let mut cmd = tool_exec(runner, "tsc", MissingTool::Fetch);
 
     for arg in args {
@@ -159,12 +159,12 @@ impl BlockHandler for TscHandler {
             if exit_code == 0 {
                 return Some("TypeScript: No errors found\n".to_string());
             }
-            // tsc failed without one diagnostic RTK understands (missing binary,
+            // tsc failed without one diagnostic PTK understands (missing binary,
             // no project, unparseable output). "No errors found" would be a
             // false green, so surface the failure with both ends of the raw
             // output.
             let mut summary = format!(
-                "TypeScript: compiler exited with code {exit_code}, but RTK parsed no diagnostics\n"
+                "TypeScript: compiler exited with code {exit_code}, but PTK parsed no diagnostics\n"
             );
 
             if raw.len() < crate::core::tee::MIN_TEE_SIZE {

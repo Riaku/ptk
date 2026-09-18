@@ -1,6 +1,6 @@
 #![cfg(unix)]
-//! Engine-faithfulness contract: `rtk grep` runs grep and `rtk rg` runs rg, each
-//! with its own regex dialect and ignore semantics. rtk filters output noise only;
+//! Engine-faithfulness contract: `ptk grep` runs grep and `ptk rg` runs rg, each
+//! with its own regex dialect and ignore semantics. ptk filters output noise only;
 //! it never substitutes one engine for the other (the bug this PR removes).
 
 use std::io::{BufRead, BufReader, Write};
@@ -8,19 +8,19 @@ use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::time::Duration;
 
-fn rtk() -> Command {
+fn ptk() -> Command {
     Command::new(env!("CARGO_BIN_EXE_ptk"))
 }
 
-/// Run rtk with `input` fed on stdin; returns (stdout, exit_code).
-fn rtk_stdin(input: &str, args: &[&str]) -> (String, Option<i32>) {
-    let mut child = rtk()
+/// Run ptk with `input` fed on stdin; returns (stdout, exit_code).
+fn ptk_stdin(input: &str, args: &[&str]) -> (String, Option<i32>) {
+    let mut child = ptk()
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("spawn rtk");
+        .expect("spawn ptk");
     child
         .stdin
         .take()
@@ -35,7 +35,7 @@ fn rtk_stdin(input: &str, args: &[&str]) -> (String, Option<i32>) {
 }
 
 fn assert_streams_before_stdin_closes(args: &[&str], expected: &str) {
-    let mut child = rtk()
+    let mut child = ptk()
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -107,7 +107,7 @@ fn grep_and_rg_use_their_own_regex_dialect() {
     let p = path.to_str().unwrap();
 
     // grep BRE: a bare `|` is a literal pipe, so "al|ga" matches nothing -> exit 1.
-    let g = rtk().args(["grep", "al|ga", p]).output().expect("rtk grep");
+    let g = ptk().args(["grep", "al|ga", p]).output().expect("ptk grep");
     assert_eq!(
         g.status.code(),
         Some(1),
@@ -116,7 +116,7 @@ fn grep_and_rg_use_their_own_regex_dialect() {
     );
 
     // rg: `|` is alternation, so "al|ga" matches both lines -> exit 0.
-    let r = rtk().args(["rg", "al|ga", p]).output().expect("rtk rg");
+    let r = ptk().args(["rg", "al|ga", p]).output().expect("ptk rg");
     assert_eq!(
         r.status.code(),
         Some(0),
@@ -146,7 +146,7 @@ fn rg_honors_ignore_files_grep_does_not() {
     let path = dir.path().to_str().unwrap();
 
     // rg respects the ignore file: skip.txt must not appear (no forced --no-ignore-vcs).
-    let r = rtk().args(["rg", "NEEDLE", path]).output().expect("rtk rg");
+    let r = ptk().args(["rg", "NEEDLE", path]).output().expect("ptk rg");
     let r_out = String::from_utf8_lossy(&r.stdout);
     assert!(
         r_out.contains("keep.txt"),
@@ -158,10 +158,10 @@ fn rg_honors_ignore_files_grep_does_not() {
     );
 
     // grep knows nothing of ignore files: -r descends and matches both.
-    let g = rtk()
+    let g = ptk()
         .args(["grep", "-rn", "NEEDLE", path])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let g_out = String::from_utf8_lossy(&g.stdout);
     assert!(
         g_out.contains("keep.txt") && g_out.contains("skip.txt"),
@@ -191,16 +191,16 @@ fn bulky_rg_yields_token_savings() {
         .expect("rg");
     let raw_tokens = count_tokens(&String::from_utf8_lossy(&raw.stdout));
 
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "MATCH", path.to_str().unwrap()])
         .output()
-        .expect("rtk rg");
-    let rtk_tokens = count_tokens(&String::from_utf8_lossy(&out.stdout));
+        .expect("ptk rg");
+    let ptk_tokens = count_tokens(&String::from_utf8_lossy(&out.stdout));
 
-    let savings = 100.0 - (rtk_tokens as f64 / raw_tokens as f64 * 100.0);
+    let savings = 100.0 - (ptk_tokens as f64 / raw_tokens as f64 * 100.0);
     assert!(
         savings >= 50.0,
-        "expected >=50% rg token savings, got {savings:.1}% (raw={raw_tokens}, rtk={rtk_tokens})"
+        "expected >=50% rg token savings, got {savings:.1}% (raw={raw_tokens}, ptk={ptk_tokens})"
     );
 }
 
@@ -217,14 +217,14 @@ fn grep_dash_e_selects_extended_regex() {
     let p = path.to_str().unwrap();
 
     // Plain BRE: bare `|` is literal -> no match, exit 1.
-    let bre = rtk().args(["grep", "al|ga", p]).output().expect("rtk grep");
+    let bre = ptk().args(["grep", "al|ga", p]).output().expect("ptk grep");
     assert_eq!(bre.status.code(), Some(1), "BRE | must stay literal");
 
     // -E (ERE): `|` is alternation -> both lines match, exit 0.
-    let ere = rtk()
+    let ere = ptk()
         .args(["grep", "-E", "al|ga", p])
         .output()
-        .expect("rtk grep -E");
+        .expect("ptk grep -E");
     assert_eq!(
         ere.status.code(),
         Some(0),
@@ -249,10 +249,10 @@ fn rg_glob_flag_filters_the_file_set() {
     std::fs::write(dir.path().join("b.txt"), "NEEDLE in text\n").expect("write");
     let path = dir.path().to_str().unwrap();
 
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "-g", "*.rs", "NEEDLE", path])
         .output()
-        .expect("rtk rg -g");
+        .expect("ptk rg -g");
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         stdout.contains("a.rs"),
@@ -268,7 +268,7 @@ fn rg_glob_flag_filters_the_file_set() {
 
 #[test]
 fn grep_reads_piped_stdin() {
-    let (out, code) = rtk_stdin("alpha\nmatch me here\nomega\n", &["grep", "match"]);
+    let (out, code) = ptk_stdin("alpha\nmatch me here\nomega\n", &["grep", "match"]);
     assert_eq!(
         code,
         Some(0),
@@ -280,7 +280,7 @@ fn grep_reads_piped_stdin() {
     );
     assert!(
         !out.contains("Is a directory"),
-        "RTK must not inject '.' and break a stdin pipe:\n{out}"
+        "PTK must not inject '.' and break a stdin pipe:\n{out}"
     );
 }
 
@@ -314,7 +314,7 @@ fn rg_reads_piped_stdin_without_flooding_cwd() {
         return;
     }
     // `fn` matches thousands of repo lines; reading stdin must yield only the pipe.
-    let (out, code) = rtk_stdin("fn stdin_only_line\n", &["rg", "fn"]);
+    let (out, code) = ptk_stdin("fn stdin_only_line\n", &["rg", "fn"]);
     assert_eq!(
         code,
         Some(0),
@@ -333,7 +333,7 @@ fn rg_reads_piped_stdin_without_flooding_cwd() {
 #[test]
 fn grep_counts_piped_stdin_via_passthrough() {
     // `-c` routes to the passthrough path; it must still read the pipe, not null stdin.
-    let (out, code) = rtk_stdin("hit\nmiss\nhit\n", &["grep", "-c", "hit"]);
+    let (out, code) = ptk_stdin("hit\nmiss\nhit\n", &["grep", "-c", "hit"]);
     assert_eq!(
         code,
         Some(0),
@@ -353,7 +353,7 @@ fn rg_type_list_passes_through() {
     if !rg_available() {
         return;
     }
-    let out = rtk().args(["rg", "--type-list"]).output().expect("rtk rg");
+    let out = ptk().args(["rg", "--type-list"]).output().expect("ptk rg");
     let stdout = String::from_utf8_lossy(&out.stdout);
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "--type-list must exit 0");
@@ -366,8 +366,8 @@ fn rg_type_list_passes_through() {
         "valid pattern-less command must not be blocked:\n{stdout}{stderr}"
     );
     assert!(
-        !stderr.contains("rtk grep:"),
-        "an rg command must never be labelled 'rtk grep:':\n{stderr}"
+        !stderr.contains("ptk grep:"),
+        "an rg command must never be labelled 'ptk grep:':\n{stderr}"
     );
 }
 
@@ -380,10 +380,10 @@ fn rg_files_lists_the_given_dir() {
     std::fs::write(dir.path().join("only_here.txt"), "x\n").expect("write");
     let path = dir.path().to_str().unwrap();
 
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "--files", path])
         .output()
-        .expect("rtk rg");
+        .expect("ptk rg");
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(out.status.code(), Some(0), "--files must exit 0");
     assert!(
@@ -400,10 +400,10 @@ fn rg_surfaces_regex_error_not_silent_zero() {
         return;
     }
     let (_dir, path) = write_temp("GET /objects/{path}\nfilePath: x\n");
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "objects|{path}", path.to_str().unwrap()])
         .output()
-        .expect("rtk rg");
+        .expect("ptk rg");
     assert_eq!(
         out.status.code(),
         Some(2),

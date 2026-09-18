@@ -31,7 +31,7 @@ derived by replaying agent transcripts. Two different methods, same number.
 
 **Reading `bash_result_bytes` as the headline is the error.** It measures bytes out of
 the filter, not dollars off the invoice — the same counterfactual substitution that makes
-`PTK gain` report savings while cost rises.
+`ptk gain` report savings while cost rises.
 
 ---
 
@@ -47,7 +47,7 @@ Agents pipe constantly. In this run:
 
 ### 2.1 Confirmed hard failure — 100% incidence
 
-`PTK find src -name "*.rs" | xargs wc -l` ran on **10/10 ON VMs and failed on all 10**:
+`ptk find src -name "*.rs" | xargs wc -l` ran on **10/10 ON VMs and failed on all 10**:
 
 ```
 wc: 166F: No such file or directory
@@ -56,17 +56,17 @@ wc: ./: Is a directory
 wc: app.rs: No such file or directory
 ```
 
-`find` emits newline-separated paths. `PTK find` emits a listing with size annotations
+`find` emits newline-separated paths. `ptk find` emits a listing with size annotations
 (`166F`, `39D:`) and basenames stripped of their directories. Nothing downstream can
 consume it. on-9 exited 123.
 
 The agent recovers by re-running raw — this is the source of the extra commands:
 
 ```
-[on-2] PTK find src -name "*.rs" | xargs wc -l | tail -5    → garbage
+[on-2] ptk find src -name "*.rs" | xargs wc -l | tail -5    → garbage
 [on-2] find src -name "*.rs" | xargs wc -l | sort -rn       → 37604 total ✓
 
-[on-9] t1 PTK ERR  PTK find src -name "*.rs" | xargs wc -l   ← fails
+[on-9] t1 PTK ERR  ptk find src -name "*.rs" | xargs wc -l   ← fails
 [on-9] t2          find src -name "*.rs" | wc -l; ...        ← raw retry
 [on-9] t2          find src -name "*.rs" | xargs wc -l | tail -1  ← raw retry
 ```
@@ -133,8 +133,8 @@ TokenKind::Pipe => {
 ```
 
 Added in v0.31.0 (#666), so it was present in the `pr:2781` build. Yet all 10 VMs show
-`is_RTK_prefixed=True` on `PTK find ... | sort`. `src/discover/rules.rs:118-124` performs
-an unconditional `^find\s+` → `PTK find` regex rewrite. **Two rewrite paths; the live hook
+`is_RTK_prefixed=True` on `ptk find ... | sort`. `src/discover/rules.rs:118-124` performs
+an unconditional `^find\s+` → `ptk find` regex rewrite. **Two rewrite paths; the live hook
 appears to take the one without the guard.** Tracing that dispatch is the first task.
 
 ---
@@ -149,8 +149,8 @@ Claude Code's Bash tool captures stdout. From PTK's perspective:
 
 | Invocation | stdout | `is_terminal()` |
 |---|---|---|
-| `PTK find src` (agent reads output) | pipe to harness | **false** |
-| `PTK find src \| xargs wc -l` (program reads output) | pipe to xargs | **false** |
+| `ptk find src` (agent reads output) | pipe to harness | **false** |
+| `ptk find src \| xargs wc -l` (program reads output) | pipe to xargs | **false** |
 
 Identical. `isatty` cannot distinguish "consumed by the LLM" from "consumed by another
 program" — both are pipes. Gating passthrough on it would make PTK a **no-op under Claude
@@ -159,7 +159,7 @@ Code**, destroying the filtering entirely while fixing nothing.
 Corollary worth noting: `ls.rs:102` only appends its summary line when `is_tty`, so under
 Claude Code **that summary is dead code** — the agent never sees it.
 
-`isatty` is still correct for interactive human use (`$ PTK find src | xargs wc -l` at a
+`isatty` is still correct for interactive human use (`$ ptk find src | xargs wc -l` at a
 real terminal does have a non-TTY stdout). It is simply blind in the deployment that matters.
 
 **Only the hook has the syntactic context needed to make this decision.** It sees the full
@@ -219,7 +219,7 @@ than what ships today.**
 
 ### Two strategies, both needed
 
-**A. Contract preservation** — reduce volume, preserve shape. `PTK find` should emit
+**A. Contract preservation** — reduce volume, preserve shape. `ptk find` should emit
 newline-separated paths, just fewer of them, with an elision marker on stderr rather than
 stdout. Then piping is safe by construction and needs no gating.
 
@@ -259,7 +259,7 @@ is on its way to a program. Everything in §2 follows from that single blind spo
    -mtime -not …`) instead of exec'ing real `find`; `main.rs:1494-1500` turns any escaped
    `Err` into exit 1 with no fallback layer. `pipe_cmd.rs:258` bails on >10 MiB stdin and
    **discards it**.
-4. **Fix `PTK gain`'s counterfactual.** It credits the full raw byte count as "saved" even
+4. **Fix `ptk gain`'s counterfactual.** It credits the full raw byte count as "saved" even
    when the harness would have truncated the output anyway. Cap the counterfactual at what
    the agent would actually have received.
 5. **`pnpm outdated` masks failure.** `pnpm_cmd.rs:434-470` — `run_outdated` lacks the

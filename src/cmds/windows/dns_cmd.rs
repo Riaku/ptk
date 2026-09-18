@@ -21,13 +21,18 @@ pub fn filter_dns_output(raw: &str) -> String {
     let mut entries: Vec<DnsRecord> = Vec::new();
 
     // Check if output is Format-List style (Name : ... \n QueryType : ...)
-    if clean.lines().any(|l| l.trim().starts_with("QueryType") && l.contains(':')) {
+    if clean
+        .lines()
+        .any(|l| l.trim().starts_with("QueryType") && l.contains(':'))
+    {
         let mut current = DnsRecord::default();
 
         for line in clean.lines() {
             let trimmed = line.trim();
             if trimmed.is_empty() {
-                if !current.name.is_empty() && (!current.target.is_empty() || !current.query_type.is_empty()) {
+                if !current.name.is_empty()
+                    && (!current.target.is_empty() || !current.query_type.is_empty())
+                {
                     entries.push(std::mem::take(&mut current));
                 }
                 continue;
@@ -50,7 +55,9 @@ pub fn filter_dns_output(raw: &str) -> String {
             }
         }
 
-        if !current.name.is_empty() && (!current.target.is_empty() || !current.query_type.is_empty()) {
+        if !current.name.is_empty()
+            && (!current.target.is_empty() || !current.query_type.is_empty())
+        {
             entries.push(current);
         }
     } else {
@@ -78,8 +85,16 @@ pub fn filter_dns_output(raw: &str) -> String {
                 entries.push(DnsRecord {
                     name: parts[0].to_string(),
                     query_type: parts[1].to_string(),
-                    ttl: if parts.len() >= 3 { parts[2].to_string() } else { "-".to_string() },
-                    target: if parts.len() >= 4 { parts[3].to_string() } else { "-".to_string() },
+                    ttl: if parts.len() >= 3 {
+                        parts[2].to_string()
+                    } else {
+                        "-".to_string()
+                    },
+                    target: if parts.len() >= 4 {
+                        parts[3].to_string()
+                    } else {
+                        "-".to_string()
+                    },
                 });
             }
         }
@@ -93,16 +108,22 @@ pub fn filter_dns_output(raw: &str) -> String {
     }
 
     let mut output = Vec::with_capacity(entries.len() + 1);
-    let header = format!("{:<30}  {:<6}  {:<6}  {}", "NAME", "TYPE", "TTL", "TARGET/IP")
-        .trim_end()
-        .to_string();
+    let header = format!(
+        "{:<30}  {:<6}  {:<6}  {}",
+        "NAME", "TYPE", "TTL", "TARGET/IP"
+    )
+    .trim_end()
+    .to_string();
     output.push(header);
 
     for r in entries {
         output.push(
-            format!("{:<30}  {:<6}  {:<6}  {}", r.name, r.query_type, r.ttl, r.target)
-                .trim_end()
-                .to_string(),
+            format!(
+                "{:<30}  {:<6}  {:<6}  {}",
+                r.name, r.query_type, r.ttl, r.target
+            )
+            .trim_end()
+            .to_string(),
         );
     }
 

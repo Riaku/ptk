@@ -21,7 +21,7 @@ fn store_hint(
     exit_code: Option<i32>,
 ) -> Option<String> {
     match retriever::store(cfg, content.as_bytes(), slug, exit_code, 1) {
-        Stored::Saved(s) => Some(format!("[full output: rtk recall {}]", s.hash)),
+        Stored::Saved(s) => Some(format!("[full output: ptk recall {}]", s.hash)),
         Stored::Unavailable | Stored::Empty => None,
     }
 }
@@ -97,7 +97,7 @@ pub fn force_tee_tail_hint(
         RecoveryMode::Sqlite => {
             match retriever::store(&cfg, content.as_bytes(), command_slug, None, line_offset) {
                 Stored::Saved(s) if s.hidden_lines > 0 => Some(format!(
-                    "[+{} hidden: rtk recall {}]",
+                    "[+{} hidden: ptk recall {}]",
                     s.hidden_lines, s.hash
                 )),
                 Stored::Saved(_) | Stored::Unavailable | Stored::Empty => None,
@@ -114,7 +114,7 @@ mod tests {
     fn test_disabled_env_emits_nothing() {
         let _guard = crate::core::utils::TEST_ENV_LOCK.lock().unwrap();
         let big = "x".repeat(1000);
-        let (hint, forced, tail) = temp_env::with_var("RTK_RECALL", Some("0"), || {
+        let (hint, forced, tail) = temp_env::with_var("PTK_RECALL", Some("0"), || {
             (
                 tee_and_hint(&big, "cmd", 1),
                 force_tee_hint(&big, "cmd"),

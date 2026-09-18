@@ -19,7 +19,7 @@ See [How PTK Savings Work](../guide/resources/savings-explained.md) for the full
 ## Overview
 
 PTK's tracking system records every command execution to provide analytics on bash output reduction. The system:
-- Stores command history in SQLite (~/.local/share/PTK/tracking.db)
+- Stores command history in SQLite (~/.local/share/ptk/tracking.db)
 - Tracks estimated input/output tokens, bash output reduction percentage, and execution time
 - Automatically cleans up records older than 90 days
 - Provides aggregation APIs (daily/weekly/monthly)
@@ -40,17 +40,17 @@ TimedExecution::track(original_cmd, RTK_cmd, input, output)
   ↓
 Tracker::record(original_cmd, RTK_cmd, input_tokens, output_tokens, exec_time_ms)
   ↓
-SQLite database (~/.local/share/PTK/tracking.db)
+SQLite database (~/.local/share/ptk/tracking.db)
   ↓
 Aggregation APIs (get_summary, get_all_days, etc.)
   ↓
-CLI output (PTK gain) or JSON/CSV export
+CLI output (ptk gain) or JSON/CSV export
 ```
 
 ### Storage Location
 
-- **Linux**: `~/.local/share/PTK/tracking.db`
-- **macOS**: `~/Library/Application Support/PTK/tracking.db`
+- **Linux**: `~/.local/share/ptk/tracking.db`
+- **macOS**: `~/Library/Application Support/ptk/tracking.db`
 - **Windows**: `%APPDATA%\PTK\tracking.db`
 
 ### Data Retention
@@ -78,7 +78,7 @@ impl Tracker {
     pub fn record(
         &self,
         original_cmd: &str,      // Standard command (e.g., "ls -la")
-        RTK_cmd: &str,            // PTK command (e.g., "PTK ls")
+        RTK_cmd: &str,            // PTK command (e.g., "ptk ls")
         input_tokens: usize,      // Estimated tokens from raw output (bytes / 4)
         output_tokens: usize,     // Estimated tokens after filtering (bytes / 4)
         exec_time_ms: u64,        // Execution time in milliseconds
@@ -210,7 +210,7 @@ impl TimedExecution {
 
 ### Utility Functions
 
-`PTK gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). PTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which PTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
+`ptk gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). PTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which PTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
 
 ```rust
 /// Estimate token count (~4 chars = 1 token)
@@ -240,7 +240,7 @@ fn main() -> anyhow::Result<()> {
     let output = execute_RTK_command()?;
 
     // Track execution
-    timer.track("ls -la", "PTK ls", &input, &output);
+    timer.track("ls -la", "ptk ls", &input, &output);
 
     Ok(())
 }
@@ -292,7 +292,7 @@ fn main() -> anyhow::Result<()> {
     execute_streaming_command()?;
 
     // Track timing only (input_tokens=0, output_tokens=0)
-    timer.track_passthrough("git tag --list", "PTK git tag --list");
+    timer.track_passthrough("git tag --list", "ptk git tag --list");
 
     Ok(())
 }
@@ -379,7 +379,7 @@ jobs:
 
       - name: Export weekly stats
         run: |
-          PTK gain --weekly --format json > PTK-weekly.json
+          ptk gain --weekly --format json > PTK-weekly.json
           cat PTK-weekly.json
 
       - name: Upload artifact
@@ -496,7 +496,7 @@ CREATE TABLE commands (
     id INTEGER PRIMARY KEY,
     timestamp TEXT NOT NULL,           -- RFC3339 UTC timestamp
     original_cmd TEXT NOT NULL,        -- Original command (e.g., "ls -la")
-    RTK_cmd TEXT NOT NULL,             -- PTK command (e.g., "PTK ls")
+    RTK_cmd TEXT NOT NULL,             -- PTK command (e.g., "ptk ls")
     input_tokens INTEGER NOT NULL,     -- Estimated tokens from raw output (bytes / 4)
     output_tokens INTEGER NOT NULL,    -- Estimated tokens after filtering (bytes / 4)
     saved_tokens INTEGER NOT NULL,     -- input_tokens - output_tokens
@@ -545,8 +545,8 @@ let _ = conn.execute(
 ## Security & Privacy
 
 - **Local storage only**: Tracking database never leaves the machine
-- **Telemetry requires consent**: PTK can send a daily anonymous usage ping (version, OS, command counts, token savings). Disabled by default, requires explicit consent via `PTK init` or `PTK telemetry enable`. Manage with `PTK telemetry status/disable/forget`. Override: `RTK_TELEMETRY_DISABLED=1`
-- **User control**: Users can delete `~/.local/share/PTK/tracking.db` anytime
+- **Telemetry requires consent**: PTK can send a daily anonymous usage ping (version, OS, command counts, token savings). Disabled by default, requires explicit consent via `ptk init` or `ptk telemetry enable`. Manage with `ptk telemetry status/disable/forget`. Override: `RTK_TELEMETRY_DISABLED=1`
+- **User control**: Users can delete `~/.local/share/ptk/tracking.db` anytime
 - **90-day retention**: Old data automatically purged
 
 ## Troubleshooting
@@ -555,15 +555,15 @@ let _ = conn.execute(
 
 If you see "database is locked" errors:
 - Ensure only one PTK process writes at a time
-- Check file permissions on `~/.local/share/PTK/tracking.db`
-- Delete and recreate: `rm ~/.local/share/PTK/tracking.db && PTK gain`
+- Check file permissions on `~/.local/share/ptk/tracking.db`
+- Delete and recreate: `rm ~/.local/share/ptk/tracking.db && ptk gain`
 
 ### Missing exec_time_ms column
 
 Older databases may not have the `exec_time_ms` column. PTK automatically migrates on first use, but you can force it:
 
 ```bash
-sqlite3 ~/.local/share/PTK/tracking.db \
+sqlite3 ~/.local/share/ptk/tracking.db \
   "ALTER TABLE commands ADD COLUMN exec_time_ms INTEGER DEFAULT 0"
 ```
 

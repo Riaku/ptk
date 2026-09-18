@@ -1,4 +1,4 @@
-//! Translates a raw shell command into its RTK-optimized equivalent.
+//! Translates a raw shell command into its PTK-optimized equivalent.
 
 use super::decision::{self, HookDecision};
 use super::permissions::check_command;
@@ -62,25 +62,25 @@ pub(crate) fn track_tee_read(cmd: &str) {
     }
 }
 
-/// Run the `rtk rewrite` command.
+/// Run the `ptk rewrite` command.
 ///
-/// Prints the RTK-rewritten command to stdout and exits with a code that tells
+/// Prints the PTK-rewritten command to stdout and exits with a code that tells
 /// the caller how to handle permissions:
 ///
 /// | Exit | Stdout   | Meaning                                                      |
 /// |------|----------|--------------------------------------------------------------|
 /// | 0    | rewritten| Rewrite allowed — hook may auto-allow the rewritten command. |
-/// | 1    | (none)   | No RTK equivalent — hook passes through unchanged.           |
+/// | 1    | (none)   | No PTK equivalent — hook passes through unchanged.           |
 /// | 2    | (none)   | Deny rule matched — hook defers to Claude Code native deny.  |
 /// | 3    | rewritten| Ask rule matched — hook rewrites but lets Claude Code prompt.|
 ///
 /// The decision itself is [`decision::decide`], shared with the in-process
-/// `rtk hook <agent>` path; this function is only its exit-code rendering.
+/// `ptk hook <agent>` path; this function is only its exit-code rendering.
 pub fn run(cmd: &str) -> anyhow::Result<()> {
-    // `rtk rewrite` is a subprocess entry point with no way to be told which
+    // `ptk rewrite` is a subprocess entry point with no way to be told which
     // host is asking, so every delegate that shells out to it -- hermes, omp,
     // opencode, openclaw, pi -- is judged against `~/.claude`'s rules. The
-    // in-process `rtk hook <agent>` path is host-parameterized instead
+    // in-process `ptk hook <agent>` path is host-parameterized instead
     // (`permissions::Host`).
     let decided = decision::decide(cmd, check_command(cmd));
     if !matches!(decided, HookDecision::Deny) {
@@ -109,21 +109,21 @@ mod tests {
 
     #[test]
     fn test_tee_read_slug_detects_tail_hint_command() {
-        let dir = std::path::Path::new("/home/u/.local/share/rtk/tee");
-        let cmd = "tail -n +52 /home/u/.local/share/rtk/tee/1755590000_docker-images.log";
+        let dir = std::path::Path::new("/home/u/.local/share/ptk/tee");
+        let cmd = "tail -n +52 /home/u/.local/share/ptk/tee/1755590000_docker-images.log";
         assert_eq!(
             tee_read_slug(cmd, dir),
             Some((
                 "docker-images".to_string(),
-                "/home/u/.local/share/rtk/tee/1755590000_docker-images.log".to_string()
+                "/home/u/.local/share/ptk/tee/1755590000_docker-images.log".to_string()
             ))
         );
     }
 
     #[test]
     fn test_tee_read_slug_detects_quoted_and_grep() {
-        let dir = std::path::Path::new("/home/u/.local/share/rtk/tee");
-        let cmd = r#"grep error "/home/u/.local/share/rtk/tee/1755590000_cargo_test.log""#;
+        let dir = std::path::Path::new("/home/u/.local/share/ptk/tee");
+        let cmd = r#"grep error "/home/u/.local/share/ptk/tee/1755590000_cargo_test.log""#;
         assert_eq!(
             tee_read_slug(cmd, dir).map(|(s, _)| s),
             Some("cargo_test".to_string())
@@ -132,11 +132,11 @@ mod tests {
 
     #[test]
     fn test_tee_read_slug_ignores_non_readers() {
-        let dir = std::path::Path::new("/home/u/.local/share/rtk/tee");
+        let dir = std::path::Path::new("/home/u/.local/share/ptk/tee");
         for cmd in [
-            "rm /home/u/.local/share/rtk/tee/1755590000_x.log",
-            "ls /home/u/.local/share/rtk/tee",
-            "mv /home/u/.local/share/rtk/tee/1755590000_x.log /tmp/",
+            "rm /home/u/.local/share/ptk/tee/1755590000_x.log",
+            "ls /home/u/.local/share/ptk/tee",
+            "mv /home/u/.local/share/ptk/tee/1755590000_x.log /tmp/",
         ] {
             assert_eq!(tee_read_slug(cmd, dir), None, "{cmd}");
         }
@@ -144,24 +144,24 @@ mod tests {
 
     #[test]
     fn test_tee_read_slug_ignores_logs_outside_tee_dir() {
-        let dir = std::path::Path::new("/home/u/.local/share/rtk/tee");
+        let dir = std::path::Path::new("/home/u/.local/share/ptk/tee");
         assert_eq!(tee_read_slug("cat /var/log/app_server.log", dir), None);
         assert_eq!(tee_read_slug("tail -f ./build_1234_out.log", dir), None);
     }
 
     #[test]
     fn test_tee_read_slug_requires_epoch_prefix() {
-        let dir = std::path::Path::new("/home/u/.local/share/rtk/tee");
+        let dir = std::path::Path::new("/home/u/.local/share/ptk/tee");
         assert_eq!(
-            tee_read_slug("cat /home/u/.local/share/rtk/tee/notes_perso.log", dir),
+            tee_read_slug("cat /home/u/.local/share/ptk/tee/notes_perso.log", dir),
             None
         );
     }
 
     #[test]
     fn test_tee_read_slug_reader_with_absolute_path() {
-        let dir = std::path::Path::new("/home/u/.local/share/rtk/tee");
-        let cmd = "/usr/bin/tail -n +5 /home/u/.local/share/rtk/tee/17_gh-prs.log";
+        let dir = std::path::Path::new("/home/u/.local/share/ptk/tee");
+        let cmd = "/usr/bin/tail -n +5 /home/u/.local/share/ptk/tee/17_gh-prs.log";
         assert_eq!(
             tee_read_slug(cmd, dir).map(|(s, _)| s),
             Some("gh-prs".to_string())
@@ -183,18 +183,18 @@ mod tests {
     }
 
     #[test]
-    fn test_run_already_rtk_returns_some() {
+    fn test_run_already_ptk_returns_some() {
         assert_eq!(
-            rewrite_command_no_prefixes("rtk git status"),
-            Some("rtk git status".into())
+            rewrite_command_no_prefixes("ptk git status"),
+            Some("ptk git status".into())
         );
     }
 
     /// SECURITY: Verify the exit code protocol for permission verdicts.
     ///
-    /// The bash hook (.claude/hooks/rtk-rewrite.sh) interprets exit codes as:
+    /// The bash hook (.claude/hooks/ptk-rewrite.sh) interprets exit codes as:
     ///   0 → auto-allow (sets permissionDecision: "allow")
-    ///   1 → passthrough (no RTK equivalent)
+    ///   1 → passthrough (no PTK equivalent)
     ///   2 → deny (let Claude Code handle natively)
     ///   3 → ask (rewrite but omit permissionDecision, forcing user prompt)
     ///
@@ -260,7 +260,7 @@ mod tests {
         fn test_no_auto_allow_bypass_for_unrecognized_commands() {
             // SECURITY: A command with no permission rules and no matching allow rule
             // must NOT be auto-allowed. This is the core of issue #1155.
-            // Even though `git status` can be rewritten to `rtk git status`,
+            // Even though `git status` can be rewritten to `ptk git status`,
             // the absence of an allow rule means Default → exit 3 → ask.
             let verdict = check_command_with_rules("git status", &[], &[], &[]);
             assert_eq!(verdict, PermissionVerdict::Default);

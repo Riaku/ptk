@@ -4,14 +4,14 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Default log file location (aligned with hook's $HOME/.local/share/rtk/).
+/// Default log file location (aligned with hook's $HOME/.local/share/ptk/).
 fn default_log_path() -> PathBuf {
-    if let Ok(dir) = std::env::var("RTK_AUDIT_DIR") {
+    if let Ok(dir) = crate::core::env_compat::env_compat("AUDIT_DIR") {
         PathBuf::from(dir).join("hook-audit.log")
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         PathBuf::from(home)
-            .join(".local/share/rtk")
+            .join(".local/share/ptk")
             .join("hook-audit.log")
     }
 }
@@ -60,8 +60,8 @@ fn filter_since_days(entries: &[AuditEntry], days: u64) -> Vec<&AuditEntry> {
     }
 
     // `crate::core::utils::days_ago_cutoff` clamps instead of panicking on a huge
-    // `days` (see its doc comment) — `rtk hook audit --since <huge>` used to crash
-    // with the same "DateTime - TimeDelta overflowed" panic `rtk discover --since`
+    // `days` (see its doc comment) — `ptk hook audit --since <huge>` used to crash
+    // with the same "DateTime - TimeDelta overflowed" panic `ptk discover --since`
     // did (rtk-ai/rtk#3206 review).
     let cutoff = crate::core::utils::days_ago_cutoff(days);
     let cutoff_str = cutoff.format("%Y-%m-%dT%H:%M:%SZ").to_string();
@@ -77,7 +77,7 @@ pub fn run(since_days: u64, verbose: u8) -> Result<()> {
 
     if !log_path.exists() {
         println!("No audit log found at {}", log_path.display());
-        println!("Enable audit mode: export RTK_HOOK_AUDIT=1 in your shell, then use Claude Code.");
+        println!("Enable audit mode: export PTK_HOOK_AUDIT=1 in your shell, then use Claude Code.");
         return Ok(());
     }
 
@@ -184,11 +184,11 @@ mod tests {
 
     #[test]
     fn test_parse_line_rewrite() {
-        let line = "2026-02-16T14:30:01Z | rewrite | git status | rtk git status";
+        let line = "2026-02-16T14:30:01Z | rewrite | git status | ptk git status";
         let entry = parse_line(line).unwrap();
         assert_eq!(entry.action, "rewrite");
         assert_eq!(entry.original_cmd, "git status");
-        assert_eq!(entry._rewritten_cmd, "rtk git status");
+        assert_eq!(entry._rewritten_cmd, "ptk git status");
     }
 
     #[test]
@@ -244,8 +244,8 @@ mod tests {
 
     #[test]
     fn test_filter_since_days_does_not_panic_on_huge_value() {
-        // rtk-ai/rtk#3206 review: `rtk hook audit --since 100000000` panicked with
-        // "DateTime - TimeDelta overflowed" — same overflow class fixed for `rtk
+        // rtk-ai/rtk#3206 review: `ptk hook audit --since 100000000` panicked with
+        // "DateTime - TimeDelta overflowed" — same overflow class fixed for `ptk
         // discover --since` via the shared `core::utils::days_ago_cutoff`.
         let entries = vec![make_entry("rewrite", "git status")];
         let result = filter_since_days(&entries, 100_000_000);
@@ -258,15 +258,15 @@ mod tests {
 
     #[test]
     fn test_token_savings() {
-        // Simulate what rtk hook-audit would output vs raw log dump
-        let raw_log = r#"2026-02-16T14:30:01Z | rewrite | git status | rtk git status
+        // Simulate what ptk hook-audit would output vs raw log dump
+        let raw_log = r#"2026-02-16T14:30:01Z | rewrite | git status | ptk git status
 2026-02-16T14:30:02Z | skip:no_match | echo hello | -
-2026-02-16T14:30:03Z | rewrite | cargo test | rtk cargo test
-2026-02-16T14:30:04Z | skip:already_rtk | rtk git log | -
-2026-02-16T14:30:05Z | rewrite | git log --oneline -10 | rtk git log --oneline -10
-2026-02-16T14:30:06Z | rewrite | gh pr view 42 | rtk gh pr view 42
+2026-02-16T14:30:03Z | rewrite | cargo test | ptk cargo test
+2026-02-16T14:30:04Z | skip:already_rtk | ptk git log | -
+2026-02-16T14:30:05Z | rewrite | git log --oneline -10 | ptk git log --oneline -10
+2026-02-16T14:30:06Z | rewrite | gh pr view 42 | ptk gh pr view 42
 2026-02-16T14:30:07Z | skip:no_match | mkdir -p foo | -
-2026-02-16T14:30:08Z | rewrite | cargo clippy --all-targets | rtk cargo clippy --all-targets"#;
+2026-02-16T14:30:08Z | rewrite | cargo clippy --all-targets | ptk cargo clippy --all-targets"#;
 
         let entries: Vec<AuditEntry> = raw_log.lines().filter_map(parse_line).collect();
         assert_eq!(entries.len(), 8);

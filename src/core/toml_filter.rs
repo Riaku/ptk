@@ -2,16 +2,16 @@
 ///
 /// Provides a declarative pipeline of 8 stages that can be configured
 /// via TOML files. Lookup priority (first match wins):
-///   1. `.rtk/filters.toml`              — project-local, committable with the repo
-///   2. `~/.config/rtk/filters.toml`     — user-global, applies to all projects
+///   1. `.ptk/filters.toml`              — project-local, committable with the repo
+///   2. `~/.config/ptk/filters.toml`     — user-global, applies to all projects
 ///   3. Built-in TOML                     — `src/filters/*.toml`, concatenated by build.rs and embedded at compile time
 ///   4. Passthrough                       — no match, handled by caller
 ///
-/// `rtk init` generates a commented template for both levels (project or global).
+/// `ptk init` generates a commented template for both levels (project or global).
 ///
 /// Environment variables:
-///   - `RTK_NO_TOML=1`     — bypass TOML engine entirely
-///   - `RTK_TOML_DEBUG=1`  — print which filter matched and line counts to stderr
+///   - `PTK_NO_TOML=1`     — bypass TOML engine entirely
+///   - `PTK_TOML_DEBUG=1`  — print which filter matched and line counts to stderr
 ///
 /// Pipeline stages (applied in order):
 ///   1. strip_ansi           — remove ANSI escape codes
@@ -22,7 +22,7 @@
 ///   6. head/tail_lines      — keep first/last N lines
 ///   7. max_lines            — absolute line cap
 ///   8. on_empty             — message if result is empty
-use super::constants::RTK_META_COMMANDS;
+use super::constants::PTK_META_COMMANDS;
 use regex::{Regex, RegexSet};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -154,7 +154,7 @@ pub struct CompiledFilter {
 }
 
 // ---------------------------------------------------------------------------
-// Results for `rtk verify`
+// Results for `ptk verify`
 // ---------------------------------------------------------------------------
 
 /// Outcome of running a single inline test.
@@ -194,7 +194,7 @@ impl TomlFilterRegistry {
 
         match Self::parse_and_compile(BUILTIN_TOML, "builtin") {
             Ok(f) => filters.extend(f),
-            Err(e) => eprintln!("[rtk] warning: builtin filters: {}", e),
+            Err(e) => eprintln!("[ptk] warning: builtin filters: {}", e),
         }
 
         TomlFilterRegistry { filters }
@@ -213,7 +213,7 @@ impl TomlFilterRegistry {
                 if let Some(content) = content {
                     match Self::parse_and_compile(&content, &label) {
                         Ok(f) => filters.extend(f),
-                        Err(e) => eprintln!("[rtk] warning: {}: {}", label, e),
+                        Err(e) => eprintln!("[ptk] warning: {}: {}", label, e),
                     }
                 }
             }
@@ -237,7 +237,7 @@ impl TomlFilterRegistry {
         for (name, def) in file.filters {
             if !is_fully_anchored(&def.match_command) {
                 eprintln!(
-                    "[rtk] warning: filter '{}' in {}: match_command '{}' has a top-level branch \
+                    "[ptk] warning: filter '{}' in {}: match_command '{}' has a top-level branch \
                      that does not start with '^'; it would match a path component mid-command. \
                      Filter ignored.",
                     name, source, def.match_command
@@ -246,7 +246,7 @@ impl TomlFilterRegistry {
             }
             match compile_filter(name.clone(), def) {
                 Ok(f) => compiled.push(f),
-                Err(e) => eprintln!("[rtk] warning: filter '{}' in {}: {}", name, source, e),
+                Err(e) => eprintln!("[ptk] warning: filter '{}' in {}: {}", name, source, e),
             }
         }
         Ok(compiled)
@@ -310,8 +310,8 @@ const RUST_HANDLED_COMMANDS: &[&str] = &[
     "learn",
 ];
 
-pub fn is_rtk_reserved_command(name: &str) -> bool {
-    RUST_HANDLED_COMMANDS.contains(&name) || RTK_META_COMMANDS.contains(&name)
+pub fn is_ptk_reserved_command(name: &str) -> bool {
+    RUST_HANDLED_COMMANDS.contains(&name) || PTK_META_COMMANDS.contains(&name)
 }
 
 fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, String> {
@@ -328,7 +328,7 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
     for cmd in RUST_HANDLED_COMMANDS {
         if match_regex.is_match(cmd) {
             eprintln!(
-                "[rtk] warning: filter '{}' match_command matches '{}' which is already \
+                "[ptk] warning: filter '{}' match_command matches '{}' which is already \
                  handled by a Rust module — this filter will never activate for that command",
                 name, cmd
             );
@@ -409,7 +409,10 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
 static REGISTRY: LazyLock<TomlFilterRegistry> = LazyLock::new(TomlFilterRegistry::load);
 
 pub fn toml_disabled() -> bool {
-    std::env::var("RTK_NO_TOML").ok().as_deref() == Some("1")
+    crate::core::env_compat::env_compat("NO_TOML")
+        .ok()
+        .as_deref()
+        == Some("1")
 }
 
 pub fn active_filter_summaries(content: &str) -> Vec<(String, String)> {
@@ -715,7 +718,7 @@ pub fn apply_filter_with_info(filter: &CompiledFilter, stdout: &str) -> (String,
 }
 
 // ---------------------------------------------------------------------------
-// rtk verify — inline test execution
+// ptk verify — inline test execution
 // ---------------------------------------------------------------------------
 
 /// Run inline tests from loaded TOML files (builtin + project-local).
@@ -737,8 +740,8 @@ pub fn run_filter_tests(filter_name_opt: Option<&str>) -> VerifyResults {
         &mut tested_filter_names,
     );
 
-    // Trust-gated: only verify project-local filters if trusted (SA-2025-RTK-002)
-    let project_path = std::path::Path::new(".rtk/filters.toml");
+    // Trust-gated: only verify project-local filters if trusted (SA-2025-PTK-002)
+    let project_path = std::path::Path::new(".ptk/filters.toml");
     if project_path.exists() {
         let (trust_status, verified_content) =
             crate::hooks::trust::check_trust_with_content(project_path)
@@ -757,7 +760,7 @@ pub fn run_filter_tests(filter_name_opt: Option<&str>) -> VerifyResults {
                 }
             }
             _ => {
-                eprintln!("[rtk] WARNING: untrusted project filters skipped in verify");
+                eprintln!("[ptk] WARNING: untrusted project filters skipped in verify");
             }
         }
     }
@@ -787,7 +790,7 @@ fn collect_test_outcomes(
     let file: TomlFilterFile = match toml::from_str(content) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("[rtk] warning: TOML parse error during verify: {}", e);
+            eprintln!("[ptk] warning: TOML parse error during verify: {}", e);
             return;
         }
     };
@@ -800,7 +803,7 @@ fn collect_test_outcomes(
             Ok(f) => {
                 compiled_filters.insert(name, f);
             }
-            Err(e) => eprintln!("[rtk] warning: filter '{}' compilation error: {}", name, e),
+            Err(e) => eprintln!("[ptk] warning: filter '{}' compilation error: {}", name, e),
         }
     }
 
@@ -818,7 +821,7 @@ fn collect_test_outcomes(
             Some(f) => f,
             None => {
                 eprintln!(
-                    "[rtk] warning: [[tests.{}]] references unknown filter",
+                    "[ptk] warning: [[tests.{}]] references unknown filter",
                     filter_name
                 );
                 continue;
@@ -848,18 +851,18 @@ fn collect_test_outcomes(
 /// Find a matching filter from the global registry. Initialises the registry
 /// lazily on first call. Returns `None` if no filter matches.
 pub fn find_matching_filter(command: &str) -> Option<&'static CompiledFilter> {
-    if std::env::var("RTK_TOML_DEBUG").is_ok() {
+    if crate::core::env_compat::env_compat_present("TOML_DEBUG") {
         eprintln!(
-            "[rtk:toml] looking up filter for: {:?} ({} filters loaded)",
+            "[ptk:toml] looking up filter for: {:?} ({} filters loaded)",
             command,
             REGISTRY.filters.len()
         );
     }
     let result = find_filter_in(command, &REGISTRY.filters);
-    if std::env::var("RTK_TOML_DEBUG").is_ok() {
+    if crate::core::env_compat::env_compat_present("TOML_DEBUG") {
         match result {
-            Some(f) => eprintln!("[rtk:toml] matched filter: '{}'", f.name),
-            None => eprintln!("[rtk:toml] no filter matched — passthrough"),
+            Some(f) => eprintln!("[ptk:toml] matched filter: '{}'", f.name),
+            None => eprintln!("[ptk:toml] no filter matched — passthrough"),
         }
     }
     result
@@ -938,15 +941,15 @@ mod tests {
     }
 
     #[test]
-    fn test_is_rtk_reserved_command() {
-        assert!(is_rtk_reserved_command("git"));
-        assert!(is_rtk_reserved_command("cargo"));
-        assert!(is_rtk_reserved_command("json"));
-        assert!(is_rtk_reserved_command("rewrite"));
-        assert!(!is_rtk_reserved_command("jj"));
-        assert!(!is_rtk_reserved_command("jq"));
-        assert!(!is_rtk_reserved_command("just"));
-        assert!(!is_rtk_reserved_command("frobnicate"));
+    fn test_is_ptk_reserved_command() {
+        assert!(is_ptk_reserved_command("git"));
+        assert!(is_ptk_reserved_command("cargo"));
+        assert!(is_ptk_reserved_command("json"));
+        assert!(is_ptk_reserved_command("rewrite"));
+        assert!(!is_ptk_reserved_command("jj"));
+        assert!(!is_ptk_reserved_command("jq"));
+        assert!(!is_ptk_reserved_command("just"));
+        assert!(!is_ptk_reserved_command("frobnicate"));
     }
 
     fn loss_of(toml: &str, input: &str) -> Lossiness {

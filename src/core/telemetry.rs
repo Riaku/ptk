@@ -1,6 +1,6 @@
 //! Optional usage ping so we know which commands people run most.
 
-use super::constants::RTK_DATA_DIR;
+use super::constants::PTK_DATA_DIR;
 use crate::core::config;
 use crate::core::tracking;
 use crate::hooks::constants::CLAUDE_DIR;
@@ -17,7 +17,7 @@ const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 /// The telemetry endpoint compiled into this build, if any.
 ///
 /// Single source of truth for "can this build talk to the collector at all",
-/// shared by the ping path and `rtk telemetry status` so the two cannot
+/// shared by the ping path and `ptk telemetry status` so the two cannot
 /// disagree. Empty is treated as unset: release builds pass the URL through a
 /// CI `env:` block, which exports an empty string when the repository variable
 /// is not configured.
@@ -215,7 +215,7 @@ fn random_salt() -> String {
 pub fn salt_file_path() -> PathBuf {
     dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join(RTK_DATA_DIR)
+        .join(PTK_DATA_DIR)
         .join(".device_salt")
 }
 
@@ -443,7 +443,7 @@ fn build_meta_usage(tracker: &tracking::Tracker) -> serde_json::Value {
 /// Check if user has a config.toml file.
 fn detect_has_config() -> bool {
     dirs::config_dir()
-        .map(|d| d.join("rtk/config.toml").exists())
+        .map(|d| d.join("ptk/config.toml").exists())
         .unwrap_or(false)
 }
 
@@ -465,11 +465,11 @@ fn detect_hook_type() -> String {
 
     // Check in order of popularity
     let checks = [
-        (claude_dir.join("hooks/rtk-rewrite.sh"), "claude"),
-        (claude_dir.join("hooks/rtk-rewrite.json"), "claude"),
-        (home.join(".gemini/hooks/rtk-hook.sh"), "gemini"),
+        (claude_dir.join("hooks/ptk-rewrite.sh"), "claude"),
+        (claude_dir.join("hooks/ptk-rewrite.json"), "claude"),
+        (home.join(".gemini/hooks/ptk-hook.sh"), "gemini"),
         (home.join(".codex/AGENTS.md"), "codex"),
-        (home.join(".cursor/hooks/rtk-rewrite.json"), "cursor"),
+        (home.join(".cursor/hooks/ptk-rewrite.json"), "cursor"),
         (home.join(".vibe/hooks.toml"), "vibe"),
     ];
 
@@ -481,10 +481,10 @@ fn detect_hook_type() -> String {
 
     // Check project-level hooks (Claude script + project-scoped Copilot config)
     if let Ok(cwd) = std::env::current_dir() {
-        if cwd.join(".claude/hooks/rtk-rewrite.sh").exists() {
+        if cwd.join(".claude/hooks/ptk-rewrite.sh").exists() {
             return "claude".to_string();
         }
-        if cwd.join(".github/hooks/rtk-rewrite.json").exists() {
+        if cwd.join(".github/hooks/ptk-rewrite.json").exists() {
             return "copilot".to_string();
         }
     }
@@ -496,9 +496,9 @@ fn detect_hook_type() -> String {
 fn count_custom_toml_filters() -> usize {
     let mut count = 0;
 
-    // Project-local: .rtk/filters/*.toml
+    // Project-local: .ptk/filters/*.toml
     if let Ok(cwd) = std::env::current_dir()
-        && let Ok(entries) = std::fs::read_dir(cwd.join(".rtk/filters"))
+        && let Ok(entries) = std::fs::read_dir(cwd.join(".ptk/filters"))
     {
         count += entries
             .filter_map(|e| e.ok())
@@ -506,9 +506,9 @@ fn count_custom_toml_filters() -> usize {
             .count();
     }
 
-    // Global: ~/.config/rtk/filters/*.toml
+    // Global: ~/.config/ptk/filters/*.toml
     if let Some(config_dir) = dirs::config_dir()
-        && let Ok(entries) = std::fs::read_dir(config_dir.join("rtk/filters"))
+        && let Ok(entries) = std::fs::read_dir(config_dir.join("ptk/filters"))
     {
         count += entries
             .filter_map(|e| e.ok())
@@ -532,7 +532,7 @@ fn detect_install_method() -> &'static str {
 }
 
 fn install_method_from_path(path: &str) -> &'static str {
-    if path.contains("/Cellar/rtk/") || path.contains("/homebrew/") {
+    if path.contains("/Cellar/ptk/") || path.contains("/homebrew/") {
         "homebrew"
     } else if path.contains("/.cargo/bin/") || path.contains("\\.cargo\\bin\\") {
         "cargo"
@@ -548,7 +548,7 @@ fn install_method_from_path(path: &str) -> &'static str {
 pub fn telemetry_marker_path() -> PathBuf {
     let data_dir = dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join(RTK_DATA_DIR);
+        .join(PTK_DATA_DIR);
     let _ = crate::core::utils::create_private_dir(&data_dir);
     data_dir.join(".telemetry_last_ping")
 }
@@ -652,7 +652,7 @@ mod tests {
     }
 
     #[test]
-    fn test_salt_file_path_is_in_rtk_dir() {
+    fn test_salt_file_path_is_in_ptk_dir() {
         let path = salt_file_path();
         assert!(path.to_string_lossy().contains("ptk"));
         assert!(path.to_string_lossy().contains(".device_salt"));
@@ -667,40 +667,40 @@ mod tests {
     #[test]
     fn test_install_method_unix_paths() {
         assert_eq!(
-            install_method_from_path("/opt/homebrew/Cellar/rtk/0.28.0/bin/rtk"),
+            install_method_from_path("/opt/homebrew/Cellar/ptk/0.28.0/bin/ptk"),
             "homebrew"
         );
         assert_eq!(
-            install_method_from_path("/usr/local/homebrew/bin/rtk"),
+            install_method_from_path("/usr/local/homebrew/bin/ptk"),
             "homebrew"
         );
         assert_eq!(
-            install_method_from_path("/home/user/.cargo/bin/rtk"),
+            install_method_from_path("/home/user/.cargo/bin/ptk"),
             "cargo"
         );
         assert_eq!(
-            install_method_from_path("/home/user/.local/bin/rtk"),
+            install_method_from_path("/home/user/.local/bin/ptk"),
             "script"
         );
         assert_eq!(
-            install_method_from_path("/nix/store/abc123-rtk/bin/rtk"),
+            install_method_from_path("/nix/store/abc123-ptk/bin/ptk"),
             "nix"
         );
-        assert_eq!(install_method_from_path("/usr/bin/rtk"), "other");
+        assert_eq!(install_method_from_path("/usr/bin/ptk"), "other");
     }
 
     #[test]
     fn test_install_method_windows_paths() {
         assert_eq!(
-            install_method_from_path("C:\\Users\\user\\.cargo\\bin\\rtk.exe"),
+            install_method_from_path("C:\\Users\\user\\.cargo\\bin\\ptk.exe"),
             "cargo"
         );
         assert_eq!(
-            install_method_from_path("C:\\Users\\user\\.local\\bin\\rtk.exe"),
+            install_method_from_path("C:\\Users\\user\\.local\\bin\\ptk.exe"),
             "script"
         );
         assert_eq!(
-            install_method_from_path("C:\\Program Files\\rtk\\rtk.exe"),
+            install_method_from_path("C:\\Program Files\\ptk\\ptk.exe"),
             "other"
         );
     }

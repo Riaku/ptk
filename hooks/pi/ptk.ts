@@ -1,14 +1,14 @@
-// RTK Pi extension — rewrites bash commands to use rtk for token savings.
+// PTK Pi extension — rewrites bash commands to use ptk for token savings.
 // Shared with Oh My Pi (OMP) — OMP loads this same file via its legacy-pi-compat layer.
-// Requires: rtk >= 0.23.0 in PATH.
+// Requires: ptk >= 0.23.0 in PATH.
 //
-// This is a thin delegating extension: all rewrite logic lives in `rtk rewrite`,
+// This is a thin delegating extension: all rewrite logic lives in `ptk rewrite`,
 // which is the single source of truth (src/discover/registry.rs).
 // To add or change rewrite rules, edit the Rust registry — not this file.
 //
-// Exit code contract for `rtk rewrite`:
+// Exit code contract for `ptk rewrite`:
 //   0 + stdout  Rewrite found → mutate command
-//   1           No RTK equivalent → pass through unchanged
+//   1           No PTK equivalent → pass through unchanged
 //   3 + stdout  Rewrite (advisory) → mutate command
 
 import type {
@@ -18,7 +18,7 @@ import type {
 } from "@earendil-works/pi-coding-agent"
 
 const REWRITE_TIMEOUT_MS = 2_000
-const MIN_SUPPORTED_RTK_MINOR = 23
+const MIN_SUPPORTED_PTK_MINOR = 23
 
 // Local reimplementation of the package's `isToolCallEventType("bash", event)` type
 // guard. That helper is a value export, so importing it pulls in the whole
@@ -37,13 +37,13 @@ function parseSemver(raw: string): [number, number, number] | null {
   return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)]
 }
 
-// Calls `rtk rewrite`; returns the rewritten command or null (pass through).
+// Calls `ptk rewrite`; returns the rewritten command or null (pass through).
 async function rewriteCommand(
   pi: ExtensionAPI,
   cmd: string,
   signal?: AbortSignal
 ): Promise<string | null> {
-  const result = await pi.exec("rtk", ["rewrite", cmd], {
+  const result = await pi.exec("ptk", ["rewrite", cmd], {
     timeout: REWRITE_TIMEOUT_MS,
     signal,
   })
@@ -69,7 +69,7 @@ function registerRtkUnavailableNotice(pi: ExtensionAPI) {
   const applyStatus = () => {
     if (!reason || !sessionContext) return
     try {
-      sessionContext.ui?.setStatus?.("rtk", `RTK disabled: ${reason}`)
+      sessionContext.ui?.setStatus?.("ptk", `PTK disabled: ${reason}`)
     } catch {
       // Status reporting must never affect the extension's fail-open behavior.
     }
@@ -94,21 +94,21 @@ function registerRtkUnavailableNotice(pi: ExtensionAPI) {
 export default async function (pi: ExtensionAPI) {
   const reportRtkUnavailable = registerRtkUnavailableNotice(pi)
 
-  // Probe rtk version at load time; disables extension if missing or too old.
-  const ver = await pi.exec("rtk", ["--version"], { timeout: REWRITE_TIMEOUT_MS })
+  // Probe ptk version at load time; disables extension if missing or too old.
+  const ver = await pi.exec("ptk", ["--version"], { timeout: REWRITE_TIMEOUT_MS })
   if (ver.code !== 0) {
-    reportRtkUnavailable("rtk binary not found in PATH")
-    console.warn("[rtk] rtk binary not found in PATH — extension disabled")
+    reportRtkUnavailable("ptk binary not found in PATH")
+    console.warn("[ptk] ptk binary not found in PATH — extension disabled")
     return
   }
 
-  // Warn and bail if rtk predates 0.23.0 (when `rtk rewrite` was introduced).
-  const parsed = parseSemver(ver.stdout.replace(/^rtk\s+/, ""))
+  // Warn and bail if ptk predates 0.23.0 (when `ptk rewrite` was introduced).
+  const parsed = parseSemver(ver.stdout.replace(/^ptk\s+/, ""))
   if (parsed) {
     const [major, minor] = parsed
-    if (major === 0 && minor < MIN_SUPPORTED_RTK_MINOR) {
-      reportRtkUnavailable(`rtk ${parsed.join(".")} is too old (need >= 0.23.0)`)
-      console.warn(`[rtk] rtk ${ver.stdout.trim()} is too old (need >= 0.23.0) — extension disabled`)
+    if (major === 0 && minor < MIN_SUPPORTED_PTK_MINOR) {
+      reportRtkUnavailable(`ptk ${parsed.join(".")} is too old (need >= 0.23.0)`)
+      console.warn(`[ptk] ptk ${ver.stdout.trim()} is too old (need >= 0.23.0) — extension disabled`)
       return
     }
   }
@@ -120,17 +120,17 @@ export default async function (pi: ExtensionAPI) {
       const cmd = event.input.command
       if (typeof cmd !== "string" || cmd.trim() === "") return
 
-      if (cmd.startsWith("rtk ")) return
-      if (process.env.RTK_DISABLED === "1") return
+      if (cmd.startsWith("ptk ")) return
+      if (process.env.PTK_DISABLED === "1") return
 
-      // Delegate to RTK.
+      // Delegate to PTK.
       const rewritten = await rewriteCommand(pi, cmd, ctx.signal)
       if (rewritten && rewritten !== cmd) {
         event.input.command = rewritten
       }
     } catch (err) {
       // Fail open: never block execution on an unexpected error.
-      console.warn("[rtk] unexpected error in tool_call handler; passing through command", err)
+      console.warn("[ptk] unexpected error in tool_call handler; passing through command", err)
       return
     }
   })

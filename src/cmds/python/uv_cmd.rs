@@ -51,7 +51,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
     let timer = tracking::TimedExecution::start();
     let args_display = args.join(" ");
     let original_cmd = display_command("uv", &args_display);
-    let rtk_cmd = display_command("rtk uv", &args_display);
+    let ptk_cmd = display_command("ptk uv", &args_display);
 
     let mut cmd = resolved_command("uv");
     cmd.args(args);
@@ -62,7 +62,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
 
     if args.first().map(String::as_str) != Some("run") {
         let status = cmd.status().context("Failed to run uv")?;
-        timer.track_passthrough(&original_cmd, &format!("{rtk_cmd} (passthrough)"));
+        timer.track_passthrough(&original_cmd, &format!("{ptk_cmd} (passthrough)"));
         return Ok(exit_code_from_status(&status, "uv"));
     }
 
@@ -76,7 +76,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
     );
 
     runner::print_with_hint(&filtered, &result.raw, &result.raw, "uv", result.exit_code);
-    timer.track(&original_cmd, &rtk_cmd, &result.raw, &filtered);
+    timer.track(&original_cmd, &ptk_cmd, &result.raw, &filtered);
 
     Ok(result.exit_code)
 }

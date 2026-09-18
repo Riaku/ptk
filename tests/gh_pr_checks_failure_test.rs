@@ -18,8 +18,8 @@ fn fake_tool(dir: &Path, name: &str, body: &str) {
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).expect("chmod fake tool");
 }
 
-/// Runs rtk with `dir` first on PATH, so the fake tool shadows any real one.
-fn rtk_with(dir: &Path, args: &[&str]) -> Output {
+/// Runs ptk with `dir` first on PATH, so the fake tool shadows any real one.
+fn ptk_with(dir: &Path, args: &[&str]) -> Output {
     let path = format!(
         "{}:{}",
         dir.display(),
@@ -29,7 +29,7 @@ fn rtk_with(dir: &Path, args: &[&str]) -> Output {
         .args(args)
         .env("PATH", path)
         .output()
-        .expect("run rtk")
+        .expect("run ptk")
 }
 
 /// A `gh` whose `pr checks` prints `table` and exits `code`, the way it does when
@@ -51,7 +51,7 @@ fn failing_checks_are_summarised_not_dumped_raw() {
     let dir = tempfile::tempdir().expect("tempdir");
     fake_gh(dir.path(), RED_TABLE, 1);
 
-    let out = rtk_with(dir.path(), &["gh", "pr", "checks", "123"]);
+    let out = ptk_with(dir.path(), &["gh", "pr", "checks", "123"]);
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -71,7 +71,7 @@ fn a_red_run_still_propagates_the_exit_code() {
     let dir = tempfile::tempdir().expect("tempdir");
     fake_gh(dir.path(), RED_TABLE, 1);
 
-    let out = rtk_with(dir.path(), &["gh", "pr", "checks", "123"]);
+    let out = ptk_with(dir.path(), &["gh", "pr", "checks", "123"]);
     assert_eq!(out.status.code(), Some(1), "gh's exit code must survive");
 }
 
@@ -87,7 +87,7 @@ clippy\tpass\t31s\thttps://example.test/job/8\t\n",
         8,
     );
 
-    let out = rtk_with(dir.path(), &["gh", "pr", "checks", "123"]);
+    let out = ptk_with(dir.path(), &["gh", "pr", "checks", "123"]);
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(stdout.contains("Pending: 3"), "got:\n{stdout}");
     assert_eq!(out.status.code(), Some(8), "gh exits 8 while checks pend");
@@ -104,7 +104,7 @@ Security Scan\tskipping\t0\thttps://example.test/job/3\t\n",
         1,
     );
 
-    let out = rtk_with(dir.path(), &["gh", "pr", "checks", "123"]);
+    let out = ptk_with(dir.path(), &["gh", "pr", "checks", "123"]);
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -123,7 +123,7 @@ fn an_error_with_empty_stdout_does_not_become_an_all_zero_summary() {
         "echo 'GraphQL: Could not resolve to a Repository' >&2\nexit 1",
     );
 
-    let out = rtk_with(dir.path(), &["gh", "pr", "checks", "123"]);
+    let out = ptk_with(dir.path(), &["gh", "pr", "checks", "123"]);
     let stdout = String::from_utf8_lossy(&out.stdout);
     let stderr = String::from_utf8_lossy(&out.stderr);
 

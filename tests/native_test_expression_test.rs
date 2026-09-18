@@ -1,7 +1,7 @@
 #![cfg(unix)]
 //! End-to-end coverage for `Commands::Test` routing.
 //!
-//! `rtk test` doubles as a wrapper around a test runner and as the POSIX `test`
+//! `ptk test` doubles as a wrapper around a test runner and as the POSIX `test`
 //! utility. The unit tests in `main.rs` cover `is_native_test_expression` on its
 //! own; these run the binary so an inverted or removed branch in the `Commands::Test`
 //! arm fails here instead of shipping.
@@ -18,10 +18,10 @@ fn exit_code(cwd: &Path, args: &[&str]) -> i32 {
         .args(args)
         .current_dir(cwd)
         .output()
-        .expect("spawn rtk")
+        .expect("spawn ptk")
         .status
         .code()
-        .expect("rtk exited via signal")
+        .expect("ptk exited via signal")
 }
 
 fn fixture() -> TempDir {

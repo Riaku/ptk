@@ -16,14 +16,51 @@ pub const CMD_BUILTINS: &[&str] = &[
 
 /// List of common PowerShell cmdlet prefixes and aliases.
 pub const POWERSHELL_ALIASES: &[&str] = &[
-    "gci", "gc", "sls", "select-string", "get-childitem", "get-content", "test-path",
-    "get-process", "gps", "ps", "stop-process", "start-process", "get-service", "gsv",
-    "get-item", "get-itemproperty", "set-item", "new-item", "ni", "remove-item",
-    "get-netipaddress", "netip", "get-eventlog", "eventlog", "get-winevent", "winevent",
-    "get-nettcpconnection", "nettcp", "resolve-dnsname", "dns", "test-netconnection", "tnc",
-    "convertfrom-json", "convertto-json", "convertfrom-csv", "export-csv", "epcsv",
-    "format-table", "ft", "format-list", "fl",
-    "invoke-webrequest", "iwr", "invoke-restmethod", "irm",
+    "gci",
+    "gc",
+    "sls",
+    "select-string",
+    "get-childitem",
+    "get-content",
+    "test-path",
+    "get-process",
+    "gps",
+    "ps",
+    "stop-process",
+    "start-process",
+    "get-service",
+    "gsv",
+    "get-item",
+    "get-itemproperty",
+    "set-item",
+    "new-item",
+    "ni",
+    "remove-item",
+    "get-netipaddress",
+    "netip",
+    "get-eventlog",
+    "eventlog",
+    "get-winevent",
+    "winevent",
+    "get-nettcpconnection",
+    "nettcp",
+    "resolve-dnsname",
+    "dns",
+    "test-netconnection",
+    "tnc",
+    "convertfrom-json",
+    "convertto-json",
+    "convertfrom-csv",
+    "export-csv",
+    "epcsv",
+    "format-table",
+    "ft",
+    "format-list",
+    "fl",
+    "invoke-webrequest",
+    "iwr",
+    "invoke-restmethod",
+    "irm",
 ];
 
 /// Returns true if the command name is a known Windows CMD built-in.
@@ -44,8 +81,8 @@ pub fn is_powershell_cmdlet(name: &str) -> bool {
         if !verb.is_empty() && !noun.is_empty() {
             let common_verbs = [
                 "get", "set", "new", "remove", "test", "invoke", "start", "stop", "restart",
-                "enable", "disable", "add", "clear", "export", "import", "select", "format",
-                "out", "write", "measure", "sort", "where",
+                "enable", "disable", "add", "clear", "export", "import", "select", "format", "out",
+                "write", "measure", "sort", "where",
             ];
             return common_verbs.contains(&verb);
         }
@@ -181,11 +218,12 @@ mod tests {
         assert!(has_shell_metachars("dir > out.txt"));
         assert!(has_shell_metachars("gci; echo done"));
         assert!(has_shell_metachars("gci && echo done"));
-        
+
         // Quoted patterns should NOT be detected as shell metachars
-        assert!(!has_shell_metachars("Select-String \"pattern|alternate\" file.txt"));
+        assert!(!has_shell_metachars(
+            "Select-String \"pattern|alternate\" file.txt"
+        ));
         assert!(!has_shell_metachars("findstr 'foo>bar' file.txt"));
         assert!(!has_shell_metachars("Get-ChildItem -Path C:\\source\\ptk"));
     }
 }
-

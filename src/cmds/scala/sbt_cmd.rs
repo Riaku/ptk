@@ -829,7 +829,7 @@ mod tests {
     #[test]
     fn test_filter_sbt_test_empty_input() {
         // Empty command output must produce empty filtered output (guard::never_worse
-        // invariant): RTK never emits tokens the underlying command didn't.
+        // invariant): PTK never emits tokens the underlying command didn't.
         assert!(filter_sbt_test("").is_empty());
     }
 

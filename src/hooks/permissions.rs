@@ -48,7 +48,7 @@ pub fn check_command_for(cmd: &str, host: Host) -> PermissionVerdict {
 
 /// Load `host`'s deny/ask/allow Bash rules from disk, doing the settings-file I/O
 /// exactly once. Exposed so a caller that checks many commands against the same
-/// host in a loop (e.g. `rtk discover` scanning thousands of transcript commands)
+/// host in a loop (e.g. `ptk discover` scanning thousands of transcript commands)
 /// can load once up front and reuse `check_command_with_rules` per command instead
 /// of going through `check_command_for` and re-reading every settings file from
 /// disk on every single call.
@@ -58,10 +58,10 @@ pub(crate) fn load_rules_for(host: Host) -> (Vec<String>, Vec<String>, Vec<Strin
         Host::Cursor => load_cursor_rules(),
         Host::Gemini => load_gemini_rules(),
         Host::Droid => load_droid_rules(),
-        // Hosts with no RTK-side rule source. Codex enforces its native
+        // Hosts with no PTK-side rule source. Codex enforces its native
         // execution rules after updatedInput. Do not interpret either host's
         // rules as Claude Bash patterns or borrow another host's settings.
-        // No RTK-side match means Default, not an explicit Allow.
+        // No PTK-side match means Default, not an explicit Allow.
         Host::Codex | Host::Vibe => (Vec::new(), Vec::new(), Vec::new()),
     }
 }
@@ -157,7 +157,7 @@ fn load_permission_rules() -> (Vec<String>, Vec<String>, Vec<String>) {
         };
         let Ok(json) = crate::core::utils::from_json_str::<Value>(&content) else {
             eprintln!(
-                "[rtk] warning: failed to parse permissions from {}",
+                "[ptk] warning: failed to parse permissions from {}",
                 path.display()
             );
             continue;
@@ -222,7 +222,7 @@ fn read_json(path: &std::path::Path) -> Option<Value> {
         Ok(v) => Some(v),
         Err(_) => {
             eprintln!(
-                "[rtk] warning: failed to parse permissions from {}",
+                "[ptk] warning: failed to parse permissions from {}",
                 path.display()
             );
             None
@@ -249,9 +249,9 @@ fn append_wrapped_rules(rules_value: Option<&Value>, prefixes: &[&str], target: 
     }
 }
 
-// Global config only. RTK auto-allows only the globally-trusted subset; anything
+// Global config only. PTK auto-allows only the globally-trusted subset; anything
 // else defers to the host, which applies its own project config and folder-trust.
-// This keeps RTK's allow set a subset of the host's — never more permissive.
+// This keeps PTK's allow set a subset of the host's — never more permissive.
 fn global_config(dir: &str, file: &str) -> Option<Value> {
     read_json(&dirs::home_dir()?.join(dir).join(file))
 }
@@ -330,12 +330,12 @@ fn droid_settings_scopes() -> Vec<Value> {
     scopes
 }
 
-/// Deny-only: `commandDenylist`/`commandBlocklist` → deny, so RTK steps aside
+/// Deny-only: `commandDenylist`/`commandBlocklist` → deny, so PTK steps aside
 /// and Droid's native confirm/block fires on the original command (rewriting
 /// first would dodge Droid's own pattern matching). Entries are unioned across
 /// scopes — a spurious step-aside is safe, a missed entry reopens the dodge.
-/// No allow rules: RTK never asserts a decision for a command it renames to
-/// `rtk …`, and Droid's built-in defaults are not mirrored (they would drift).
+/// No allow rules: PTK never asserts a decision for a command it renames to
+/// `ptk …`, and Droid's built-in defaults are not mirrored (they would drift).
 fn load_droid_rules() -> (Vec<String>, Vec<String>, Vec<String>) {
     droid_rules_from_settings(&droid_settings_scopes())
 }
@@ -1156,13 +1156,13 @@ mod tests {
         let (deny, ask, allow) = droid_rules_from_settings(&[]);
         assert!(deny.is_empty(), "no built-in denylist may be mirrored");
         assert!(ask.is_empty(), "Droid has no ask-shaped list");
-        assert!(allow.is_empty(), "RTK never asserts allow for Droid");
+        assert!(allow.is_empty(), "PTK never asserts allow for Droid");
     }
 
     #[test]
     fn test_droid_deny_lists_union_across_scopes() {
         // Project/local deny entries must be honored, not just global ones,
-        // or the rtk-rename rewrite dodges them.
+        // or the ptk-rename rewrite dodges them.
         let user = serde_json::json!({ "commandDenylist": ["git push"] });
         let user_local = serde_json::json!({ "commandBlocklist": ["curl:*"] });
         let project = serde_json::json!({ "commandDenylist": ["docker *"] });

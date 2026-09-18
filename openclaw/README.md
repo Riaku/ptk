@@ -6,9 +6,9 @@ This is the OpenClaw equivalent of the Claude Code hooks in `hooks/rtk-rewrite.s
 
 ## How it works
 
-The plugin registers a `before_tool_call` hook that intercepts `exec` tool calls. When the agent runs a command like `git status`, the plugin delegates to `PTK rewrite` which returns the optimized command (e.g. `PTK git status`). The compressed output enters the agent's context window, saving tokens.
+The plugin registers a `before_tool_call` hook that intercepts `exec` tool calls. When the agent runs a command like `git status`, the plugin delegates to `ptk rewrite` which returns the optimized command (e.g. `ptk git status`). The compressed output enters the agent's context window, saving tokens.
 
-All rewrite logic lives in PTK itself (`PTK rewrite`). This plugin is a thin delegate -- when new filters are added to PTK, the plugin picks them up automatically with zero changes.
+All rewrite logic lives in PTK itself (`ptk rewrite`). This plugin is a thin delegate -- when new filters are added to PTK, the plugin picks them up automatically with zero changes.
 
 ## Installation
 
@@ -61,11 +61,11 @@ In `openclaw.json`:
 
 ## What gets rewritten
 
-Everything that `PTK rewrite` supports (30+ commands). See the [full command list](https://github.com/Riaku/ptk#what-it-does).
+Everything that `ptk rewrite` supports (30+ commands). See the [full command list](https://github.com/Riaku/ptk#what-it-does).
 
 ## What's NOT rewritten
 
-Handled by `PTK rewrite` guards:
+Handled by `ptk rewrite` guards:
 - Commands already using `PTK`
 - Piped commands (`|`, `&&`, `;`)
 - Heredocs (`<<`)

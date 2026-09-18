@@ -10,14 +10,14 @@ fn read_stdin(input: &[u8], args: &[&str]) -> Output {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("run rtk read from stdin");
+        .expect("run ptk read from stdin");
     child
         .stdin
         .take()
         .expect("piped stdin")
         .write_all(input)
         .expect("write stdin");
-    child.wait_with_output().expect("wait for rtk read")
+    child.wait_with_output().expect("wait for ptk read")
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn read_windows_preserve_non_utf8_files() {
             .arg(&file)
             .args([flag, "2"])
             .output()
-            .expect("run rtk read");
+            .expect("run ptk read");
 
         assert!(output.status.success(), "{flag}: {:?}", output.stderr);
         assert_eq!(output.stdout, expected, "{flag}");
@@ -69,7 +69,7 @@ fn read_windows_preserve_binary_boundaries_for_files_and_stdin() {
                 .arg(&file)
                 .args([flag, count])
                 .output()
-                .expect("run rtk read");
+                .expect("run ptk read");
             let from_stdin = read_stdin(input, &[flag, count]);
             for output in [from_file, from_stdin] {
                 assert!(
@@ -129,7 +129,7 @@ fn rewritten_head_spellings_match_native_on_non_utf8_files() {
     let claude_dir = dir.path().join(".claude");
     fs::create_dir(&claude_dir).expect("create isolated Claude config directory");
     let config_dir = dir.path().join("config");
-    fs::create_dir(&config_dir).expect("create isolated rtk config directory");
+    fs::create_dir(&config_dir).expect("create isolated ptk config directory");
     let file = dir.path().join("binary.log");
     fs::write(&file, b"\xff\xfe bad\nline2\nline3\n").expect("write binary file");
     for flags in ["-2", "-n 2", "--lines 2", "--lines=2", ""] {
@@ -151,14 +151,14 @@ fn rewritten_head_spellings_match_native_on_non_utf8_files() {
         let count = if flags.is_empty() { "10" } else { "2" };
         assert_eq!(
             rewritten.trim(),
-            format!("rtk read {} --head-lines {count}", file.display())
+            format!("ptk read {} --head-lines {count}", file.display())
         );
         let actual = Command::new(env!("CARGO_BIN_EXE_ptk"))
             .args(
                 rewritten
                     .trim()
-                    .strip_prefix("rtk ")
-                    .expect("rtk rewrite prefix")
+                    .strip_prefix("ptk ")
+                    .expect("ptk rewrite prefix")
                     .split_whitespace(),
             )
             .output()

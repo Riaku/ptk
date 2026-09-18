@@ -27,7 +27,7 @@ User / LLM Agent
 +--------------------------------------------------+
 |  LLM Agent Hook                                  |
 |  hooks/{claude,copilot,cursor,...}/               |
-|  Intercepts: "git status" -> "PTK git status"    |
+|  Intercepts: "git status" -> "ptk git status"    |
 +-------------------------+------------------------+
                           |
                           v
@@ -68,9 +68,9 @@ User / LLM Agent
 
 This is the full lifecycle of a command through PTK, from LLM agent to filtered output.
 
-### 3.1 Hook Installation (`PTK init`)
+### 3.1 Hook Installation (`ptk init`)
 
-The user runs `PTK init` to set up hooks for their LLM agent. This:
+The user runs `ptk init` to set up hooks for their LLM agent. This:
 
 1. Writes a thin shell hook script (e.g., `~/.claude/hooks/rtk-rewrite.sh`)
 2. Stores its SHA-256 hash for integrity verification
@@ -87,8 +87,8 @@ When an LLM agent runs a command (e.g., `git status`):
 
 1. The agent fires a `PreToolUse` event (or equivalent) containing the command as JSON
 2. The hook script reads the JSON, extracts the command string
-3. The hook calls `PTK rewrite "git status"` as a subprocess
-4. `PTK rewrite` consults the command registry and returns `PTK git status`
+3. The hook calls `ptk rewrite "git status"` as a subprocess
+4. `ptk rewrite` consults the command registry and returns `ptk git status`
 5. The hook sends a response telling the agent to use the rewritten command
 6. If anything fails (jq missing, PTK not found, no match), the hook exits silently -- the raw command runs unchanged
 
@@ -110,7 +110,7 @@ Traced step by step for `cargo fmt --all && cargo test 2>&1 | tail -20`:
 LLM Agent: "cargo fmt --all && cargo test 2>&1 | tail -20"
   |
   |  Hook shell (hooks/claude/rtk-rewrite.sh)
-  |  Reads JSON from agent, extracts command, calls `PTK rewrite "$CMD"`
+  |  Reads JSON from agent, extracts command, calls `ptk rewrite "$CMD"`
   |  On failure (jq missing, PTK missing, old version): exit 0 (passthrough)
   |
   v
@@ -166,8 +166,8 @@ rewrite_segment(seg, excluded)                     [src/discover/registry.rs]
   |  Step 4 — Already PTK → return as-is
   |
   |  Step 5 — Special cases (short-circuit before classification)
-  |  head -N / -n N / --lines[= ]N / bare → rewrite_line_range() → "PTK read file --head-lines N"
-  |  tail -N / -n N / --lines N → rewrite_line_range() → "PTK read file --tail-lines N"
+  |  head -N / -n N / --lines[= ]N / bare → rewrite_line_range() → "ptk read file --head-lines N"
+  |  tail -N / -n N / --lines N → rewrite_line_range() → "ptk read file --tail-lines N"
   |  head/tail with unsupported flag (-c, -f) → None (skip rewrite)
   |  cat with incompatible flag (-A, -v, -e) → None (skip rewrite)
   |
@@ -181,7 +181,7 @@ rewrite_segment(seg, excluded)                     [src/discover/registry.rs]
   |     e.g. "GIT_SSH_COMMAND=\"ssh -o ...\" git push" → prefix="GIT_SSH_COMMAND=..."
   |  c. Guard: RTK_DISABLED=1 in prefix → None
   |  d. Guard: gh with --json/--jq/--template → None
-  |  e. Apply rule's rewrite_prefixes: "cargo fmt" → "PTK cargo fmt"
+  |  e. Apply rule's rewrite_prefixes: "cargo fmt" → "ptk cargo fmt"
   |  f. Reassemble: env_prefix + RTK_cmd + args + redirect_suffix
   |
   v
@@ -197,7 +197,7 @@ classify_command(cmd)                              [src/discover/registry.rs]
   |  9. Return Classification::Supported { RTK_equivalent, category, savings, status }
   |
   v
-Result: "PTK cargo fmt --all && PTK cargo test 2>&1 | tail -20"
+Result: "ptk cargo fmt --all && ptk cargo test 2>&1 | tail -20"
   |
   |  Hook response
   |  Hook wraps result in agent-specific JSON, returns to LLM agent
@@ -267,14 +267,14 @@ Command received
 
 ### 3.6 Token Tracking
 
-Every command execution records metrics to SQLite (`~/.local/share/PTK/tracking.db`):
+Every command execution records metrics to SQLite (`~/.local/share/ptk/tracking.db`):
 
 - Input tokens (raw output size) and output tokens (filtered size)
 - Savings percentage, execution time, project path
 - 90-day automatic retention cleanup
 - Token estimation: `ceil(chars / 4.0)` approximation
 
-Analytics commands (`PTK gain`, `PTK cc-economics`, `PTK session`) query this database to produce dashboards and ROI reports.
+Analytics commands (`ptk gain`, `ptk cc-economics`, `ptk session`) query this database to produce dashboards and ROI reports.
 
 > **Details**: [`src/analytics/README.md`](../src/analytics/README.md) covers the analytics modules, and [`src/core/README.md`](../src/core/README.md) covers the tracking database schema.
 
@@ -282,11 +282,11 @@ Analytics commands (`PTK gain`, `PTK cc-economics`, `PTK session`) query this da
 
 On command failure (non-zero exit code) — or when a filter truncates a long list:
 
-1. Raw unfiltered output is stored in a content-addressed sqlite database (`~/.local/share/PTK/recall.db`, gzip, byte-faithful)
-2. A hint line is printed: `[full output: PTK recall 3f9c2a81d4e7]` (failures) or `[+N hidden: PTK recall <hash>]` (truncated lists)
-3. LLM agents run `PTK recall <hash>` to get back exactly what was elided instead of re-running the command
+1. Raw unfiltered output is stored in a content-addressed sqlite database (`~/.local/share/ptk/recall.db`, gzip, byte-faithful)
+2. A hint line is printed: `[full output: ptk recall 3f9c2a81d4e7]` (failures) or `[+N hidden: ptk recall <hash>]` (truncated lists)
+3. LLM agents run `ptk recall <hash>` to get back exactly what was elided instead of re-running the command
 
-The mode is selectable via `PTK config recall <sqlite|tee|disabled>` — `tee` keeps the legacy per-file behavior (`~/.local/share/PTK/tee/{epoch}_{slug}.log`). Recovery never affects command output or exit code. `PTK gain --recalls` reports how often elided output is actually consulted, per filter.
+The mode is selectable via `ptk config recall <sqlite|tee|disabled>` — `tee` keeps the legacy per-file behavior (`~/.local/share/ptk/tee/{epoch}_{slug}.log`). Recovery never affects command output or exit code. `ptk gain --recalls` reports how often elided output is actually consulted, per filter.
 
 > **Details**: [`src/core/README.md`](../src/core/README.md) covers the recall store, tee mode configuration, and the rotation strategy.
 
@@ -302,8 +302,8 @@ Start here, then drill down into each README for file-level details.
 |-----------|-------------|-------------------------------|
 | `main.rs` | CLI entry point, `Commands` enum, routing match | _(no README — read the file directly)_ |
 | [`core/`](../src/core/README.md) | Shared infrastructure | Tracking DB schema, config system, tee recovery, TOML filter engine, utility functions |
-| [`hooks/`](../src/hooks/README.md) | Hook system | Installation flow (`PTK init`), integrity verification, rewrite command, trust model |
-| [`analytics/`](../src/analytics/README.md) | Token savings analytics | `PTK gain` dashboard, Claude Code economics, ccusage parsing |
+| [`hooks/`](../src/hooks/README.md) | Hook system | Installation flow (`ptk init`), integrity verification, rewrite command, trust model |
+| [`analytics/`](../src/analytics/README.md) | Token savings analytics | `ptk gain` dashboard, Claude Code economics, ccusage parsing |
 | [`cmds/`](../src/cmds/README.md) | **Command filters (9 ecosystems)** | Common filter pattern, cross-command routing, token savings table, **links to each ecosystem** |
 | [`discover/`](../src/discover/README.md) | History analysis + rewrite registry | Rewrite patterns, session providers, compound command splitting |
 | [`learn/`](../src/learn/README.md) | CLI correction detection | Error classification, correction pair detection, rule generation |
@@ -332,13 +332,13 @@ PTK supports the following LLM agents through hook integrations:
 | Agent | Hook Type | Mechanism | Can Modify Command? |
 |-------|-----------|-----------|---------------------|
 | Claude Code | Shell hook | `PreToolUse` in `settings.json` | Yes (`updatedInput`) |
-| GitHub Copilot (VS Code) | Rust binary | `PTK hook copilot` reads JSON | Yes (`updatedInput`) |
-| GitHub Copilot CLI | Rust binary | `PTK hook copilot` reads JSON | Yes (`updatedInput`) |
-| Cursor | Rust binary | `PTK hook cursor` reads JSON | Yes (`updated_input`) |
-| Gemini CLI | Rust binary | `PTK hook gemini` reads JSON | Yes (`hookSpecificOutput`) |
+| GitHub Copilot (VS Code) | Rust binary | `ptk hook copilot` reads JSON | Yes (`updatedInput`) |
+| GitHub Copilot CLI | Rust binary | `ptk hook copilot` reads JSON | Yes (`updatedInput`) |
+| Cursor | Rust binary | `ptk hook cursor` reads JSON | Yes (`updated_input`) |
+| Gemini CLI | Rust binary | `ptk hook gemini` reads JSON | Yes (`hookSpecificOutput`) |
 | Cline/Roo Code | Rules file | Prompt-level guidance | N/A (prompt) |
 | Windsurf | Rules file | Prompt-level guidance | N/A (prompt) |
-| Codex CLI | Rust binary | `PTK hook codex` reads JSON | Yes (`updatedInput`) |
+| Codex CLI | Rust binary | `ptk hook codex` reads JSON | Yes (`updatedInput`) |
 | OpenCode | TS plugin | `tool.execute.before` event | Yes (in-place mutation) |
 
 > **Details**: [`hooks/README.md`](../hooks/README.md) has the full JSON schemas for each agent. [`src/hooks/README.md`](../src/hooks/README.md) covers installation, integrity verification, and the rewrite command.
@@ -355,7 +355,7 @@ Compiled filter modules for complex transformations, cutting 60-95% of the bash 
 
 ### TOML DSL Filters (src/filters/*.toml)
 
-Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match output, strip/keep lines, truncate lines, head/tail, max lines, on-empty message. Loaded from three tiers: built-in (compiled), global (`~/.config/PTK/filters/`), project-local (`.PTK/filters/`, trust-gated).
+Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match output, strip/keep lines, truncate lines, head/tail, max lines, on-empty message. Loaded from three tiers: built-in (compiled), global (`~/.config/ptk/filters/`), project-local (`.PTK/filters/`, trust-gated).
 
 > **Details**: [`src/core/README.md`](../src/core/README.md) covers the TOML filter engine.
 
@@ -365,8 +365,8 @@ Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match o
 
 | Metric | Target | Verification |
 |--------|--------|--------------|
-| Startup time | < 10ms | `hyperfine 'PTK git status' 'git status'` |
-| Memory usage | < 5MB resident | `/usr/bin/time -v PTK git status` |
+| Startup time | < 10ms | `hyperfine 'ptk git status' 'git status'` |
+| Memory usage | < 5MB resident | `/usr/bin/time -v ptk git status` |
 | Binary size | < 5MB stripped | `ls -lh target/release/PTK` |
 | Bash output reduction | ≥20% per filter (floor) | Snapshot + token count tests |
 
@@ -400,7 +400,7 @@ fn test_my_filter() {
 }
 ```
 
-**3. Verify the output reduction** (>=20% of the bash output required; `count_tokens` in tests and the `bytes / 4` estimator behind `PTK gain` are both approximations, reliable as ratios):
+**3. Verify the output reduction** (>=20% of the bash output required; `count_tokens` in tests and the `bytes / 4` estimator behind `ptk gain` are both approximations, reliable as ratios):
 ```rust
 #[test]
 fn test_my_filter_savings() {

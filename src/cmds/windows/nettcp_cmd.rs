@@ -15,7 +15,10 @@ pub fn filter_nettcp_output(raw: &str) -> String {
     let mut entries = Vec::new();
 
     // Check if output is Format-List style (LocalAddress : ...)
-    if clean.lines().any(|l| l.trim().starts_with("LocalAddress") && l.contains(':')) {
+    if clean
+        .lines()
+        .any(|l| l.trim().starts_with("LocalAddress") && l.contains(':'))
+    {
         let mut local_addr = String::new();
         let mut local_port = String::new();
         let mut remote_addr = String::new();
@@ -86,7 +89,9 @@ pub fn filter_nettcp_output(raw: &str) -> String {
                 let local = format!("{}:{}", parts[0], parts[1]);
                 let remote = format!("{}:{}", parts[2], parts[3]);
                 let state = parts[4];
-                let pid = if parts.len() >= 6 && parts[parts.len() - 1].chars().all(|c| c.is_ascii_digit()) {
+                let pid = if parts.len() >= 6
+                    && parts[parts.len() - 1].chars().all(|c| c.is_ascii_digit())
+                {
                     parts[parts.len() - 1]
                 } else {
                     "-"
@@ -110,9 +115,12 @@ pub fn filter_nettcp_output(raw: &str) -> String {
     let total = entries.len();
     let take = total.min(MAX_DEFAULT_CONNECTIONS);
 
-    let header = format!("{:<28}  {:<28}  {:<12}  {:<6}", "LOCAL_ADDRESS", "REMOTE_ADDRESS", "STATE", "PID")
-        .trim_end()
-        .to_string();
+    let header = format!(
+        "{:<28}  {:<28}  {:<12}  {:<6}",
+        "LOCAL_ADDRESS", "REMOTE_ADDRESS", "STATE", "PID"
+    )
+    .trim_end()
+    .to_string();
     let mut output = Vec::with_capacity(take + 2);
     output.push(header);
 
@@ -161,9 +169,12 @@ pub fn filter_netstat_output(raw: &str) -> String {
                 (parts[3], "-")
             };
             entries.push(
-                format!("{:<5}  {:<28}  {:<28}  {:<12}  {:<6}", proto, local, remote, state, pid)
-                    .trim_end()
-                    .to_string(),
+                format!(
+                    "{:<5}  {:<28}  {:<28}  {:<12}  {:<6}",
+                    proto, local, remote, state, pid
+                )
+                .trim_end()
+                .to_string(),
             );
         }
     }
@@ -178,9 +189,12 @@ pub fn filter_netstat_output(raw: &str) -> String {
     let total = entries.len();
     let take = total.min(MAX_DEFAULT_CONNECTIONS);
 
-    let header = format!("{:<5}  {:<28}  {:<28}  {:<12}  {:<6}", "PROTO", "LOCAL_ADDRESS", "REMOTE_ADDRESS", "STATE", "PID")
-        .trim_end()
-        .to_string();
+    let header = format!(
+        "{:<5}  {:<28}  {:<28}  {:<12}  {:<6}",
+        "PROTO", "LOCAL_ADDRESS", "REMOTE_ADDRESS", "STATE", "PID"
+    )
+    .trim_end()
+    .to_string();
     let mut output = Vec::with_capacity(take + 2);
     output.push(header);
 
@@ -190,12 +204,9 @@ pub fn filter_netstat_output(raw: &str) -> String {
 
     if total > MAX_DEFAULT_CONNECTIONS {
         output.push(
-            format!(
-                "... [ptk: showing {}/{} connections] ...",
-                take, total
-            )
-            .trim_end()
-            .to_string(),
+            format!("... [ptk: showing {}/{} connections] ...", take, total)
+                .trim_end()
+                .to_string(),
         );
     }
 

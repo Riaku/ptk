@@ -251,7 +251,7 @@ fn run_generic(subcommand: &str, args: &[String], verbose: u8, full_sub: &str) -
     if exit_code != 0 {
         timer.track(
             &format!("aws {}", full_sub),
-            &format!("rtk aws {}", full_sub),
+            &format!("ptk aws {}", full_sub),
             &stderr,
             &stderr,
         );
@@ -274,7 +274,7 @@ fn run_generic(subcommand: &str, args: &[String], verbose: u8, full_sub: &str) -
 
     timer.track(
         &format!("aws {}", full_sub),
-        &format!("rtk aws {}", full_sub),
+        &format!("ptk aws {}", full_sub),
         &raw,
         &filtered,
     );
@@ -329,7 +329,7 @@ fn run_aws_filtered(
     filter_fn: fn(&str) -> Option<FilterResult>,
 ) -> Result<i32> {
     let cmd_label = format!("aws {}", sub_args.join(" "));
-    let rtk_label = format!("rtk {}", cmd_label);
+    let ptk_label = format!("ptk {}", cmd_label);
     let slug = cmd_label.replace(' ', "_");
     let timer = tracking::TimedExecution::start();
     let CaptureResult {
@@ -351,12 +351,12 @@ fn run_aws_filtered(
         } else {
             eprintln!("{}", stderr.trim());
         }
-        timer.track(&cmd_label, &rtk_label, &raw, &stderr);
+        timer.track(&cmd_label, &ptk_label, &raw, &stderr);
         return Ok(exit_code);
     }
 
     let result = filter_fn(&stdout).unwrap_or_else(|| {
-        eprintln!("rtk: filter warning: aws filter returned None, passing through raw output");
+        eprintln!("ptk: filter warning: aws filter returned None, passing through raw output");
         FilterResult::new(stdout.clone())
     });
 
@@ -367,7 +367,7 @@ fn run_aws_filtered(
     };
     let shown = crate::core::runner::emit_guarded(&result.text, hint.as_deref(), &raw);
 
-    timer.track(&cmd_label, &rtk_label, &raw, &shown);
+    timer.track(&cmd_label, &ptk_label, &raw, &shown);
     Ok(0)
 }
 
@@ -400,7 +400,7 @@ fn run_s3_ls(extra_args: &[String], verbose: u8) -> Result<i32> {
         } else {
             eprintln!("{}", stderr.trim());
         }
-        timer.track("aws s3 ls", "rtk aws s3 ls", &raw, &stderr);
+        timer.track("aws s3 ls", "ptk aws s3 ls", &raw, &stderr);
         return Ok(exit_code);
     }
 
@@ -412,7 +412,7 @@ fn run_s3_ls(extra_args: &[String], verbose: u8) -> Result<i32> {
     };
     let shown = crate::core::runner::emit_guarded(&result.text, hint.as_deref(), &raw);
 
-    timer.track("aws s3 ls", "rtk aws s3 ls", &raw, &shown);
+    timer.track("aws s3 ls", "ptk aws s3 ls", &raw, &shown);
     Ok(0)
 }
 
@@ -420,7 +420,7 @@ fn run_s3_ls(extra_args: &[String], verbose: u8) -> Result<i32> {
 fn run_s3_transfer(operation: &str, extra_args: &[String], verbose: u8) -> Result<i32> {
     let timer = tracking::TimedExecution::start();
     let cmd_label = format!("aws s3 {}", operation);
-    let rtk_label = format!("rtk aws s3 {}", operation);
+    let ptk_label = format!("ptk aws s3 {}", operation);
     let slug = format!("aws_s3_{}", operation);
 
     let mut cmd = resolved_command("aws");
@@ -449,7 +449,7 @@ fn run_s3_transfer(operation: &str, extra_args: &[String], verbose: u8) -> Resul
         } else {
             eprintln!("{}", stderr.trim());
         }
-        timer.track(&cmd_label, &rtk_label, &raw, &stderr);
+        timer.track(&cmd_label, &ptk_label, &raw, &stderr);
         return Ok(exit_code);
     }
 
@@ -461,7 +461,7 @@ fn run_s3_transfer(operation: &str, extra_args: &[String], verbose: u8) -> Resul
     };
     let shown = crate::core::runner::emit_guarded(&result.text, hint.as_deref(), &raw);
 
-    timer.track(&cmd_label, &rtk_label, &raw, &shown);
+    timer.track(&cmd_label, &ptk_label, &raw, &shown);
     Ok(0)
 }
 

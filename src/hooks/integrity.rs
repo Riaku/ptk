@@ -1,6 +1,6 @@
 //! Detects if someone tampered with the installed hook file.
 //!
-//! RTK installs a PreToolUse hook (`rtk-rewrite.sh`) that auto-approves
+//! PTK installs a PreToolUse hook (`ptk-rewrite.sh`) that auto-approves
 //! rewritten commands with `permissionDecision: "allow"`. Because this
 //! hook bypasses Claude Code's permission prompts, any unauthorized
 //! modification represents a command injection vector.
@@ -8,9 +8,9 @@
 //! This module provides:
 //! - SHA-256 hash computation and storage at install time
 //! - Runtime verification before command execution
-//! - Manual verification via `rtk verify`
+//! - Manual verification via `ptk verify`
 //!
-//! Reference: SA-2025-RTK-001 (Finding F-01)
+//! Reference: SA-2025-PTK-001 (Finding F-01)
 
 use super::constants::{HOOKS_SUBDIR, PRE_TOOL_USE_KEY, REWRITE_HOOK_FILE};
 use super::init::resolve_claude_dir;
@@ -21,18 +21,18 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Filename for the stored hash (dotfile alongside hook)
-const HASH_FILENAME: &str = ".rtk-hook.sha256";
+const HASH_FILENAME: &str = ".ptk-hook.sha256";
 
 /// Result of hook integrity verification
 #[derive(Debug, PartialEq)]
 pub enum IntegrityStatus {
     /// Hash matches — hook is unmodified since last install/update
     Verified,
-    /// Hash mismatch — hook has been modified outside of `rtk init`
+    /// Hash mismatch — hook has been modified outside of `ptk init`
     Tampered { expected: String, actual: String },
     /// Hook exists but no stored hash (installed before integrity checks)
     NoBaseline,
-    /// Neither hook nor hash file exist (RTK not installed)
+    /// Neither hook nor hash file exist (PTK not installed)
     NotInstalled,
     /// Hash file exists but hook was deleted
     OrphanedHash,
@@ -69,7 +69,7 @@ pub fn hash_path_for(hook_path: &Path) -> PathBuf {
 ///
 /// Format is compatible with `sha256sum -c`:
 /// ```text
-/// <hex_hash>  rtk-rewrite.sh
+/// <hex_hash>  ptk-rewrite.sh
 /// ```
 ///
 /// The hash file is set to read-only (0o444) as a speed bump
@@ -193,12 +193,12 @@ fn read_stored_hash(path: &Path) -> Result<String> {
     Ok(hash.to_string())
 }
 
-/// Resolve the default hook path (~/.claude/hooks/rtk-rewrite.sh)
+/// Resolve the default hook path (~/.claude/hooks/ptk-rewrite.sh)
 pub fn resolve_hook_path() -> Result<PathBuf> {
     resolve_claude_dir().map(|dir| dir.join(HOOKS_SUBDIR).join(REWRITE_HOOK_FILE))
 }
 
-/// Run integrity check and print results (for `rtk verify` subcommand)
+/// Run integrity check and print results (for `ptk verify` subcommand)
 pub fn run_verify(verbose: u8) -> Result<()> {
     let result = report_hook_status(verbose);
     report_data_dir_privacy();
@@ -223,13 +223,13 @@ fn report_hook_status(verbose: u8) -> Result<()> {
             let content = fs::read_to_string(&settings_path).unwrap_or_default();
             if settings_has_claude_hook(&content) {
                 println!("PASS  native binary hook registered in settings.json");
-                println!("      command: rtk hook claude");
+                println!("      command: ptk hook claude");
                 println!("      (no script file — integrity check not applicable)");
                 return Ok(());
             }
         }
-        println!("SKIP  RTK hook not installed");
-        println!("      Run `rtk init -g` to install.");
+        println!("SKIP  ptk hook not installed");
+        println!("      Run `ptk init -g` to install.");
         return Ok(());
     }
 
@@ -246,36 +246,36 @@ fn report_hook_status(verbose: u8) -> Result<()> {
             eprintln!("  Expected: {}", expected);
             eprintln!("  Actual:   {}", actual);
             eprintln!();
-            eprintln!("  The hook file has been modified outside of `rtk init`.");
+            eprintln!("  The hook file has been modified outside of `ptk init`.");
             eprintln!("  This could indicate tampering or a manual edit.");
             eprintln!();
-            eprintln!("  To restore: rtk init -g --auto-patch");
+            eprintln!("  To restore: ptk init -g --auto-patch");
             eprintln!("  To inspect: cat {}", hook_path.display());
             std::process::exit(1);
         }
         IntegrityStatus::NoBaseline => {
             println!("WARN  no baseline hash found");
             println!("      Hook exists but was installed before integrity checks.");
-            println!("      Run `rtk init -g` to establish baseline.");
+            println!("      Run `ptk init -g` to establish baseline.");
         }
         IntegrityStatus::NotInstalled => {
-            println!("SKIP  RTK hook not installed");
-            println!("      Run `rtk init -g` to install.");
+            println!("SKIP  ptk hook not installed");
+            println!("      Run `ptk init -g` to install.");
         }
         IntegrityStatus::OrphanedHash => {
             eprintln!("WARN  hash file exists but hook is missing");
-            eprintln!("      Run `rtk init -g` to reinstall.");
+            eprintln!("      Run `ptk init -g` to reinstall.");
         }
     }
 
     Ok(())
 }
 
-/// Report a data directory other local users can reach. RTK tightens it to 0700
+/// Report a data directory other local users can reach. PTK tightens it to 0700
 /// on every run, but that chmod fails silently when the directory belongs to
-/// another user — `rtk verify` is where that surfaces, never the command path.
+/// another user — `ptk verify` is where that surfaces, never the command path.
 ///
-/// Checks the parent of the actual resolved DB path (honoring `RTK_DB_PATH` and
+/// Checks the parent of the actual resolved DB path (honoring `PTK_DB_PATH` and
 /// `config.tracking.database_path` overrides), not just the default location.
 #[cfg(unix)]
 fn report_data_dir_privacy() {
@@ -313,11 +313,11 @@ fn report_data_dir_privacy() {}
 /// - `Tampered`: print warning to stderr, exit 1
 /// - `OrphanedHash`: warn to stderr, continue
 ///
-/// When RTK uses native binary commands (no script file), integrity
+/// When PTK uses native binary commands (no script file), integrity
 /// checking is a no-op — there is no script to tamper with.
 ///
 /// No env-var bypass is provided — if the hook is legitimately modified,
-/// re-run `rtk init -g --auto-patch` to re-establish the baseline.
+/// re-run `ptk init -g --auto-patch` to re-establish the baseline.
 pub fn runtime_check() -> Result<()> {
     let hook_path = resolve_hook_path()?;
 
@@ -336,7 +336,7 @@ pub fn runtime_check() -> Result<()> {
             // Silently skip to avoid noise for users who haven't re-run init
         }
         IntegrityStatus::Tampered { expected, actual } => {
-            eprintln!("rtk: hook integrity check FAILED");
+            eprintln!("ptk: hook integrity check FAILED");
             eprintln!(
                 "  Expected hash: {}...",
                 expected.get(..16).unwrap_or(&expected)
@@ -346,16 +346,16 @@ pub fn runtime_check() -> Result<()> {
                 actual.get(..16).unwrap_or(&actual)
             );
             eprintln!();
-            eprintln!("  The hook at ~/.claude/hooks/rtk-rewrite.sh has been modified.");
-            eprintln!("  This may indicate tampering. RTK will not execute.");
+            eprintln!("  The hook at ~/.claude/hooks/ptk-rewrite.sh has been modified.");
+            eprintln!("  This may indicate tampering. PTK will not execute.");
             eprintln!();
-            eprintln!("  To restore:  rtk init -g --auto-patch");
-            eprintln!("  To inspect:  rtk verify");
+            eprintln!("  To restore:  ptk init -g --auto-patch");
+            eprintln!("  To inspect:  ptk verify");
             std::process::exit(1);
         }
         IntegrityStatus::OrphanedHash => {
-            eprintln!("rtk: warning: hash file exists but hook is missing");
-            eprintln!("  Run `rtk init -g` to reinstall.");
+            eprintln!("ptk: warning: hash file exists but hook is missing");
+            eprintln!("  Run `ptk init -g` to reinstall.");
             // Don't block — hook is gone, nothing to exploit
         }
     }
@@ -415,7 +415,7 @@ mod tests {
     #[test]
     fn test_store_and_verify_ok() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "#!/bin/bash\necho test\n").unwrap();
 
         store_hash(&hook).unwrap();
@@ -425,14 +425,14 @@ mod tests {
     }
 
     #[test]
-    fn test_settings_has_claude_hook_accepts_absolute_rtk_path() {
+    fn test_settings_has_claude_hook_accepts_absolute_ptk_path() {
         let settings = r#"{
             "hooks": {
                 "PreToolUse": [{
                     "matcher": "Bash",
                     "hooks": [{
                         "type": "command",
-                        "command": "/opt/homebrew/bin/rtk hook claude",
+                        "command": "/opt/homebrew/bin/ptk hook claude",
                         "timeout": 5
                     }]
                 }]
@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn test_verify_detects_tampering() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "#!/bin/bash\necho original\n").unwrap();
 
         store_hash(&hook).unwrap();
@@ -467,7 +467,7 @@ mod tests {
     #[test]
     fn test_verify_no_baseline() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "#!/bin/bash\necho test\n").unwrap();
 
         // No hash file stored
@@ -478,7 +478,7 @@ mod tests {
     #[test]
     fn test_verify_not_installed() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         // Don't create hook file
 
         let status = verify_hook_at(&hook).unwrap();
@@ -488,13 +488,13 @@ mod tests {
     #[test]
     fn test_verify_orphaned_hash() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hook = temp.path().join("ptk-rewrite.sh");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
 
         // Create hash but no hook
         fs::write(
             &hash_file,
-            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2  rtk-rewrite.sh\n",
+            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2  ptk-rewrite.sh\n",
         )
         .unwrap();
 
@@ -505,27 +505,27 @@ mod tests {
     #[test]
     fn test_store_hash_creates_sha256sum_format() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "test content").unwrap();
 
         store_hash(&hook).unwrap();
 
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
         assert!(hash_file.exists());
 
         let content = fs::read_to_string(&hash_file).unwrap();
-        // Format: "<64 hex chars>  rtk-rewrite.sh\n"
-        assert!(content.ends_with("  rtk-rewrite.sh\n"));
+        // Format: "<64 hex chars>  ptk-rewrite.sh\n"
+        assert!(content.ends_with("  ptk-rewrite.sh\n"));
         let parts: Vec<&str> = content.trim().splitn(2, "  ").collect();
         assert_eq!(parts.len(), 2);
         assert_eq!(parts[0].len(), 64);
-        assert_eq!(parts[1], "rtk-rewrite.sh");
+        assert_eq!(parts[1], "ptk-rewrite.sh");
     }
 
     #[test]
     fn test_store_hash_overwrites_existing() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
 
         fs::write(&hook, "version 1").unwrap();
         store_hash(&hook).unwrap();
@@ -548,12 +548,12 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "test").unwrap();
 
         store_hash(&hook).unwrap();
 
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
         let perms = fs::metadata(&hash_file).unwrap().permissions();
         assert_eq!(perms.mode() & 0o777, 0o444, "Hash file should be read-only");
     }
@@ -561,11 +561,11 @@ mod tests {
     #[test]
     fn test_remove_hash() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "test").unwrap();
 
         store_hash(&hook).unwrap();
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
         assert!(hash_file.exists());
 
         let removed = remove_hash(&hook).unwrap();
@@ -576,7 +576,7 @@ mod tests {
     #[test]
     fn test_remove_hash_not_found() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
 
         let removed = remove_hash(&hook).unwrap();
         assert!(!removed);
@@ -585,11 +585,11 @@ mod tests {
     #[test]
     fn test_invalid_hash_file_rejected() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hook = temp.path().join("ptk-rewrite.sh");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
 
         fs::write(&hook, "test").unwrap();
-        fs::write(&hash_file, "not-a-valid-hash  rtk-rewrite.sh\n").unwrap();
+        fs::write(&hash_file, "not-a-valid-hash  ptk-rewrite.sh\n").unwrap();
 
         let result = verify_hook_at(&hook);
         assert!(result.is_err(), "Should reject invalid hash format");
@@ -598,8 +598,8 @@ mod tests {
     #[test]
     fn test_hash_only_no_filename_rejected() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hook = temp.path().join("ptk-rewrite.sh");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
 
         fs::write(&hook, "test").unwrap();
         // Hash with no two-space separator and filename
@@ -619,14 +619,14 @@ mod tests {
     #[test]
     fn test_wrong_separator_rejected() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hook = temp.path().join("ptk-rewrite.sh");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
 
         fs::write(&hook, "test").unwrap();
         // Single space instead of two-space separator
         fs::write(
             &hash_file,
-            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2 rtk-rewrite.sh\n",
+            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2 ptk-rewrite.sh\n",
         )
         .unwrap();
 
@@ -637,12 +637,12 @@ mod tests {
     #[test]
     fn test_hash_format_compatible_with_sha256sum() {
         let temp = TempDir::new().unwrap();
-        let hook = temp.path().join("rtk-rewrite.sh");
+        let hook = temp.path().join("ptk-rewrite.sh");
         fs::write(&hook, "#!/bin/bash\necho hello\n").unwrap();
 
         store_hash(&hook).unwrap();
 
-        let hash_file = temp.path().join(".rtk-hook.sha256");
+        let hash_file = temp.path().join(".ptk-hook.sha256");
         let content = fs::read_to_string(&hash_file).unwrap();
 
         // Should be parseable by sha256sum -c
@@ -650,6 +650,6 @@ mod tests {
         let parts: Vec<&str> = content.trim().splitn(2, "  ").collect();
         assert_eq!(parts.len(), 2);
         assert_eq!(parts[0].len(), 64);
-        assert_eq!(parts[1], "rtk-rewrite.sh");
+        assert_eq!(parts[1], "ptk-rewrite.sh");
     }
 }

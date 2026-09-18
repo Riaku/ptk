@@ -171,7 +171,7 @@ pub fn run_pkg(subcmd: &str, args: &[String], verbose: u8) -> Result<i32> {
 pub fn run_pm_ls(args: &[String], verbose: u8) -> Result<i32> {
     // No --json injection: bun 1.x ignores the flag, `filter_bun_pm_ls` selects
     // its parser from the output's shape, and a bun that rejected an unknown
-    // flag would make rtk fail a command that succeeds on its own.
+    // flag would make ptk fail a command that succeeds on its own.
     let mut cmd = resolved_command("bun");
     cmd.arg("pm").arg("ls");
     for arg in args {
@@ -272,7 +272,7 @@ mod tests {
         // resolution lines, and one line per package.
         let raw = include_str!("../../../tests/fixtures/bun_install_raw.txt");
         let out = filter_bun_pkg(raw);
-        // Bytes, not tokens: bun colorizes even when piped, so what rtk records
+        // Bytes, not tokens: bun colorizes even when piped, so what ptk records
         // is measured against the escape sequences the command really emits.
         let savings = 100.0 - (out.len() as f64 / raw.len() as f64 * 100.0);
         assert!(
@@ -453,7 +453,7 @@ error: failed to resolve left-pad
 
     #[test]
     fn test_pkg_argv_passes_specs_verbatim() {
-        // Every spec bun itself accepts must reach bun untouched. rtk rejecting
+        // Every spec bun itself accepts must reach bun untouched. ptk rejecting
         // chars like ^ ~ : # broke semver ranges and protocol specifiers.
         let specs = [
             "express",

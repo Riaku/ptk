@@ -104,7 +104,7 @@ fn is_analyse_command(args: &[String]) -> bool {
 
 /// Which `--error-format` the user requested, if any.
 enum ErrorFormat {
-    /// No format flag — rtk injects `--error-format=json`.
+    /// No format flag — ptk injects `--error-format=json`.
     Unspecified,
     /// User explicitly asked for json — keep it, don't duplicate the flag.
     Json,
@@ -144,7 +144,7 @@ pub(crate) fn filter_phpstan_json(output: &str) -> String {
     let phpstan = match parsed {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("[rtk] phpstan: JSON parse failed ({})", e);
+            eprintln!("[ptk] phpstan: JSON parse failed ({})", e);
             return crate::core::utils::fallback_tail(output, "phpstan (JSON parse error)", 5);
         }
     };

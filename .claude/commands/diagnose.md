@@ -13,7 +13,7 @@ Vérifie l'état de l'environnement PTK et suggère des corrections.
   - `PTK: command not found` → PTK non installé ou pas dans PATH
   - Hook errors in Claude Code → Hooks mal configurés ou non exécutables
   - `Unknown command` dans PTK → Version incompatible ou commande non supportée
-  - Token savings reports missing → `PTK gain` not working
+  - Token savings reports missing → `ptk gain` not working
   - Command routing errors → Hook integration broken
 
 - **Manuellement** après installation, mise à jour PTK, ou si comportement suspect
@@ -26,7 +26,7 @@ Lancer ces commandes en parallèle :
 
 ```bash
 # PTK installation check
-which PTK && PTK --version || echo "❌ PTK not found in PATH"
+which PTK && ptk --version || echo "❌ PTK not found in PATH"
 ```
 
 ```bash
@@ -77,11 +77,11 @@ fi
 ```bash
 # Test command routing (dry-run)
 if command -v PTK >/dev/null 2>&1; then
-    # Test if PTK gain works (validates install)
-    if PTK --help | grep -q "gain"; then
-        echo "✅ OK: PTK gain available"
+    # Test if ptk gain works (validates install)
+    if ptk --help | grep -q "gain"; then
+        echo "✅ OK: ptk gain available"
     else
-        echo "❌ MISSING: PTK gain command (old version or wrong binary)"
+        echo "❌ MISSING: ptk gain command (old version or wrong binary)"
     fi
 else
     echo "❌ PTK binary not found"
@@ -91,13 +91,13 @@ fi
 ### 2. Validate token analytics
 
 ```bash
-# Run PTK gain to verify analytics work
+# Run ptk gain to verify analytics work
 if command -v PTK >/dev/null 2>&1; then
     echo ""
     echo "📊 Token Savings (last 5 commands):"
-    PTK gain --history 2>&1 | head -8 || echo "⚠️ PTK gain failed"
+    ptk gain --history 2>&1 | head -8 || echo "⚠️ ptk gain failed"
 else
-    echo "⚠️ Cannot test PTK gain (binary not installed)"
+    echo "⚠️ Cannot test ptk gain (binary not installed)"
 fi
 ```
 
@@ -137,7 +137,7 @@ fi
 📦 PTK Binary:      ✅ OK (v0.16.0) | ❌ NOT FOUND
 🔗 Hooks:           ✅ OK (rtk-rewrite.sh + PTK-suggest.sh executable)
                     ❌ MISSING or ⚠️ WARNING (not executable)
-📊 Token Analytics: ✅ OK (PTK gain working)
+📊 Token Analytics: ✅ OK (ptk gain working)
                     ❌ FAILED (command not available)
 🎯 Claude Context:  ✅ OK (hook environment detected)
                     ⚠️ WARNING (not in Claude Code)
@@ -186,13 +186,13 @@ options:
     description: "Si hooks manquants, copier depuis repository principal"
 ```
 
-### Si PTK gain échoue
+### Si ptk gain échoue
 ```
 options:
   - label: "Réinstaller PTK"
     description: "cargo install --path . --force (version outdated?)"
   - label: "Vérifier version"
-    description: "PTK --version (besoin v0.16.0+ pour PTK gain)"
+    description: "ptk --version (besoin v0.16.0+ pour ptk gain)"
 ```
 
 ## Exécution des fixes
@@ -202,7 +202,7 @@ options:
 # Depuis la racine du repo PTK
 cargo install --path .
 # Vérifier installation
-which PTK && PTK --version
+which PTK && ptk --version
 ```
 
 ### Fix 2 : Rendre hooks exécutables
@@ -221,7 +221,7 @@ cargo install --path .
 chmod +x .claude/hooks/*.sh
 
 # Verify
-which PTK && PTK --version && PTK gain --history | head -3
+which PTK && ptk --version && ptk gain --history | head -3
 ```
 
 ## Détection automatique
@@ -233,7 +233,7 @@ which PTK && PTK --version && PTK gain --history | head -3
 | PTK not found | `PTK: command not found` | Pas installé ou pas dans PATH |
 | Hook error | Hook execution failed, permission denied | Hooks non exécutables (`chmod +x` needed) |
 | Version mismatch | `Unknown command` in PTK output | Version PTK incompatible (upgrade needed) |
-| No analytics | `PTK gain` fails or command not found | PTK install incomplete or old version |
+| No analytics | `ptk gain` fails or command not found | PTK install incomplete or old version |
 | Command not rewritten | Commands not proxied via PTK | Hook integration broken (check `CLAUDE_CODE_HOOK_BASH_TEMPLATE`) |
 
 ### Exemples de suggestion automatique
@@ -252,9 +252,9 @@ les hooks ne sont pas exécutables. Lance `/diagnose` pour identifier
 le problème et corriger les permissions avec `chmod +x`.
 ```
 
-**Cas 3 : PTK gain unavailable**
+**Cas 3 : ptk gain unavailable**
 ```
-La commande `PTK gain` échoue, ce qui suggère une version PTK obsolète
+La commande `ptk gain` échoue, ce qui suggère une version PTK obsolète
 ou une installation incomplète. `/diagnose` va vérifier la version et
 suggérer une réinstallation si nécessaire.
 ```
@@ -285,15 +285,15 @@ source ~/.zshrc  # or source ~/.bashrc
 
 ### Issue : Multiple PTK binaries (name collision)
 
-**Symptom**: `PTK gain` fails with "command not found" even though `PTK --version` works
+**Symptom**: `ptk gain` fails with "command not found" even though `ptk --version` works
 
 **Diagnosis**:
 ```bash
 # Check if wrong PTK installed (reachingforthejack/PTK)
-PTK --version
-# Should show "PTK X.Y.Z", NOT "Rust Type Kit"
+ptk --version
+# Should show "ptk X.Y.Z", NOT "Rust Type Kit"
 
-PTK --help | grep gain
+ptk --help | grep gain
 # Should show "gain" command - if missing, wrong binary
 ```
 
@@ -306,12 +306,12 @@ cargo uninstall PTK
 cargo install --path .
 
 # Verify
-PTK gain --help  # Should work
+ptk gain --help  # Should work
 ```
 
 ### Issue : Hooks not triggering in Claude Code
 
-**Symptom**: Commands not rewritten to `PTK <cmd>` automatically
+**Symptom**: Commands not rewritten to `ptk <cmd>` automatically
 
 **Diagnosis**:
 ```bash
@@ -335,7 +335,7 @@ chmod +x .claude/hooks/*.sh
 
 ## Version Compatibility Matrix
 
-| PTK Version | PTK gain | PTK discover | Python/Go support | Notes |
+| PTK Version | ptk gain | ptk discover | Python/Go support | Notes |
 |-------------|----------|--------------|-------------------|-------|
 | v0.14.x     | ❌ No    | ❌ No        | ❌ No             | Outdated, upgrade |
 | v0.15.x     | ✅ Yes   | ❌ No        | ❌ No             | Missing discover |
@@ -348,5 +348,5 @@ chmod +x .claude/hooks/*.sh
 # From the PTK repo root
 git pull origin main
 cargo install --path . --force
-PTK --version  # Should show 0.16.x or newer
+ptk --version  # Should show 0.16.x or newer
 ```

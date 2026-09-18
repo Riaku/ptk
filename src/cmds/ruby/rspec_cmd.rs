@@ -175,7 +175,7 @@ fn filter_rspec_output(output: &str) -> String {
         Ok(rspec) => return build_rspec_summary(&rspec),
         Err(e) => {
             eprintln!(
-                "[rtk] rspec: JSON parse failed ({}), using text fallback",
+                "[ptk] rspec: JSON parse failed ({}), using text fallback",
                 e
             );
         }

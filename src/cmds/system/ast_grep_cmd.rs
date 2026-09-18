@@ -130,7 +130,7 @@ pub fn run(args: &[String]) -> Result<i32> {
     };
 
     let shown = crate::core::guard::never_worse(&result.stdout, filtered);
-    timer.track(&real_cmd, "rtk ast-grep", &result.stdout, shown);
+    timer.track(&real_cmd, "ptk ast-grep", &result.stdout, shown);
     print!("{}", shown);
 
     if !result.stderr.is_empty() {

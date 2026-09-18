@@ -19,8 +19,7 @@ pub fn filter_eventlog_output(raw: &str) -> String {
         }
 
         // Table headers and separators
-        if trimmed.starts_with("Index ")
-            && trimmed.contains("InstanceID")
+        if trimmed.starts_with("Index ") && trimmed.contains("InstanceID")
             || trimmed.chars().all(|c| c == '-' || c.is_whitespace())
         {
             continue;
@@ -34,13 +33,22 @@ pub fn filter_eventlog_output(raw: &str) -> String {
         // Standard Get-EventLog row:
         // Index Time(Month Day Time) EntryType Source InstanceID Message...
         // 117676 Sep 16 21:50 Information Microsoft-Windows-H... 71 Delete complete...
-        if parts.len() >= 7 && (parts[4] == "Information" || parts[4] == "Warning" || parts[4] == "Error") {
+        if parts.len() >= 7
+            && (parts[4] == "Information" || parts[4] == "Warning" || parts[4] == "Error")
+        {
             let time_str = format!("{} {} {}", parts[1], parts[2], parts[3]);
             let entry_type = parts[4];
             let source = parts[5];
             let id = parts[6];
             let msg = parts[7..].join(" ");
-            lines.push(format!("[{}] {} {} (ID {}): {}", time_str, entry_type, source, id, msg).trim_end().to_string());
+            lines.push(
+                format!(
+                    "[{}] {} {} (ID {}): {}",
+                    time_str, entry_type, source, id, msg
+                )
+                .trim_end()
+                .to_string(),
+            );
         } else {
             // Compress multiple whitespace gaps into 2 spaces
             let mut compressed = String::new();
@@ -84,8 +92,7 @@ pub fn filter_winevent_output(raw: &str) -> String {
             continue;
         }
 
-        if trimmed.starts_with("TimeCreated")
-            && trimmed.contains("LevelDisplayName")
+        if trimmed.starts_with("TimeCreated") && trimmed.contains("LevelDisplayName")
             || trimmed.chars().all(|c| c == '-' || c.is_whitespace())
         {
             continue;
@@ -98,7 +105,9 @@ pub fn filter_winevent_output(raw: &str) -> String {
 
         // Format: TimeCreated(Date Time AM/PM) Id LevelDisplayName Message...
         // 2026-09-16 9:50:07 PM 71 Information Delete complete for port...
-        if parts.len() >= 6 && (parts[2].eq_ignore_ascii_case("am") || parts[2].eq_ignore_ascii_case("pm")) {
+        if parts.len() >= 6
+            && (parts[2].eq_ignore_ascii_case("am") || parts[2].eq_ignore_ascii_case("pm"))
+        {
             let time_str = format!("{} {} {}", parts[0], parts[1], parts[2]);
             let id = parts[3];
             let level = parts[4];
@@ -108,7 +117,14 @@ pub fn filter_winevent_output(raw: &str) -> String {
             } else {
                 String::new()
             };
-            lines.push(format!("[{}] {} {}(ID {}): {}", time_str, level, provider_prefix, id, msg).trim_end().to_string());
+            lines.push(
+                format!(
+                    "[{}] {} {}(ID {}): {}",
+                    time_str, level, provider_prefix, id, msg
+                )
+                .trim_end()
+                .to_string(),
+            );
         } else {
             lines.push(trimmed.trim_end().to_string());
         }
@@ -161,7 +177,9 @@ mod tests {
   117676 Sep 16 21:50  Information Microsoft-Windows-Test         71 Delete complete
 "#;
         let filtered = filter_eventlog_output(sample);
-        assert!(filtered.contains("[Sep 16 21:50] Information Microsoft-Windows-Test (ID 71): Delete complete"));
+        assert!(filtered.contains(
+            "[Sep 16 21:50] Information Microsoft-Windows-Test (ID 71): Delete complete"
+        ));
     }
 
     #[test]

@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use clap::Subcommand;
 
-const TELEMETRY_DISABLED_ENV: &str = "RTK_TELEMETRY_DISABLED";
+#[cfg(test)]
+const TELEMETRY_DISABLED_ENV: &str = "PTK_TELEMETRY_DISABLED";
 const TELEMETRY_DISABLED_VALUE: &str = "1";
 
 /// Label for the `device hash` row when no salt file exists.
@@ -20,13 +21,13 @@ fn salt_missing_label(
         return "(not applicable; this build has no telemetry endpoint)";
     }
     if env_override {
-        return "(blocked by RTK_TELEMETRY_DISABLED)";
+        return "(blocked by PTK_TELEMETRY_DISABLED)";
     }
     match consent_given {
         // `Some(false)` (explicit opt-out) and `None` (never prompted) collapse
-        // because the user-facing remediation — running `rtk telemetry enable`
+        // because the user-facing remediation — running `ptk telemetry enable`
         // — is identical in both states.
-        Some(false) | None => "(telemetry not enabled; run `rtk telemetry enable` to opt in)",
+        Some(false) | None => "(telemetry not enabled; run `ptk telemetry enable` to opt in)",
         Some(true) if !enabled => "(telemetry disabled in config.toml)",
         // Every gate is clear, so the salt is simply not there yet. This is true
         // both when no ping has landed (the 23 h interval, or a run that touched
@@ -87,14 +88,15 @@ pub fn run(command: &TelemetrySubcommand) -> Result<()> {
 }
 
 /// Returns true when telemetry is explicitly disabled through the
-/// `RTK_TELEMETRY_DISABLED` env var (value `"1"`).
+/// `PTK_TELEMETRY_DISABLED` env var (value `"1"`).
 ///
 /// Single source of truth for the env opt-out so the consent prompt
 /// (`init::prompt_telemetry_consent`), the status command, and
 /// `telemetry::maybe_ping` never diverge — if the accepted values ever grow
 /// (e.g. `"true"`, `"y"`), they change here once.
 pub fn telemetry_disabled_by_env() -> bool {
-    std::env::var(TELEMETRY_DISABLED_ENV).unwrap_or_default() == TELEMETRY_DISABLED_VALUE
+    crate::core::env_compat::env_compat("TELEMETRY_DISABLED").unwrap_or_default()
+        == TELEMETRY_DISABLED_VALUE
 }
 
 fn run_status() -> Result<()> {
@@ -121,7 +123,7 @@ fn run_status() -> Result<()> {
     }
     println!("  enabled:       {}", enabled_str);
     if env_override {
-        println!("  env override:  RTK_TELEMETRY_DISABLED=1 (blocked)");
+        println!("  env override:  PTK_TELEMETRY_DISABLED=1 (blocked)");
     }
 
     let salt_path = super::telemetry::salt_file_path();
@@ -142,7 +144,7 @@ fn run_status() -> Result<()> {
     );
 
     println!();
-    println!("Data controller: RTK AI Labs, contact@rtk-ai.app");
+    println!("Data controller: PTK AI Labs, contact@rtk-ai.app");
     println!("Details: https://github.com/rtk-ai/rtk/blob/master/docs/TELEMETRY.md");
 
     Ok(())
@@ -157,10 +159,10 @@ fn run_enable() -> Result<()> {
         );
     }
 
-    eprintln!("RTK collects anonymous usage metrics once per day to improve filters.");
+    eprintln!("PTK collects anonymous usage metrics once per day to improve filters.");
     eprintln!();
     eprintln!("  What:    command names (not arguments), token savings, OS, version");
-    eprintln!("  Who:     RTK AI Labs, contact@rtk-ai.app");
+    eprintln!("  Who:     PTK AI Labs, contact@rtk-ai.app");
     eprintln!("  Details: https://github.com/rtk-ai/rtk/blob/master/docs/TELEMETRY.md");
     eprintln!();
     eprint!("Enable anonymous telemetry? [y/N] ");
@@ -180,7 +182,7 @@ fn run_enable() -> Result<()> {
     crate::hooks::init::save_telemetry_consent(accepted)?;
 
     if accepted {
-        println!("Telemetry enabled. Disable anytime: rtk telemetry disable");
+        println!("Telemetry enabled. Disable anytime: ptk telemetry disable");
     } else {
         println!("Telemetry not enabled.");
     }
@@ -219,12 +221,12 @@ fn run_forget() -> Result<()> {
     // Purge local tracking database (GDPR Art. 17 — right to erasure applies to local data too)
     let db_path = dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join(super::constants::RTK_DATA_DIR)
+        .join(super::constants::PTK_DATA_DIR)
         .join(super::constants::HISTORY_DB);
     if db_path.exists() {
         match std::fs::remove_file(&db_path) {
             Ok(()) => println!("Local tracking database deleted: {}", db_path.display()),
-            Err(e) => eprintln!("rtk: could not delete {}: {}", db_path.display(), e),
+            Err(e) => eprintln!("ptk: could not delete {}: {}", db_path.display(), e),
         }
     }
 
@@ -235,7 +237,7 @@ fn run_forget() -> Result<()> {
                 println!("Erasure request sent to server.");
             }
             Err(e) => {
-                eprintln!("rtk: could not reach server: {}", e);
+                eprintln!("ptk: could not reach server: {}", e);
                 eprintln!("  To complete erasure, email contact@rtk-ai.app");
                 eprintln!("  with your device hash: {}", hash);
             }
@@ -259,8 +261,8 @@ fn send_erasure_request(device_hash: &str) -> Result<()> {
 
     let mut req = ureq::post(&url).set("Content-Type", "application/json");
 
-    if let Some(token) = option_env!("RTK_TELEMETRY_TOKEN") {
-        req = req.set("X-RTK-Token", token);
+    if let Some(token) = option_env!("PTK_TELEMETRY_TOKEN").or(option_env!("RTK_TELEMETRY_TOKEN")) {
+        req = req.set("X-PTK-Token", token);
     }
 
     req.timeout(std::time::Duration::from_secs(5))
@@ -274,15 +276,17 @@ mod tests {
     use super::*;
 
     /// Regression for #1307: the env opt-out must short-circuit telemetry
-    /// consent paths so `rtk init` cannot hang in non-interactive environments.
+    /// consent paths so `ptk init` cannot hang in non-interactive environments.
     /// All cases live in one test so the opt-out states cannot interleave.
     #[test]
     fn test_telemetry_disabled_by_env_honors_opt_out() {
         temp_env::with_var_unset(TELEMETRY_DISABLED_ENV, || {
-            assert!(
-                !telemetry_disabled_by_env(),
-                "unset env must not count as disabled"
-            );
+            temp_env::with_var_unset("RTK_TELEMETRY_DISABLED", || {
+                assert!(
+                    !telemetry_disabled_by_env(),
+                    "unset env must not count as disabled"
+                );
+            });
         });
 
         temp_env::with_var(
@@ -291,10 +295,24 @@ mod tests {
             || {
                 assert!(
                     telemetry_disabled_by_env(),
-                    "RTK_TELEMETRY_DISABLED=1 must disable telemetry prompts (issue #1307)"
+                    "PTK_TELEMETRY_DISABLED=1 must disable telemetry prompts (issue #1307)"
                 );
             },
         );
+
+        // Legacy RTK_ name still honored as a fallback.
+        temp_env::with_var_unset(TELEMETRY_DISABLED_ENV, || {
+            temp_env::with_var(
+                "RTK_TELEMETRY_DISABLED",
+                Some(TELEMETRY_DISABLED_VALUE),
+                || {
+                    assert!(
+                        telemetry_disabled_by_env(),
+                        "RTK_TELEMETRY_DISABLED=1 must still disable telemetry (legacy fallback)"
+                    );
+                },
+            );
+        });
 
         for other in ["0", "true", "false", "yes", "no", ""] {
             temp_env::with_var(TELEMETRY_DISABLED_ENV, Some(other), || {
@@ -311,11 +329,11 @@ mod tests {
 
     #[test]
     fn salt_missing_label_distinguishes_consent_not_given_from_real_failure() {
-        // #1656: a fresh `brew install rtk` followed by `rtk telemetry status`
-        // (without ever running `rtk init`) leaves `consent_given == None` and
+        // #1656: a fresh `brew install ptk` followed by `ptk telemetry status`
+        // (without ever running `ptk init`) leaves `consent_given == None` and
         // therefore never writes a salt — that is by design, not a failure.
         // Surfacing it as `(no salt file)` reads as an error to users.
-        let not_enabled = "(telemetry not enabled; run `rtk telemetry enable` to opt in)";
+        let not_enabled = "(telemetry not enabled; run `ptk telemetry enable` to opt in)";
         assert_eq!(salt_missing_label(true, false, true, None), not_enabled);
         assert_eq!(
             salt_missing_label(true, false, true, Some(false)),
@@ -341,7 +359,7 @@ mod tests {
         );
         assert_eq!(
             salt_missing_label(true, true, false, Some(false)),
-            "(blocked by RTK_TELEMETRY_DISABLED)"
+            "(blocked by PTK_TELEMETRY_DISABLED)"
         );
         assert_eq!(
             salt_missing_label(true, false, false, Some(true)),
@@ -374,11 +392,11 @@ mod tests {
         );
         assert_eq!(
             device_hash_line(true, false, true, None, None),
-            "  device hash:   (telemetry not enabled; run `rtk telemetry enable` to opt in)"
+            "  device hash:   (telemetry not enabled; run `ptk telemetry enable` to opt in)"
         );
         assert_eq!(
             device_hash_line(true, false, true, Some(false), None),
-            "  device hash:   (telemetry not enabled; run `rtk telemetry enable` to opt in)"
+            "  device hash:   (telemetry not enabled; run `ptk telemetry enable` to opt in)"
         );
         assert_eq!(
             device_hash_line(false, false, true, Some(true), None),
@@ -386,7 +404,7 @@ mod tests {
         );
         assert_eq!(
             device_hash_line(true, true, true, Some(true), None),
-            "  device hash:   (blocked by RTK_TELEMETRY_DISABLED)"
+            "  device hash:   (blocked by PTK_TELEMETRY_DISABLED)"
         );
         assert_eq!(
             device_hash_line(true, false, false, Some(true), None),

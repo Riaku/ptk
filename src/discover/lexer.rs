@@ -586,7 +586,7 @@ fn resolve_word_text(raw: &str) -> String {
 /// Quote-aware split of a single shell command into argv-ready words: quotes
 /// stripped, backslash escapes resolved — for callers that hand the result
 /// straight to `Command::new`/exec or compare it against literal words
-/// (`hooks/mod.rs::is_claude_hook_command`, `rtk proxy` arg-splitting).
+/// (`hooks/mod.rs::is_claude_hook_command`, `ptk proxy` arg-splitting).
 pub fn shell_split(input: &str) -> Vec<String> {
     coalesce_words(input, &tokenize(input))
         .into_iter()
@@ -1298,8 +1298,8 @@ mod tests {
     #[test]
     fn test_shell_split_keeps_backslash_in_double_quotes() {
         assert_eq!(
-            shell_split(r#""C:\Program Files\rtk.exe" hook codex"#),
-            vec![r"C:\Program Files\rtk.exe", "hook", "codex"]
+            shell_split(r#""C:\Program Files\ptk.exe" hook codex"#),
+            vec![r"C:\Program Files\ptk.exe", "hook", "codex"]
         );
     }
 

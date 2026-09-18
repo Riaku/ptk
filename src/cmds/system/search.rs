@@ -1,4 +1,4 @@
-//! Shared search-output filter for `rtk grep` and `rtk rg`.
+//! Shared search-output filter for `ptk grep` and `ptk rg`.
 //!
 //! Runs the agent's exact engine (grep or rg) — never substituting one for the other — and
 //! compresses its output by grouping matches by file, capping, and teeing overflow.
@@ -38,7 +38,7 @@ fn stdin_is_readable() -> bool {
 }
 
 /// KNOWN LIMITATION: no portable file-type check here, so Windows keeps the wider
-/// `!is_terminal()` rule -- `rtk rg foo < NUL` still routes to the streaming path and drops
+/// `!is_terminal()` rule -- `ptk rg foo < NUL` still routes to the streaming path and drops
 /// filenames there.
 #[cfg(not(unix))]
 fn stdin_is_readable() -> bool {
@@ -225,7 +225,7 @@ fn extract_pattern_path<T: AsRef<str>>(
                 if is_show_line_on_token(t.kind, t.text) {
                     show_line_flag = Some(true);
                 }
-                // Neither negation is forwarded: RTK forces `-nH` so it can parse the output,
+                // Neither negation is forwarded: PTK forces `-nH` so it can parse the output,
                 // and the user's `--no-filename`/`--no-line-number` would win as the later
                 // flag, leaving nothing parseable and forcing a second run of the whole search.
                 if is_show_file_off_token(engine, t.kind, t.text) {
@@ -306,7 +306,7 @@ fn extract_pattern_path<T: AsRef<str>>(
                     _ => (cluster, None),
                 };
 
-                // `-h` drops out of the cluster for the same reason as its long form: RTK
+                // `-h` drops out of the cluster for the same reason as its long form: PTK
                 // forces `-H` to parse the output and the user's later `-h` would win.
                 let glued: String = bool_chars
                     .iter()
@@ -381,7 +381,7 @@ fn unparsed_signal(stdout: &str) -> usize {
 
 /// Run real grep so matches and the savings baseline match the agent's command;
 /// rg is the fallback when grep is absent, rejects a flag, or `--type` is used.
-/// The search engine the agent actually invoked. RTK runs this binary verbatim
+/// The search engine the agent actually invoked. PTK runs this binary verbatim
 /// and never substitutes one for the other.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Engine {
@@ -465,7 +465,7 @@ fn format_match_line(line: &str, show_file: bool, show_line: bool) -> Option<Str
 }
 
 /// Emits each piped match as it arrives. Buffered search waits for EOF, so
-/// `tail -f app.log | rtk grep ERROR` would otherwise show no matches.
+/// `tail -f app.log | ptk grep ERROR` would otherwise show no matches.
 struct SearchStreamFilter {
     show_file: bool,
     show_line: bool,
@@ -489,7 +489,7 @@ impl StreamFilter for SearchStreamFilter {
             }
             self.cap_reported = true;
             return Some(format!(
-                "[rtk] output capped at {} results\n",
+                "[ptk] output capped at {} results\n",
                 self.max_results
             ));
         }
@@ -540,14 +540,14 @@ fn run_streaming_search(
 
     timer.track(
         real_cmd,
-        &format!("rtk {}", engine.label()),
+        &format!("ptk {}", engine.label()),
         &result.raw_stdout,
         &result.filtered,
     );
     Ok(result.exit_code)
 }
 
-/// Runs the agent's command verbatim for forms RTK does not group: format/shape
+/// Runs the agent's command verbatim for forms PTK does not group: format/shape
 /// flags and pattern-less modes (`--files`, `--type-list`).
 fn passthrough<T: AsRef<str>>(
     timer: &tracking::TimedExecution,
@@ -578,7 +578,7 @@ fn passthrough<T: AsRef<str>>(
         result.exit_code
     };
 
-    timer.track_passthrough(real_cmd, &format!("rtk {} (passthrough)", real_cmd));
+    timer.track_passthrough(real_cmd, &format!("ptk {} (passthrough)", real_cmd));
     Ok(exit_code)
 }
 
@@ -595,7 +595,7 @@ pub fn run(
     let args = &args_utils::restore_double_dash(args);
 
     // --version / --help: pass through to the engine without filtering. Token-based and
-    // scoped before the boundary, because `rtk grep -- --version` searches *for* that string.
+    // scoped before the boundary, because `ptk grep -- --version` searches *for* that string.
     // `-h` is engine-specific: rg's is --help, grep's is --no-filename.
     let help_tokens = tokenize_search_args(args, engine);
     let asks_for_help = arg_tokenizer::before_dashdash(&help_tokens)
@@ -626,7 +626,7 @@ pub fn run(
     }
 
     let real_cmd = format!("{} {}", engine.label(), args.join(" "));
-    let rtk_label = format!("rtk {}", engine.label());
+    let ptk_label = format!("ptk {}", engine.label());
 
     let (patterns, paths, extra_args, extra_args_has_format_flag, detected_flags) =
         extract_pattern_path(args, engine);
@@ -684,7 +684,7 @@ pub fn run(
     }
 
     if result.stdout.trim().is_empty() {
-        timer.track(&real_cmd, &rtk_label, &raw_output, "");
+        timer.track(&real_cmd, &ptk_label, &raw_output, "");
         return Ok(exit_code);
     }
 
@@ -813,9 +813,9 @@ pub fn run(
     }
 
     // Switch to the grouped form only when capping actually shrank the output;
-    // otherwise emit the faithful baseline, so RTK never exceeds the real command.
+    // otherwise emit the faithful baseline, so PTK never exceeds the real command.
     let capped = shown < total_matches || skipped_files > 0;
-    let rtk_output = if capped {
+    let ptk_output = if capped {
         format!(
             "{} matches in {} files:\n\n{}",
             total_matches,
@@ -826,14 +826,14 @@ pub fn run(
         body
     };
 
-    let output = if capped && rtk_output.len() < plain.len() {
-        rtk_output
+    let output = if capped && ptk_output.len() < plain.len() {
+        ptk_output
     } else {
         plain
     };
 
     print!("{}", output);
-    timer.track(&real_cmd, &rtk_label, &raw_output, &output);
+    timer.track(&real_cmd, &ptk_label, &raw_output, &output);
 
     Ok(exit_code)
 }
@@ -878,7 +878,7 @@ fn is_format_flag_token(engine: Engine, kind: TokenKind, text: &str) -> bool {
         "vimgrep",
     ];
     match kind {
-        // grep's `--initial-tab` pads and tabs every match line, so RTK's own `-H --null -n`
+        // grep's `--initial-tab` pads and tabs every match line, so PTK's own `-H --null -n`
         // parse reads nothing back and leaked the injected flags into the output. ripgrep has
         // no such flag, and its `-T` is `--type-not`, a value-taking flag (see rg_takes_value).
         TokenKind::Long => {
@@ -927,9 +927,9 @@ fn is_show_line_on_token(kind: TokenKind, text: &str) -> bool {
     }
 }
 
-/// True for `-h`/`--no-filename` (negates [`is_show_file_token`]). RTK forces `-H` so it can
+/// True for `-h`/`--no-filename` (negates [`is_show_file_token`]). PTK forces `-H` so it can
 /// parse the output, so the user's request has to be honoured at display time instead --
-/// leaving it in the engine command would defeat RTK's own parse and force a second run.
+/// leaving it in the engine command would defeat PTK's own parse and force a second run.
 fn is_show_file_off_token(engine: Engine, kind: TokenKind, text: &str) -> bool {
     match kind {
         TokenKind::Long => text == "no-filename",
@@ -1124,7 +1124,7 @@ mod tests {
         );
         assert_eq!(
             filter.feed_line(concat!("(standard input)\0", "2:second")),
-            Some("[rtk] output capped at 1 results\n".to_string())
+            Some("[ptk] output capped at 1 results\n".to_string())
         );
         assert_eq!(
             filter.feed_line(concat!("(standard input)\0", "3:third")),
@@ -1224,7 +1224,7 @@ mod tests {
 
     #[test]
     fn test_no_filename_is_honoured_at_display_not_forwarded() {
-        // RTK forces `-H` so it can parse the output, so the user's `-h`/`--no-filename` has to
+        // PTK forces `-H` so it can parse the output, so the user's `-h`/`--no-filename` has to
         // be applied when printing -- forwarded, it wins as the later flag, the NUL-separated
         // parse fails on every line, and the whole search runs a second time.
         let (_, _, flags, _, detected) =
@@ -1236,7 +1236,7 @@ mod tests {
         assert_eq!(detected.show_file, Some(false));
         assert_eq!(flags, vec!["-i"], "the rest of the cluster survives");
 
-        // Both engines arbitrate the pair by last-one-wins, so RTK must too.
+        // Both engines arbitrate the pair by last-one-wins, so PTK must too.
         let (_, _, _, _, detected) =
             extract_pattern_path(&["-h", "-H", "x", "a.txt"], Engine::Grep);
         assert_eq!(detected.show_file, Some(true));
@@ -1255,7 +1255,7 @@ mod tests {
     #[test]
     fn test_rg_unwraps_an_equals_attached_short_value_but_grep_does_not() {
         // rg accepts `-A=1` and strips the `=`; GNU grep answers "invalid context length
-        // argument", so RTK must not normalise it for grep.
+        // argument", so PTK must not normalise it for grep.
         let (_, _, flags, _, _) = extract_pattern_path(&["-A=1", "x", "a.txt"], Engine::Rg);
         assert_eq!(flags, vec!["-A", "1"]);
 
@@ -1267,7 +1267,7 @@ mod tests {
     fn test_extract_patterns_from_file_leaves_every_positional_a_path() {
         // `-f`/`--file` supplies the patterns like `-e` does. Taking the first positional as
         // the pattern instead left no path at all, so the engine read stdin (a hang) or walked
-        // the cwd, and `rtk grep -f pats.txt a.txt` answered "no matches" for a file that had
+        // the cwd, and `ptk grep -f pats.txt a.txt` answered "no matches" for a file that had
         // one.
         for args in [
             vec!["-f", "pats.txt", "a.txt"],
@@ -1856,7 +1856,7 @@ mod tests {
 
     #[test]
     fn grep_initial_tab_is_a_shape_flag_in_both_spellings() {
-        // `-T` pads and tabs every match line, so RTK's forced `-H --null -n` parse reads
+        // `-T` pads and tabs every match line, so PTK's forced `-H --null -n` parse reads
         // nothing back and leaked the injected flags -- filename, a raw NUL and the line
         // number -- straight into the output.
         assert!(is_format_flag_token(Engine::Grep, TokenKind::Short, "T"));

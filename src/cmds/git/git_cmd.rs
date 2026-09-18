@@ -46,7 +46,7 @@ fn git_cmd(global_args: &[String]) -> Command {
 
 /// Create a git Command for internal parsing that must be locale-stable.
 ///
-/// We only use this for non-user-facing parses where RTK depends on git's
+/// We only use this for non-user-facing parses where PTK depends on git's
 /// English status phrases. User-visible passthrough output keeps the user's
 /// locale.
 fn git_cmd_c_locale(global_args: &[String]) -> Command {
@@ -146,7 +146,7 @@ fn split_stash_region(region: &[String]) -> (Option<String>, Vec<String>) {
 }
 
 /// `-s`/`--no-patch` ask `git diff` for no body at all, so there is nothing to compact and
-/// RTK's own `--stat` header would answer a question the user did not ask. On `git show` the
+/// PTK's own `--stat` header would answer a question the user did not ask. On `git show` the
 /// same flags ask for the commit summary, which is exactly what the compact form prints, so
 /// this is deliberately not part of [`diff_wants_raw_shape`].
 fn suppresses_diff_body(token: &Token<'_>) -> bool {
@@ -268,10 +268,10 @@ fn run_diff(
         .iter()
         .any(|t| diff_wants_raw_shape(t, &tokens) || suppresses_diff_body(t));
 
-    // Compact diff is the default RTK behavior; --no-compact is RTK's own pseudo-flag. The
+    // Compact diff is the default PTK behavior; --no-compact is PTK's own pseudo-flag. The
     // strip below removes the arg this token came from, so detection and removal can't
     // disagree -- re-matching the string dropped a pathspec of the same name past `--`.
-    // Any spelling counts, attached value or not: `--no-compact` is RTK's own, so git would
+    // Any spelling counts, attached value or not: `--no-compact` is PTK's own, so git would
     // only answer `error: invalid option` if a value form leaked through.
     let no_compact: Vec<usize> = tokens
         .iter()
@@ -286,7 +286,7 @@ fn run_diff(
         cmd.arg("diff");
         for (index, arg) in args.iter().enumerate() {
             if no_compact.contains(&index) {
-                continue; // RTK flag, not a git flag
+                continue; // PTK flag, not a git flag
             }
             cmd.arg(arg);
         }
@@ -304,7 +304,7 @@ fn run_diff(
             }
             timer.track(
                 &format!("git diff {}", args.join(" ")),
-                &format!("rtk git diff {} (passthrough)", args.join(" ")),
+                &format!("ptk git diff {} (passthrough)", args.join(" ")),
                 &result.stdout,
                 &result.stdout,
             );
@@ -313,7 +313,7 @@ fn run_diff(
 
         timer.track(
             &format!("git diff {}", args.join(" ")),
-            &format!("rtk git diff {} (passthrough)", args.join(" ")),
+            &format!("ptk git diff {} (passthrough)", args.join(" ")),
             &result.stdout,
             &result.stdout,
         );
@@ -321,9 +321,9 @@ fn run_diff(
         return Ok(0);
     }
 
-    // Default RTK behavior: stat first, then compacted diff. `--no-patch --stat` forces the
+    // Default PTK behavior: stat first, then compacted diff. `--no-patch --stat` forces the
     // header to be stat-only whatever the user asked for -- `git diff --stat -p` (or -U3, -W,
-    // ...) emits the patch too, and RTK then printed it again, compacted, for 2.4x the raw
+    // ...) emits the patch too, and PTK then printed it again, compacted, for 2.4x the raw
     // output. The flags go before the user's own `--`, where git still reads them as options.
     // The user's own command runs first, because only it can give git's verdict on what they
     // typed. The stat header below runs with the patch-shape flags stripped, so it answers a
@@ -344,7 +344,7 @@ fn run_diff(
         }
         timer.track(
             &format!("git diff {}", args.join(" ")),
-            &format!("rtk git diff {}", args.join(" ")),
+            &format!("ptk git diff {}", args.join(" ")),
             &diff_result.stdout,
             &diff_result.stdout,
         );
@@ -352,7 +352,7 @@ fn run_diff(
     }
 
     // `--no-patch --stat` forces the header to be stat-only whatever the user asked for --
-    // `git diff --stat -p` (or -U3, -W, ...) emits the patch too, and RTK then printed it
+    // `git diff --stat -p` (or -U3, -W, ...) emits the patch too, and PTK then printed it
     // again, compacted, for 2.4x the raw output. The flags go before the user's own `--`,
     // where git still reads them as options. A failure here costs the header, not the command.
     let mut cmd = git_cmd(global_args);
@@ -380,7 +380,7 @@ fn run_diff(
 
     timer.track(
         &format!("git diff {}", args.join(" ")),
-        &format!("rtk git diff {}", args.join(" ")),
+        &format!("ptk git diff {}", args.join(" ")),
         &raw,
         shown,
     );
@@ -388,20 +388,20 @@ fn run_diff(
     Ok(0)
 }
 
-/// `git show` with RTK's own shape flags in front. `drop_patch_shape` removes the user's
+/// `git show` with PTK's own shape flags in front. `drop_patch_shape` removes the user's
 /// patch-enabling flags, which the summary and stat steps need (git takes the last one, so a
 /// `-p` anywhere would bring the patch back) but the diff step must not -- `-U5` sets the
-/// context width of the patch RTK is about to compact.
+/// context width of the patch PTK is about to compact.
 /// git takes the last output-format flag, so a `-p` left anywhere in the args -- including
-/// after a revision, where RTK's flags cannot be placed -- would re-enable the patch in the
+/// after a revision, where PTK's flags cannot be placed -- would re-enable the patch in the
 /// summary and stat steps and the result stopped being smaller than raw.
-/// True when the user asked `git show` for a commit format of their own, which RTK cannot
+/// True when the user asked `git show` for a commit format of their own, which PTK cannot
 /// compact around -- its own `--pretty=format:` would be overridden by theirs.
 ///
 /// `--oneline` is deliberately absent, unlike `run_log`'s equivalent check: it does not replace
 /// the summary with something unparseable, so routing the whole command raw over it cost 3.7x
 /// the output on a real commit (116 KB against 31 KB), on the one metric this tool exists for.
-/// It does outrank RTK's own `--pretty=format:`, which is passed before the user's args, so the
+/// It does outrank PTK's own `--pretty=format:`, which is passed before the user's args, so the
 /// stat step drops it from what it forwards (see `args_without_oneline`); otherwise the commit
 /// header that step suppresses comes back and the summary prints twice.
 fn show_wants_format(tokens: &[Token<'_>]) -> bool {
@@ -414,12 +414,12 @@ fn show_cmd(
     global_args: &[String],
     args: &[String],
     tokens: &[Token<'_>],
-    rtk_flags: &[&str],
+    ptk_flags: &[&str],
     drop_patch_shape: bool,
 ) -> Command {
     let mut cmd = git_cmd(global_args);
     cmd.arg("show");
-    cmd.args(rtk_flags);
+    cmd.args(ptk_flags);
     let forwarded = if drop_patch_shape {
         args_without_patch_shape(args, tokens)
     } else {
@@ -498,7 +498,7 @@ fn run_show(
 
         timer.track(
             &format!("git show {}", args.join(" ")),
-            &format!("rtk git show {} (passthrough)", args.join(" ")),
+            &format!("ptk git show {} (passthrough)", args.join(" ")),
             &result.stdout,
             &result.stdout,
         );
@@ -518,7 +518,7 @@ fn run_show(
         let result =
             crate::core::stream::exec_capture_bytes(&mut cmd).context("Failed to run git show")?;
         let label = format!("git show {}", args.join(" "));
-        let rtk_label = format!("rtk git show {}", args.join(" "));
+        let ptk_label = format!("ptk git show {}", args.join(" "));
         if !result.success() {
             eprint!(
                 "{}",
@@ -559,7 +559,7 @@ fn run_show(
         // pipe); a consumer that needs the full content follows the `| tail -n +N`
         // recovery hint — the same tradeoff `git log | grep` already makes.
         // (`is_terminal()` is not a reliable "human is watching" signal anyway: the hook
-        // always pipes rtk's stdout — verified `isatty: False` — and CI agents hand rtk
+        // always pipes ptk's stdout — verified `isatty: False` — and CI agents hand ptk
         // a pseudo-TTY. Had this branch gated on it, it would have been the first gate to
         // drop CONTENT; every other `stdout().is_terminal()` gate in the tree governs
         // only PRESENTATION — color, line-buffering, curl formatting.)
@@ -574,7 +574,7 @@ fn run_show(
                 return emit_raw_bytes_passthrough(
                     &result.stdout,
                     &label,
-                    &rtk_label,
+                    &ptk_label,
                     &timer,
                     result.exit_code,
                 );
@@ -606,7 +606,7 @@ fn run_show(
             let shown = compact_blob_show(text, blob_objects[0], global_args);
             print!("{}", shown);
             // Track savings against the bytes git actually wrote (`result.stdout`).
-            timer.track_bytes(&label, &rtk_label, result.stdout.len(), &shown);
+            timer.track_bytes(&label, &ptk_label, result.stdout.len(), &shown);
             return Ok(0);
         }
         // Not windowable (multiple concatenated objects, a content-transforming flag, or
@@ -614,14 +614,14 @@ fn run_show(
         return emit_raw_bytes_passthrough(
             &result.stdout,
             &label,
-            &rtk_label,
+            &ptk_label,
             &timer,
             result.exit_code,
         );
     }
 
     // The compacted commit-diff path from here down. `show_route` above already decided the
-    // blob and summary cases, so what is left is the one shape RTK renders itself.
+    // blob and summary cases, so what is left is the one shape PTK renders itself.
     let tokens = tokenize_git_diff_args(args);
 
     // Get raw output for tracking
@@ -632,7 +632,7 @@ fn run_show(
     }
     let raw_result = exec_capture(&mut raw_cmd).context("Failed to run git show")?;
     // git's verdict on the command as the user typed it, before the steps below run it again
-    // with RTK's own flags -- the stat step strips the patch-shape flags, so it succeeds where
+    // with PTK's own flags -- the stat step strips the patch-shape flags, so it succeeds where
     // git refused (`git show -pq HEAD` exits 128 raw) and the compaction looked like success.
     if !raw_result.success() {
         if !raw_result.stderr.trim().is_empty() {
@@ -640,7 +640,7 @@ fn run_show(
         }
         timer.track(
             &format!("git show {}", args.join(" ")),
-            &format!("rtk git show {}", args.join(" ")),
+            &format!("ptk git show {}", args.join(" ")),
             &raw_result.stdout,
             &raw_result.stdout,
         );
@@ -670,7 +670,7 @@ fn run_show(
         println!("{}", shown);
         timer.track(
             &format!("git show {}", args.join(" ")),
-            &format!("rtk git show {}", args.join(" ")),
+            &format!("ptk git show {}", args.join(" ")),
             &raw_output,
             shown,
         );
@@ -678,9 +678,9 @@ fn run_show(
     }
 
     // Step 2: --stat summary
-    // `--oneline` is dropped, not outranked: RTK's `--pretty=format:` suppresses the commit
+    // `--oneline` is dropped, not outranked: PTK's `--pretty=format:` suppresses the commit
     // header this step must not repeat, and git resolves the two by last flag wins, so a user
-    // `--oneline` re-enabled it and the summary printed twice. Appending RTK's flag after the
+    // `--oneline` re-enabled it and the summary printed twice. Appending PTK's flag after the
     // user's instead would put it past their `--`, where git reads it as a pathspec.
     let stat_args = args_without_oneline(args, &tokens);
     let mut stat_cmd = show_cmd(
@@ -718,7 +718,7 @@ fn run_show(
 
     timer.track(
         &format!("git show {}", args.join(" ")),
-        &format!("rtk git show {}", args.join(" ")),
+        &format!("ptk git show {}", args.join(" ")),
         &raw_output,
         shown,
     );
@@ -937,7 +937,7 @@ fn show_route(args: &[String]) -> ShowRoute {
 /// candidate (a flag value like `-S 'url:1'`, or a tree/commit/bogus object).
 fn commit_or_stat_route(args: &[String]) -> ShowRoute {
     // Tokenized, not string-matched: a pathspec named `--stat` past the boundary is not the
-    // flag, `--prettyish` is not `--pretty`, and the shapes RTK cannot compact are more than
+    // flag, `--prettyish` is not `--pretty`, and the shapes PTK cannot compact are more than
     // the three stat spellings -- `--raw`, `--name-only`, `--check` and the rest route here
     // too. A word/color-word diff has no unified-diff markers for `compact_diff` to read, so
     // it passes through like a summary; it only ever applies to a commit-diff, so it is
@@ -1040,7 +1040,7 @@ fn compact_blob_show(raw: &str, blob_arg: &str, global_args: &[String]) -> Strin
     };
     // Carry the command's global args (`-C <dir>`, `-c k=v`, `--git-dir`, `--work-tree`)
     // into the hint so it is runnable from anywhere, not just the repo root: without
-    // them `rtk git -C /repo show HEAD:big` would emit `git show 'HEAD:big' | tail …`,
+    // them `ptk git -C /repo show HEAD:big` would emit `git show 'HEAD:big' | tail …`,
     // which fails outside /repo. Each is shell-quoted for copy-paste safety.
     let mut prefix = String::new();
     for arg in global_args {
@@ -1065,7 +1065,7 @@ fn compact_blob_show(raw: &str, blob_arg: &str, global_args: &[String]) -> Strin
 fn emit_raw_bytes_passthrough(
     bytes: &[u8],
     label: &str,
-    rtk_label: &str,
+    ptk_label: &str,
     timer: &tracking::TimedExecution,
     exit_code: i32,
 ) -> Result<i32> {
@@ -1075,7 +1075,7 @@ fn emit_raw_bytes_passthrough(
     handle
         .write_all(bytes)
         .context("Failed to write blob to stdout")?;
-    timer.track_passthrough(label, rtk_label);
+    timer.track_passthrough(label, ptk_label);
     Ok(exit_code)
 }
 
@@ -1445,7 +1445,7 @@ pub(crate) fn compact_diff(diff: &str, max_lines: usize) -> String {
             header.consume(markers);
 
             // Hunk bodies emit at column 0 in git's own unified shape, so
-            // `^+` / `^-` anchor. rtk's own annotations stay indented so those
+            // `^+` / `^-` anchor. ptk's own annotations stay indented so those
             // same anchors never match them. Inside a hunk every `+`/`-` line
             // is content: the `---` / `+++` file headers only ever appear
             // before the first hunk header.
@@ -1526,20 +1526,20 @@ pub(crate) fn compact_diff(diff: &str, max_lines: usize) -> String {
     }
 
     if was_truncated {
-        result.push("[full diff: rtk git diff --no-compact]".to_string());
+        result.push("[full diff: ptk git diff --no-compact]".to_string());
     }
 
     result.join("\n")
 }
 
-/// RTK's default `git log` limit, applied whenever the user names none.
+/// PTK's default `git log` limit, applied whenever the user names none.
 const DEFAULT_LOG_LIMIT: usize = 10;
 const DEFAULT_LOG_LIMIT_ARG: &str = "-10";
 
-/// `git log <args>` for the raw passthrough, carrying RTK's default limit unless the user named
+/// `git log <args>` for the raw passthrough, carrying PTK's default limit unless the user named
 /// one. [`run_passthrough`] streams straight to the terminal, so the limit has to be in the args
 /// or it never applies: a patch request became the whole history, 411k lines against 50 for
-/// plain `rtk git log`.
+/// plain `ptk git log`.
 ///
 /// The limit goes first, ahead of every user argument. `injection_point` is the wrong tool here:
 /// it only guarantees "before the user's `--`", while git requires options to precede *all*
@@ -1555,14 +1555,14 @@ fn raw_log_passthrough_args(args: &[String], capped: bool) -> Vec<OsString> {
     out
 }
 
-/// True when RTK's default limit applies: the user named no limit of their own and did not
+/// True when PTK's default limit applies: the user named no limit of their own and did not
 /// bound the walk with a revision range.
 fn raw_log_is_capped(tokens: &[Token<'_>]) -> bool {
     !has_limit_flag(tokens) && !bounds_the_walk(tokens)
 }
 
 /// How many commits a default-format `git log` printed. `None` when the format is not the
-/// default one, which is when RTK cannot tell and says nothing rather than guessing.
+/// default one, which is when PTK cannot tell and says nothing rather than guessing.
 fn count_default_format_commits(stdout: &str) -> Option<usize> {
     let n = stdout
         .lines()
@@ -1574,7 +1574,7 @@ fn count_default_format_commits(stdout: &str) -> Option<usize> {
     (n > 0).then_some(n)
 }
 
-/// True when the arguments already bound the walk, so RTK's default limit would only take away
+/// True when the arguments already bound the walk, so PTK's default limit would only take away
 /// what the user explicitly asked for -- `git log -p HEAD~15..HEAD` means those 15 commits.
 ///
 /// A revision range is the one bound that is exact; `--since` and friends narrow the walk but
@@ -1617,7 +1617,7 @@ fn run_log(
         }
         timer.track(
             &format!("git log {}", args.join(" ")),
-            &format!("rtk git log {} (passthrough)", args.join(" ")),
+            &format!("ptk git log {} (passthrough)", args.join(" ")),
             &result.stdout,
             &result.stdout,
         );
@@ -1626,7 +1626,7 @@ fn run_log(
         }
         if count_default_format_commits(&result.stdout) == Some(DEFAULT_LOG_LIMIT) {
             eprintln!(
-                "[rtk] showing {} commits; pass -n <count> for more",
+                "[ptk] showing {} commits; pass -n <count> for more",
                 DEFAULT_LOG_LIMIT
             );
         }
@@ -1646,7 +1646,7 @@ fn run_log(
     // Check if user provided limit flag (-N, -n N, --max-count=N, --max-count N)
     let has_limit_flag = has_limit_flag(&tokens);
 
-    // Apply RTK defaults only if user didn't specify them
+    // Apply PTK defaults only if user didn't specify them
     // Use %b (body) to preserve first line of commit body for agent context
     // (BREAKING CHANGE, Closes #xxx, design notes)
     if !has_format_flag {
@@ -1670,7 +1670,7 @@ fn run_log(
 
     // Only add --no-merges if user didn't explicitly request merge commits. Any
     // `--min-parents=N` with N >= 2 asks for merges; pinning it to 2 let `--min-parents=3`
-    // collect RTK's `--no-merges` as well, and the two constraints select nothing at all.
+    // collect PTK's `--no-merges` as well, and the two constraints select nothing at all.
     let wants_merges = tokens.iter().any(|t| {
         t.kind == TokenKind::Long
             && (t.text == "merges"
@@ -1700,14 +1700,14 @@ fn run_log(
         eprintln!("Git log output:");
     }
 
-    // Post-process: truncate long messages, cap lines only if RTK set the default
+    // Post-process: truncate long messages, cap lines only if PTK set the default
     let filtered = filter_log_output(&result.stdout, limit, user_set_limit, has_format_flag);
     let filtered = never_worse(&result.stdout, &filtered).to_string();
     println!("{}", filtered);
 
     timer.track(
         &format!("git log {}", args.join(" ")),
-        &format!("rtk git log {}", args.join(" ")),
+        &format!("ptk git log {}", args.join(" ")),
         &result.stdout,
         &filtered,
     );
@@ -1789,7 +1789,7 @@ fn log_takes_value(kind: TokenKind, name: &str) -> Option<ValueSpec> {
 
 /// `diff`/`show`'s grammar. Same long list, but `-l` is the rename limit here and *does*
 /// cluster: `git diff -wl 100` works where `git log -cl 2` does not. Sharing log's short
-/// grammar made RTK read the 100 as a pathspec and splice its own flags in front of it.
+/// grammar made ptk read the 100 as a pathspec and splice its own flags in front of it.
 fn diff_takes_value(kind: TokenKind, name: &str) -> Option<ValueSpec> {
     match kind {
         TokenKind::Long => shared_long_takes_value(name).then(ValueSpec::value),
@@ -1821,7 +1821,7 @@ fn real_flag_args(args: &[String]) -> Vec<&str> {
 }
 
 /// True for git log flags that change the *shape* of git's raw output (patch text, diffstat,
-/// name lists) in a way incompatible with RTK's injected `--pretty=format` markers, requiring
+/// name lists) in a way incompatible with PTK's injected `--pretty=format` markers, requiring
 /// the raw passthrough path instead (see [`requests_raw_log_output`]). `diff`/`show` use the
 /// narrower [`diff_wants_raw_shape`]/[`show_wants_raw_shape`] instead.
 fn log_wants_raw_shape(token: &Token<'_>, tokens: &[Token<'_>]) -> bool {
@@ -1883,7 +1883,7 @@ fn diff_wants_raw_shape(token: &Token<'_>, tokens: &[Token<'_>]) -> bool {
 ///
 /// Excludes `--patch`/`-p`/`-u` and `--unified`/`-U`: unlike `log`, `diff`/`show`'s default
 /// output already *is* patch text, so those are redundant with the default rather than a shape
-/// RTK cannot produce. Delegates the rest to [`log_wants_raw_shape`] so the two can't drift.
+/// PTK cannot produce. Delegates the rest to [`log_wants_raw_shape`] so the two can't drift.
 fn show_wants_raw_shape(token: &Token<'_>, tokens: &[Token<'_>]) -> bool {
     if matches!(
         (token.kind, token.text),
@@ -1971,7 +1971,7 @@ pub(crate) fn filter_log_output(
     let truncate_width = if user_set_limit { 120 } else { 80 };
 
     // When user specified their own format (--oneline, --pretty, --format),
-    // RTK did not inject ---END--- markers. Use simple line-based truncation.
+    // PTK did not inject ---END--- markers. Use simple line-based truncation.
     if user_format {
         let lines: Vec<&str> = output.lines().collect();
         let max_lines = if user_set_limit { lines.len() } else { limit };
@@ -1983,7 +1983,7 @@ pub(crate) fn filter_log_output(
             .join("\n");
     }
 
-    // RTK injected format: split output into commit blocks separated by ---END---
+    // PTK injected format: split output into commit blocks separated by ---END---
     let commits: Vec<&str> = output.split("---END---").collect();
     let max_commits = if user_set_limit { commits.len() } else { limit };
 
@@ -2231,7 +2231,7 @@ fn run_status(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
             }
             timer.track(
                 &format!("git status {}", args.join(" ")),
-                &format!("rtk git status {}", args.join(" ")),
+                &format!("ptk git status {}", args.join(" ")),
                 &result.stdout,
                 &result.stdout,
             );
@@ -2249,7 +2249,7 @@ fn run_status(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
 
         timer.track(
             &format!("git status {}", args.join(" ")),
-            &format!("rtk git status {}", args.join(" ")),
+            &format!("ptk git status {}", args.join(" ")),
             &result.stdout,
             &filtered,
         );
@@ -2281,13 +2281,13 @@ fn run_status(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
         } else {
             format!("git status {}", args.join(" "))
         };
-        let rtk_cmd = if args.is_empty() {
-            "rtk git status".to_string()
+        let ptk_cmd = if args.is_empty() {
+            "ptk git status".to_string()
         } else {
-            format!("rtk git status {}", args.join(" "))
+            format!("ptk git status {}", args.join(" "))
         };
         let shown = never_worse(&raw_output, &message);
-        timer.track(&original_cmd, &rtk_cmd, &raw_output, shown);
+        timer.track(&original_cmd, &ptk_cmd, &raw_output, shown);
         return Ok(result.exit_code);
     }
 
@@ -2312,13 +2312,13 @@ fn run_status(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
     } else {
         format!("git status {}", args.join(" "))
     };
-    let rtk_cmd = if args.is_empty() {
-        "rtk git status".to_string()
+    let ptk_cmd = if args.is_empty() {
+        "ptk git status".to_string()
     } else {
-        format!("rtk git status {}", args.join(" "))
+        format!("ptk git status {}", args.join(" "))
     };
 
-    timer.track(&original_cmd, &rtk_cmd, &raw_output, shown);
+    timer.track(&original_cmd, &ptk_cmd, &raw_output, shown);
 
     Ok(0)
 }
@@ -2378,7 +2378,7 @@ fn run_add(args: &[String], verbose: u8, global_args: &[String]) -> Result<i32> 
 
         timer.track(
             &format!("git add {}", args.join(" ")),
-            &format!("rtk git add {}", args.join(" ")),
+            &format!("ptk git add {}", args.join(" ")),
             &raw_output,
             &compact,
         );
@@ -2450,7 +2450,7 @@ fn run_commit(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
     match classify_commit_outcome(exit_code == 0, &stdout, exit_code) {
         CommitOutcome::Ok(compact) => {
             println!("{}", compact);
-            timer.track(&original_cmd, "rtk git commit", &raw_output, &compact);
+            timer.track(&original_cmd, "ptk git commit", &raw_output, &compact);
             Ok(0)
         }
         CommitOutcome::Failed(code) => {
@@ -2460,7 +2460,7 @@ fn run_commit(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
             if !stdout.trim().is_empty() {
                 eprint!("{}", stdout);
             }
-            timer.track(&original_cmd, "rtk git commit", &raw_output, &raw_output);
+            timer.track(&original_cmd, "ptk git commit", &raw_output, &raw_output);
             Ok(code)
         }
     }
@@ -2754,7 +2754,7 @@ fn run_push(args: &[String], verbose: u8, global_args: &[String]) -> Result<i32>
 
     timer.track(
         &cmd_label,
-        &format!("rtk {}", cmd_label),
+        &format!("ptk {}", cmd_label),
         &result.raw,
         &result.filtered,
     );
@@ -2829,7 +2829,7 @@ fn run_pull(args: &[String], verbose: u8, global_args: &[String]) -> Result<i32>
 
         timer.track(
             &format!("git pull {}", args.join(" ")),
-            &format!("rtk git pull {}", args.join(" ")),
+            &format!("ptk git pull {}", args.join(" ")),
             &raw_output,
             &compact,
         );
@@ -2932,7 +2932,7 @@ fn run_branch(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
         let trimmed = result.stdout.trim();
         timer.track(
             &format!("git branch {}", args.join(" ")),
-            &format!("rtk git branch {}", args.join(" ")),
+            &format!("ptk git branch {}", args.join(" ")),
             &combined,
             trimmed,
         );
@@ -2963,7 +2963,7 @@ fn run_branch(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
 
         timer.track(
             &format!("git branch {}", args.join(" ")),
-            &format!("rtk git branch {}", args.join(" ")),
+            &format!("ptk git branch {}", args.join(" ")),
             &combined,
             msg,
         );
@@ -3002,7 +3002,7 @@ fn run_branch(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
         }
         timer.track(
             &format!("git branch {}", args.join(" ")),
-            &format!("rtk git branch {}", args.join(" ")),
+            &format!("ptk git branch {}", args.join(" ")),
             &result.stdout,
             &result.stdout,
         );
@@ -3015,7 +3015,7 @@ fn run_branch(args: &[String], verbose: u8, global_args: &[String]) -> Result<i3
 
     timer.track(
         &format!("git branch {}", args.join(" ")),
-        &format!("rtk git branch {}", args.join(" ")),
+        &format!("ptk git branch {}", args.join(" ")),
         &result.stdout,
         &filtered,
     );
@@ -3122,7 +3122,7 @@ fn run_fetch(args: &[String], verbose: u8, global_args: &[String]) -> Result<i32
     };
 
     println!("{}", msg);
-    timer.track("git fetch", "rtk git fetch", &raw, &msg);
+    timer.track("git fetch", "ptk git fetch", &raw, &msg);
 
     Ok(0)
 }
@@ -3184,7 +3184,7 @@ fn run_stash(
                 if !result.success() && !result.stderr.trim().is_empty() {
                     eprintln!("{}", result.stderr.trim());
                 }
-                timer.track("git stash list", "rtk git stash list", &result.stdout, "");
+                timer.track("git stash list", "ptk git stash list", &result.stdout, "");
                 return Ok(result.exit_code);
             }
 
@@ -3193,7 +3193,7 @@ fn run_stash(
             println!("{}", filtered);
             timer.track(
                 "git stash list",
-                "rtk git stash list",
+                "ptk git stash list",
                 &result.stdout,
                 &filtered,
             );
@@ -3212,7 +3212,7 @@ fn run_stash(
                 if !result.success() && !result.stderr.trim().is_empty() {
                     eprintln!("{}", result.stderr.trim());
                 }
-                timer.track("git stash show", "rtk git stash show", &result.stdout, "");
+                timer.track("git stash show", "ptk git stash show", &result.stdout, "");
                 return Ok(result.exit_code);
             }
 
@@ -3238,7 +3238,7 @@ fn run_stash(
             let shown = crate::core::runner::emit_guarded(&filtered, None, &result.stdout);
             timer.track(
                 "git stash show",
-                "rtk git stash show",
+                "ptk git stash show",
                 &result.stdout,
                 &shown,
             );
@@ -3268,7 +3268,7 @@ fn run_stash(
 
             timer.track(
                 &format!("git stash {}", sub),
-                &format!("rtk git stash {}", sub),
+                &format!("ptk git stash {}", sub),
                 &combined,
                 &msg,
             );
@@ -3310,7 +3310,7 @@ fn run_stash(
 
             timer.track(
                 &format!("git stash {}", sub),
-                &format!("rtk git stash {}", sub),
+                &format!("ptk git stash {}", sub),
                 &combined,
                 &msg,
             );
@@ -3419,7 +3419,7 @@ fn diffstat_row(line: &str) -> Option<String> {
 
 /// True when a `git worktree` write action was asked to report what it did: `prune --dry-run`
 /// names every worktree it would remove and that list is the whole point of the command, while
-/// `git worktree add`'s progress lines are exactly what RTK's "ok" replaces.
+/// `git worktree add`'s progress lines are exactly what PTK's "ok" replaces.
 fn worktree_asked_for_report(tokens: &[Token<'_>]) -> bool {
     arg_tokenizer::before_dashdash(tokens)
         .iter()
@@ -3445,10 +3445,10 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
         .find(|t| t.is_free_positional())
         .map(|t| t.text);
 
-    // Only a bare listing is RTK's to compact. A write action gets the terse "ok"; everything
+    // Only a bare listing is PTK's to compact. A write action gets the terse "ok"; everything
     // else -- `list` with flags of its own like `--porcelain`, a subcommand git grows later,
     // or a `--` with no subcommand, which real git rejects -- passes through verbatim, since
-    // RTK cannot know what its output means.
+    // PTK cannot know what its output means.
     let compact_list = tokens.is_empty() || (subcommand == Some("list") && tokens.len() == 1);
     let write_action = matches!(
         subcommand,
@@ -3469,7 +3469,7 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
         }
         timer.track(
             &format!("git worktree {}", args.join(" ")),
-            &format!("rtk git worktree {} (passthrough)", args.join(" ")),
+            &format!("ptk git worktree {} (passthrough)", args.join(" ")),
             &result.stdout,
             &result.stdout,
         );
@@ -3490,7 +3490,7 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
         } else {
             ""
         };
-        // Track what RTK prints, not what git said: on success that is the report or "ok".
+        // Track what PTK prints, not what git said: on success that is the report or "ok".
         let msg = if !result.success() {
             combined.as_str()
         } else if said.is_empty() {
@@ -3501,7 +3501,7 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
 
         timer.track(
             &format!("git worktree {}", args.join(" ")),
-            &format!("rtk git worktree {}", args.join(" ")),
+            &format!("ptk git worktree {}", args.join(" ")),
             &combined,
             msg,
         );
@@ -3533,7 +3533,7 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
         }
         timer.track(
             "git worktree list",
-            "rtk git worktree",
+            "ptk git worktree",
             &result.stdout,
             &result.stderr,
         );
@@ -3545,7 +3545,7 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
     println!("{}", filtered);
     timer.track(
         "git worktree list",
-        "rtk git worktree",
+        "ptk git worktree",
         &result.stdout,
         &filtered,
     );
@@ -3595,7 +3595,7 @@ pub fn run_passthrough(args: &[OsString], global_args: &[String], verbose: u8) -
     let args_str = tracking::args_display(args);
     timer.track_passthrough(
         &format!("git {}", args_str),
-        &format!("rtk git {} (passthrough)", args_str),
+        &format!("ptk git {} (passthrough)", args_str),
     );
 
     if !status.success() {
@@ -3818,7 +3818,7 @@ mod tests {
         );
         assert_eq!(added, vec!["+ADDED"], "`^+` must anchor");
 
-        // rtk's own tally stays indented so these same greps never count it as
+        // ptk's own tally stays indented so these same greps never count it as
         // a diff line. Without this, `^+` would pick up the "+1 -2" summary.
         assert!(result.contains("  +1 -2"), "tally must stay indented");
 
@@ -4054,7 +4054,7 @@ mod tests {
     fn test_diff_header_path_unescapes_gits_default_quoting() {
         // What git actually emits under the default `core.quotepath`: one octal
         // escape per byte, so the header has to be decoded rather than merely
-        // unwrapped, or `rtk git diff | grep été` finds nothing.
+        // unwrapped, or `ptk git diff | grep été` finds nothing.
         assert_eq!(
             diff_header_path(r#"diff --git "a/\303\251t\303\251.txt" "b/\303\251t\303\251.txt""#),
             "été.txt"
@@ -4699,7 +4699,7 @@ mod tests {
 
     #[test]
     fn test_compact_blob_show_hint_carries_global_args() {
-        // `rtk git -C /repo -c core.x=y show HEAD:big` must produce a hint that is
+        // `ptk git -C /repo -c core.x=y show HEAD:big` must produce a hint that is
         // runnable from OUTSIDE the repo: the global args go between `git` and `show`,
         // each shell-quoted, so the recovery command targets the same repo.
         let mut s = String::new();
@@ -4954,7 +4954,7 @@ mod tests {
 
     #[test]
     fn test_run_worktree_list_propagates_failure() {
-        // #2497: `git worktree list` outside a repo exits non-zero; rtk must not
+        // #2497: `git worktree list` outside a repo exits non-zero; ptk must not
         // report success (empty output + exit 0).
         let dir = tempfile::tempdir().expect("tempdir");
         let global = vec!["-C".to_string(), dir.path().to_string_lossy().into_owned()];
@@ -5278,7 +5278,7 @@ A  added.rs
     #[test]
     fn test_diff_shape_flags_request_raw_output() {
         // These change the shape of git's raw output (diffstat, name lists)
-        // the same way -p does — RTK's injected --pretty=format markers
+        // the same way -p does — PTK's injected --pretty=format markers
         // can't coexist with them, so they must stay on the raw path too.
         for flag in [
             "--dirstat",
@@ -5432,13 +5432,13 @@ A  added.rs
     #[test]
     fn test_diff_grammar_differs_from_logs_where_git_does() {
         // `git diff -wl 100` clusters (rename limit); `git log -cl 2` does not. Sharing log's
-        // predicate made RTK read the 100 as a pathspec and splice its own flags before it.
+        // predicate made ptk read the 100 as a pathspec and splice its own flags before it.
         let args = vec!["-wl".to_string(), "100".to_string()];
         let tokens = tokenize_git_diff_args(&args);
         assert_eq!(tokens[1].text, "l");
         assert_eq!(tokens[1].value(&tokens), Some("100"));
 
-        // Options git's own completion helper lists as value-taking that RTK had missed: their
+        // Options git's own completion helper lists as value-taking that PTK had missed: their
         // values were read as free positionals, which is what the project-path and pathspec
         // logic keys on.
         for opt in [
@@ -5482,8 +5482,8 @@ A  added.rs
     #[test]
     fn test_diff_header_drops_the_users_patch_flags() {
         // git takes the last shape flag and accepts options after a revision, so a `-p`
-        // written there outranks RTK's header flags wherever they are placed -- the header
-        // then carried the whole patch and RTK printed it again, compacted.
+        // written there outranks PTK's header flags wherever they are placed -- the header
+        // then carried the whole patch and PTK printed it again, compacted.
         let args = vec!["HEAD~1".to_string(), "-p".to_string()];
         let tokens = tokenize_git_diff_args(&args);
         assert_eq!(args_without_patch_shape(&args, &tokens), vec!["HEAD~1"]);
@@ -5586,10 +5586,10 @@ A  added.rs
             let owned: Vec<String> = args.iter().map(|a| a.to_string()).collect();
             show_wants_format(&tokenize_git_diff_args(&owned))
         };
-        // The user's own format displaces RTK's summary entirely: nothing to compact around.
+        // The user's own format displaces PTK's summary entirely: nothing to compact around.
         assert!(gate(&["--pretty=format:%H"]));
         assert!(gate(&["--format=%H"]));
-        // `--oneline` only outranks RTK's own one-line summary. Compaction stays on, or one
+        // `--oneline` only outranks PTK's own one-line summary. Compaction stays on, or one
         // display flag turns the whole command into a raw passthrough.
         assert!(!gate(&["--oneline"]));
         assert!(!gate(&[]));
@@ -5730,7 +5730,7 @@ A  added.rs
             );
         }
 
-        // No value is a git error either way; RTK must not read it as a patch request.
+        // No value is a git error either way; PTK must not read it as a patch request.
         assert_eq!(route(&["--diff-merges"]), (false, false));
     }
 
@@ -5765,7 +5765,7 @@ A  added.rs
     #[test]
     fn test_log_output_flags_are_not_a_patch_request() {
         // Neither changes `git log`'s output at all (byte-identical to plain `git log`
-        // against git 2.53), so routing them raw skipped RTK's own -10 and printed the
+        // against git 2.53), so routing them raw skipped PTK's own -10 and printed the
         // entire history.
         for flag in ["--quiet", "--exit-code"] {
             let args = vec![flag.to_string()];
@@ -6240,7 +6240,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
     #[test]
     #[ignore] // Integration test: requires git repo
     fn test_branch_creation_not_swallowed() {
-        let branch = "test-rtk-create-branch-regression";
+        let branch = "test-ptk-create-branch-regression";
         // Create branch via run_branch
         run_branch(&[branch.to_string()], 0, &[]).expect("run_branch should succeed");
         // Verify it exists
@@ -6262,7 +6262,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
     #[test]
     #[ignore] // Integration test: requires git repo
     fn test_branch_creation_from_commit() {
-        let branch = "test-rtk-create-from-commit";
+        let branch = "test-ptk-create-from-commit";
         run_branch(&[branch.to_string(), "HEAD".to_string()], 0, &[])
             .expect("run_branch with start-point should succeed");
         let output = Command::new("git")
@@ -6344,15 +6344,15 @@ no changes added to commit (use "git add" and/or "git commit -a")
     #[test]
     #[ignore] // Requires `cargo build` first — run with `cargo test --ignored`
     fn test_git_status_not_a_repo_exits_nonzero() {
-        // Run rtk git status in a directory that is not a git repo
-        let tmp = std::env::temp_dir().join("rtk_test_not_a_repo");
+        // Run ptk git status in a directory that is not a git repo
+        let tmp = std::env::temp_dir().join("ptk_test_not_a_repo");
         let _ = std::fs::create_dir_all(&tmp);
 
         // Build the path to the test binary
         let bin_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("target")
             .join("debug")
-            .join("rtk");
+            .join("ptk");
         assert!(
             bin_path.exists(),
             "Debug binary not found at {:?} — run `cargo build` first",
@@ -6362,7 +6362,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
             .args(["git", "status"])
             .current_dir(&tmp)
             .output()
-            .expect("Failed to run rtk");
+            .expect("Failed to run ptk");
 
         // Should exit with non-zero (128 from git)
         assert!(
@@ -6424,7 +6424,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
         }
         let result = compact_diff(&diff, 500);
         assert!(
-            result.contains("[full diff: rtk git diff --no-compact]"),
+            result.contains("[full diff: ptk git diff --no-compact]"),
             "Expected recovery hint when hunk is truncated, got:\n{}",
             result
         );

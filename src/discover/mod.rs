@@ -1,4 +1,4 @@
-//! Scans AI coding sessions to find commands that could benefit from RTK filtering.
+//! Scans AI coding sessions to find commands that could benefit from PTK filtering.
 
 pub mod lexer;
 pub mod provider;
@@ -18,11 +18,11 @@ use registry::{
 use report::{DiscoverReport, SupportedEntry, UnsupportedEntry};
 
 use crate::core::tracking::{HookDecisionRecord, Tracker};
-use crate::discover::registry::prefix_contains_rtk_disabled;
+use crate::discover::registry::prefix_contains_ptk_disabled;
 use crate::hooks::hook_check::{HookStatus, status as hook_status};
 use crate::hooks::permissions::{self, PermissionVerdict};
 
-/// Whether a `Supported` command was actually routed through RTK, and how
+/// Whether a `Supported` command was actually routed through PTK, and how
 /// confident we are in that answer.
 ///
 /// `Measured` comes from a real `hook_decisions` log row, keyed by the
@@ -64,7 +64,7 @@ struct PermissionRules {
 ///
 /// Grouped into one struct rather than several individual positional params: with
 /// `excluded`/`transparent_prefixes` both `Vec<String>`, a swapped argument order
-/// at a call site would compile silently and misclassify RTK_DISABLED bypass
+/// at a call site would compile silently and misclassify PTK_DISABLED bypass
 /// coverage (code-review finding on rtk-ai/rtk#3206's fixup round).
 ///
 /// `exclude_patterns`/`normalized_transparent_prefixes` are `registry::
@@ -84,15 +84,15 @@ struct CoverageContext {
 }
 
 /// Determine whether `cmd` was (or, absent a log entry, likely would have been)
-/// routed through RTK by the installed PreToolUse hook.
+/// routed through PTK by the installed PreToolUse hook.
 ///
-/// Do NOT call this for an `RTK_DISABLED=`-bypassed command — call
+/// Do NOT call this for an `PTK_DISABLED=`-bypassed command — call
 /// `would_be_covered_without_bypass` instead. `hook_coverage` trusts a measured
 /// `hook_decisions` row as ground truth, but for a bypassed command the real logged
 /// decision is always `Defer` (see `registry.rs` #345 / `get_rewritten`), which only
 /// confirms the hook stepped aside — it says nothing about whether the command would
 /// have been covered absent the bypass, which is the actual question the
-/// RTK_DISABLED= bucket is answering. Consulting the measured log there made that
+/// PTK_DISABLED= bucket is answering. Consulting the measured log there made that
 /// bucket silently collapse to (near) zero once real `hook_decisions` rows
 /// accumulated (rtk-ai/rtk#3206 review) — the counterfactual can only ever be
 /// answered by the estimate.
@@ -139,17 +139,17 @@ fn hook_coverage(
 /// `permission_cmd` is checked against permission rules and scanned for
 /// unattestable constructs, and MUST be the exact full string the real hook would
 /// have seen — the whole raw command line, chain operators and any
-/// `RTK_DISABLED=` prefix intact — since that's what Claude Code's permission
+/// `PTK_DISABLED=` prefix intact — since that's what Claude Code's permission
 /// engine actually evaluates (`hooks::hook_cmd::decide_hook_action` never splits
 /// or strips it; see `hook_coverage`'s doc comment for why an isolated chain
 /// segment would blind the deny/ask check to sibling segments). `rewrite_cmd` is
 /// passed to `registry::rewrite_command`, which is genuinely best-effort
-/// *per segment* — pass the isolated segment being evaluated. For the RTK_DISABLED=
+/// *per segment* — pass the isolated segment being evaluated. For the PTK_DISABLED=
 /// bypass call site specifically, `rewrite_cmd` must also have the prefix already
 /// *stripped*, since `rewrite_command` itself detects and refuses a raw
-/// `RTK_DISABLED=` prefix (registry.rs #345) — passing it unstripped there would
+/// `PTK_DISABLED=` prefix (registry.rs #345) — passing it unstripped there would
 /// make every bypassed command register as never-covered regardless of whether
-/// it's otherwise supported, defeating the point of the RTK_DISABLED bucket.
+/// it's otherwise supported, defeating the point of the PTK_DISABLED bucket.
 ///
 /// Checks `hook_installed` before touching `rules`/the lexer/the registry: with no
 /// hook installed the answer is always "not covered", so there's no reason to pay
@@ -193,18 +193,18 @@ fn estimate_hook_coverage_with_verdict(
         .is_some()
 }
 
-/// Would `raw_cmd` (still carrying its `RTK_DISABLED=` prefix) have been covered
+/// Would `raw_cmd` (still carrying its `PTK_DISABLED=` prefix) have been covered
 /// by the hook if the bypass weren't there?
 ///
 /// The *only* correct way to answer this question — deliberately named and kept
-/// separate from `hook_coverage` so an RTK_DISABLED= call site reaches for this
+/// separate from `hook_coverage` so an PTK_DISABLED= call site reaches for this
 /// instead of `hook_coverage` by construction, not just by doc comment. A prior
 /// review round had to catch exactly this mixup once already: `hook_coverage`
 /// trusts a measured `hook_decisions` row as ground truth, but a bypassed
 /// command's real logged decision is always `Defer` (`get_rewritten` refuses an
-/// `RTK_DISABLED=` prefix unconditionally — registry.rs #345), which only confirms
+/// `PTK_DISABLED=` prefix unconditionally — registry.rs #345), which only confirms
 /// the hook stepped aside and says nothing about the counterfactual this function
-/// answers. Consulting the measured log there made the RTK_DISABLED bucket
+/// answers. Consulting the measured log there made the PTK_DISABLED bucket
 /// silently collapse to (near) zero once real `hook_decisions` rows accumulated
 /// (rtk-ai/rtk#3206 review) — only the estimate can ever answer this.
 ///
@@ -214,7 +214,7 @@ fn estimate_hook_coverage_with_verdict(
 /// doc comment for why an isolated segment would blind the deny/ask check to
 /// siblings). `stripped_cmd` is the isolated, prefix-*removed* segment being
 /// evaluated, which is what `registry::rewrite_command` needs since it refuses a
-/// raw `RTK_DISABLED=`-prefixed string on its own — see `estimate_hook_coverage`'s
+/// raw `PTK_DISABLED=`-prefixed string on its own — see `estimate_hook_coverage`'s
 /// doc comment for the full reasoning.
 fn would_be_covered_without_bypass(
     raw_cmd: &str,
@@ -224,18 +224,18 @@ fn would_be_covered_without_bypass(
     estimate_hook_coverage(raw_cmd, stripped_cmd, ctx)
 }
 
-/// Whether an already-`rtk`-prefixed command counts as coverage. `rtk proxy <cmd>`
+/// Whether an already-`ptk`-prefixed command counts as coverage. `ptk proxy <cmd>`
 /// deliberately runs the raw command unfiltered, so it must not count — that would
 /// let the audit flatter itself via its own escape hatch. This is ground truth read
-/// directly from the transcript (the model really did invoke `rtk`), not a guess.
+/// directly from the transcript (the model really did invoke `ptk`), not a guess.
 pub(crate) fn is_already_rtk(cmd: &str) -> bool {
     let trimmed = cmd.trim();
-    trimmed.starts_with("rtk ") && !trimmed.starts_with("rtk proxy")
+    trimmed.starts_with("ptk ") && !trimmed.starts_with("ptk proxy")
 }
 
 /// Aggregation bucket for supported commands.
 struct SupportedBucket {
-    rtk_equivalent: &'static str,
+    ptk_equivalent: &'static str,
     category: &'static str,
     count: usize,
     /// Total estimated tokens *saved* (post-filter). Used for the "Est. Savings" column.
@@ -307,7 +307,7 @@ pub fn run(
     let cutoff = crate::core::utils::days_ago_cutoff(since_days);
     // Every other hook_decisions-touching path (record()/record_parse_failure()/
     // record_hook_decision() in tracking.rs) warns the user when a write fails
-    // because a table is missing, pointing them at `rtk init` to self-heal. This
+    // because a table is missing, pointing them at `ptk init` to self-heal. This
     // read path used to swallow the same class of error via unwrap_or_default()/
     // ok().flatten(), silently reporting "no hook-decision log yet" for what could
     // actually be a corrupted database — warn here too instead of going quiet.
@@ -316,14 +316,14 @@ pub fn run(
             Ok(t) => {
                 let log = t.hook_decisions_since(cutoff).unwrap_or_else(|e| {
                     eprintln!(
-                        "rtk: warning: failed to read hook_decisions log ({e}). \
+                        "ptk: warning: failed to read hook_decisions log ({e}). \
                          Coverage will fall back to the current-state estimate. \
-                         Run `rtk init` if the tracking database looks corrupted."
+                         Run `ptk init` if the tracking database looks corrupted."
                     );
                     HashMap::new()
                 });
                 let measured_since = t.earliest_hook_decision_timestamp().unwrap_or_else(|e| {
-                    eprintln!("rtk: warning: failed to read hook_decisions log timestamp ({e}).");
+                    eprintln!("ptk: warning: failed to read hook_decisions log timestamp ({e}).");
                     None
                 });
                 (log, measured_since)
@@ -331,10 +331,10 @@ pub fn run(
             Err(e) => {
                 // A brand-new install with no tracking DB yet is the common,
                 // benign case here — only surface this under --verbose so a fresh
-                // `rtk discover` run doesn't alarm a first-time user.
+                // `ptk discover` run doesn't alarm a first-time user.
                 if verbose > 0 {
                     eprintln!(
-                        "rtk: warning: failed to open tracking database ({e}). \
+                        "ptk: warning: failed to open tracking database ({e}). \
                          Coverage will fall back to the current-state estimate."
                     );
                 }
@@ -352,11 +352,11 @@ pub fn run(
 
     let mut total_commands: usize = 0;
     let mut already_rtk: usize = 0;
-    let mut already_rtk_estimated: usize = 0;
+    let mut already_ptk_estimated: usize = 0;
     let mut parse_errors: usize = 0;
-    let mut rtk_disabled_count: usize = 0;
-    let mut rtk_disabled_estimated: usize = 0;
-    let mut rtk_disabled_cmds: HashMap<String, usize> = HashMap::new();
+    let mut ptk_disabled_count: usize = 0;
+    let mut ptk_disabled_estimated: usize = 0;
+    let mut ptk_disabled_cmds: HashMap<String, usize> = HashMap::new();
     let mut supported_map: HashMap<&'static str, SupportedBucket> = HashMap::new();
     let mut unsupported_map: HashMap<String, UnsupportedBucket> = HashMap::new();
 
@@ -377,13 +377,13 @@ pub fn run(
             for part in parts {
                 total_commands += 1;
 
-                // Detect RTK_DISABLED= bypass before classification
+                // Detect PTK_DISABLED= bypass before classification
                 let (env_prefix, actual_cmd) = strip_disabled_prefix(part);
-                let part = if prefix_contains_rtk_disabled(env_prefix) {
+                let part = if prefix_contains_ptk_disabled(env_prefix) {
                     match classify_command(actual_cmd) {
                         Classification::Supported { .. } => {
                             // Only count as a "bypass" if the hook would actually have
-                            // covered it absent the bypass — otherwise RTK_DISABLED=
+                            // covered it absent the bypass — otherwise PTK_DISABLED=
                             // bypassed nothing (hook wasn't installed / excluded / would
                             // defer / would deny), and flagging it as a "bypass" would be
                             // false advice. See `would_be_covered_without_bypass`'s doc
@@ -394,10 +394,10 @@ pub fn run(
                                 actual_cmd,
                                 &coverage_ctx,
                             ) {
-                                rtk_disabled_count += 1;
-                                rtk_disabled_estimated += 1;
+                                ptk_disabled_count += 1;
+                                ptk_disabled_estimated += 1;
                                 let display = truncate_command(actual_cmd);
-                                *rtk_disabled_cmds.entry(display).or_insert(0) += 1;
+                                *ptk_disabled_cmds.entry(display).or_insert(0) += 1;
                                 continue;
                             }
                             // Genuinely never had a chance regardless of the bypass (no
@@ -410,8 +410,8 @@ pub fn run(
                             // else (rtk-ai/rtk#3206 review).
                             actual_cmd
                         }
-                        // Unsupported/Ignored under RTK_DISABLED= isn't interesting
-                        // either way — rtk was never going to touch it regardless of
+                        // Unsupported/Ignored under PTK_DISABLED= isn't interesting
+                        // either way — ptk was never going to touch it regardless of
                         // the bypass.
                         _ => continue,
                     }
@@ -421,7 +421,7 @@ pub fn run(
 
                 match classify_command(part) {
                     Classification::Supported {
-                        rtk_equivalent,
+                        ptk_equivalent,
                         category,
                         estimated_savings_pct,
                         status,
@@ -434,18 +434,18 @@ pub fn run(
                         );
 
                         if coverage.is_covered() {
-                            // Hook already routed this through RTK at runtime — it's
+                            // Hook already routed this through PTK at runtime — it's
                             // coverage, not a missed opportunity.
                             already_rtk += 1;
                             if coverage.is_estimated() {
-                                already_rtk_estimated += 1;
+                                already_ptk_estimated += 1;
                             }
                             continue;
                         }
 
-                        let bucket = supported_map.entry(rtk_equivalent).or_insert_with(|| {
+                        let bucket = supported_map.entry(ptk_equivalent).or_insert_with(|| {
                             SupportedBucket {
-                                rtk_equivalent,
+                                ptk_equivalent,
                                 category,
                                 count: 0,
                                 total_output_tokens: 0,
@@ -492,8 +492,8 @@ pub fn run(
                     }
                     Classification::Ignored => {
                         // Ground truth from the transcript itself — the model really
-                        // did invoke `rtk` directly (excluding the deliberate
-                        // unfiltered `rtk proxy` escape hatch).
+                        // did invoke `ptk` directly (excluding the deliberate
+                        // unfiltered `ptk proxy` escape hatch).
                         if is_already_rtk(part) {
                             already_rtk += 1;
                         }
@@ -542,11 +542,11 @@ pub fn run(
             SupportedEntry {
                 command: command_with_status,
                 count: bucket.count,
-                rtk_equivalent: bucket.rtk_equivalent,
+                ptk_equivalent: bucket.ptk_equivalent,
                 category: bucket.category,
                 estimated_savings_tokens: bucket.total_output_tokens,
                 estimated_savings_pct: effective_savings_pct,
-                rtk_status: status,
+                ptk_status: status,
             }
         })
         .collect();
@@ -566,9 +566,9 @@ pub fn run(
     // Sort by count descending
     unsupported.sort_by_key(|b| std::cmp::Reverse(b.count));
 
-    // Build RTK_DISABLED examples sorted by frequency (top 5)
-    let rtk_disabled_examples: Vec<String> = {
-        let mut sorted: Vec<_> = rtk_disabled_cmds.into_iter().collect();
+    // Build PTK_DISABLED examples sorted by frequency (top 5)
+    let ptk_disabled_examples: Vec<String> = {
+        let mut sorted: Vec<_> = ptk_disabled_cmds.into_iter().collect();
         sorted.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         sorted
             .into_iter()
@@ -581,15 +581,15 @@ pub fn run(
         sessions_scanned: sessions.len(),
         total_commands,
         already_rtk,
-        already_rtk_estimated,
+        already_ptk_estimated,
         measured_since: measured_since.map(|ts| ts.format("%Y-%m-%d").to_string()),
         since_days,
         supported,
         unsupported,
         parse_errors,
-        rtk_disabled_count,
-        rtk_disabled_estimated,
-        rtk_disabled_examples,
+        ptk_disabled_count,
+        ptk_disabled_estimated,
+        ptk_disabled_examples,
         agent_status: report::AgentIntegrationStatus::detect(),
     };
 
@@ -726,16 +726,16 @@ mod tests {
 
     #[test]
     fn test_estimate_hook_coverage_uses_full_raw_command_for_permission_check() {
-        // Regression: the RTK_DISABLED= bypass path must check permission rules
+        // Regression: the PTK_DISABLED= bypass path must check permission rules
         // against the *full* raw command (prefix intact) — matching what the real
         // hook's permission engine actually evaluates — even though the rewrite
         // check needs the stripped form. An exact-match deny rule on the literal
         // prefixed command only matches the raw form, not the stripped one.
         let mut ctx = test_ctx(true);
-        ctx.rules.deny = vec!["RTK_DISABLED=1 git status".to_string()];
+        ctx.rules.deny = vec!["PTK_DISABLED=1 git status".to_string()];
 
         assert!(
-            !would_be_covered_without_bypass("RTK_DISABLED=1 git status", "git status", &ctx),
+            !would_be_covered_without_bypass("PTK_DISABLED=1 git status", "git status", &ctx),
             "a deny rule matching the raw (prefixed) command must still apply"
         );
 
@@ -776,19 +776,19 @@ mod tests {
     }
 
     #[test]
-    fn test_is_already_rtk_plain_rewrite() {
-        assert!(is_already_rtk("rtk grep -n foo bar.py"));
+    fn test_is_already_ptk_plain_rewrite() {
+        assert!(is_already_rtk("ptk grep -n foo bar.py"));
     }
 
     #[test]
-    fn test_is_already_rtk_excludes_proxy_escape_hatch() {
-        // rtk#3148 secondary finding: `rtk proxy` deliberately bypasses filtering,
+    fn test_is_already_ptk_excludes_proxy_escape_hatch() {
+        // ptk#3148 secondary finding: `ptk proxy` deliberately bypasses filtering,
         // so it must not count as coverage.
-        assert!(!is_already_rtk("rtk proxy grep -n foo bar.py"));
+        assert!(!is_already_rtk("ptk proxy grep -n foo bar.py"));
     }
 
     #[test]
-    fn test_is_already_rtk_false_for_unrelated_command() {
+    fn test_is_already_ptk_false_for_unrelated_command() {
         assert!(!is_already_rtk("grep -n foo bar.py"));
     }
 

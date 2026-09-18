@@ -23,7 +23,7 @@ fn is_short_flag(arg: &str) -> bool {
 }
 
 /// `-a`/`--all` and `-A`/`--almost-all` both make ls print dotfiles;
-/// in either case RTK must show everything the child listed.
+/// in either case PTK must show everything the child listed.
 fn shows_dotfiles(args: &[String]) -> bool {
     args.iter().any(|a| {
         (is_short_flag(a) && a.chars().any(|c| matches!(c, 'a' | 'A')))
@@ -140,9 +140,9 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
 }
 
 /// Build the recovery hint for entries dropped from the listing —
-/// truncated past the display cap and/or RTK-filtered noise.
+/// truncated past the display cap and/or PTK-filtered noise.
 ///
-/// Standard RTK pattern: a truncation note plus a one-shot command to
+/// Standard PTK pattern: a truncation note plus a one-shot command to
 /// retrieve the remaining. The tee file contains ONLY the dropped
 /// entries (truncated first, then filtered), so `tail -n +1` (whole
 /// file) retrieves nothing the agent has already seen.
@@ -279,7 +279,7 @@ fn perms_to_octal(perms: &str) -> Option<String> {
 /// a recovery hint when anything was dropped.
 /// parsed_count tracks how many non-header lines were successfully parsed.
 /// truncated holds compact lines beyond the CAP_INVENTORY display cap.
-/// filtered holds the display name of each entry RTK removed from view
+/// filtered holds the display name of each entry PTK removed from view
 /// (noise dirs without -a/-A as `name/`, plus raw unparsable non-dotdir
 /// lines).
 /// If parsed_count == 0 but raw had content, caller should fall back to raw output.
@@ -312,7 +312,7 @@ fn compact_ls(
         parsed_count += 1;
 
         // Filter noise dirs unless dotfiles were requested; every entry the
-        // child printed and RTK drops is recorded so the hint can recover it.
+        // child printed and PTK drops is recorded so the hint can recover it.
         if !show_all && NOISE_DIRS.iter().any(|noise| name == *noise) {
             filtered.push(format!("{}/", name));
             continue;
@@ -463,7 +463,7 @@ mod tests {
     #[test]
     fn test_compact_only_noise_dirs_keeps_hidden() {
         // Directory containing only noise dirs: output collapses to (empty),
-        // but RTK-filtered entries must survive so the agent knows they exist.
+        // but PTK-filtered entries must survive so the agent knows they exist.
         let input = "total 8\n\
                      drwxr-xr-x  2 user  staff  64 Jan  1 12:00 node_modules\n\
                      drwxr-xr-x  2 user  staff  64 Jan  1 12:00 .git\n";
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_compact_records_dot_noise_dir_when_child_printed_it() {
-        // Child ran with -A but RTK was told not to show all: the dot noise
+        // Child ran with -A but PTK was told not to show all: the dot noise
         // dir must be recorded, never silently vanish.
         let input = "total 8\n\
                      drwxr-xr-x  2 user  staff  64 Jan  1 12:00 .git\n\
@@ -510,7 +510,7 @@ mod tests {
         assert!(hint.starts_with("... (2 filtered)"));
         assert!(
             !hint.contains("use -a"),
-            "standard ls flags are not RTK's job to teach: {hint}"
+            "standard ls flags are not PTK's job to teach: {hint}"
         );
         assert!(
             !hint.contains("full output"),
@@ -521,7 +521,7 @@ mod tests {
         if hint.lines().count() > 1 {
             assert!(
                 hint.contains("[see remaining: tail -n +1 ")
-                    || hint.contains("hidden: rtk recall "),
+                    || hint.contains("hidden: ptk recall "),
                 "recovery hint must be a standard retrieval form: {hint}"
             );
         }
@@ -655,7 +655,7 @@ mod tests {
 
     #[test]
     fn test_pipe_line_count() {
-        // Simulates: rtk ls | wc -l
+        // Simulates: ptk ls | wc -l
         // Entries should have exactly 1 line per file/dir, no extra blank or summary
         let input = "total 48\n\
                      drwxr-xr-x  2 user  staff    64 Jan  1 12:00 src\n\
@@ -756,7 +756,7 @@ mod tests {
 
     #[test]
     fn test_compact_device_files() {
-        // Regression test for #844: `rtk ls /dev/ttyACM*` returned "(empty)"
+        // Regression test for #844: `ptk ls /dev/ttyACM*` returned "(empty)"
         // because character devices (type 'c') were not handled by compact_ls.
         let input = "crw-rw----  1 root  dialout  166, 0 Apr 22 09:46 /dev/ttyACM0\n";
         let (entries, _parsed, _truncated, _hidden) = compact_ls(input, false, false);

@@ -47,13 +47,12 @@ pub fn filter_dir_output(raw: &str) -> String {
             // Check if parts[0] is a date (contains / or -)
             let is_date = parts[0].contains('/') || parts[0].contains('-');
             if is_date && parts.len() >= 4 {
-                let (type_idx, name_idx) = if parts[2].eq_ignore_ascii_case("am")
-                    || parts[2].eq_ignore_ascii_case("pm")
-                {
-                    (3, 4)
-                } else {
-                    (2, 3)
-                };
+                let (type_idx, name_idx) =
+                    if parts[2].eq_ignore_ascii_case("am") || parts[2].eq_ignore_ascii_case("pm") {
+                        (3, 4)
+                    } else {
+                        (2, 3)
+                    };
 
                 if name_idx < parts.len() {
                     let type_or_size = parts[type_idx];
@@ -91,9 +90,16 @@ pub fn filter_dir_output(raw: &str) -> String {
         if entries.is_empty() {
             continue;
         }
-        let trimmed_entries: Vec<String> = entries.into_iter().map(|e| e.trim_end().to_string()).collect();
+        let trimmed_entries: Vec<String> = entries
+            .into_iter()
+            .map(|e| e.trim_end().to_string())
+            .collect();
         if let Some(d) = dir {
-            formatted_sections.push(format!("{}:\n  {}", d.trim_end(), trimmed_entries.join("\n  ")));
+            formatted_sections.push(format!(
+                "{}:\n  {}",
+                d.trim_end(),
+                trimmed_entries.join("\n  ")
+            ));
         } else {
             formatted_sections.push(trimmed_entries.join("\n  "));
         }
@@ -122,7 +128,7 @@ fn format_size(bytes: u64) -> String {
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_cmd("dir", args);
     let cmd_label = format!("dir {}", args.join(" "));
-    
+
     runner::run_filtered(
         cmd,
         "dir",

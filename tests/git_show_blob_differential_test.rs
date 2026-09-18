@@ -1,30 +1,30 @@
-//! Differential fuzzer for `rtk git show` blob classification.
+//! Differential fuzzer for `ptk git show` blob classification.
 //!
 //! The blob-windowing bug ("is this `git show` arg a blob to window, or a commit-diff /
 //! flag value?") was reopened three times because the classifier tried to mirror git's
 //! flag grammar. The fix asks git instead: `git cat-file -t <arg>` is the authority, and
-//! `rtk` only ever windows an arg git calls a `blob`.
+//! `ptk` only ever windows an arg git calls a `blob`.
 //!
 //! This test is the standing guarantee that no misroute class is hiding. It builds a
 //! hermetic git repo with objects of every relevant type, then — with a FIXED seed so CI
 //! is deterministic — generates hundreds of `git show <random flags> <arg>` invocations
-//! and checks rtk's CLASSIFICATION (did it window? pass through? render a commit-diff?)
+//! and checks ptk's CLASSIFICATION (did it window? pass through? render a commit-diff?)
 //! against ground truth from `git cat-file -t`. It asserts:
-//! - 0 misroutes: rtk never windows anything git does not call a `blob`;
+//! - 0 misroutes: ptk never windows anything git does not call a `blob`;
 //! - 0 silent losses: a large, byte-recoverable UTF-8 blob is ALWAYS windowed — INCLUDING
 //!   when a colon-carrying short-flag CLUSTER (`-wG x:y`, `-pS url:1`, …) precedes it, the
 //!   exact cross the old fuzzer never generated so the blocker hid for three rounds;
-//! - byte fidelity: a blob rtk declines to window (Latin-1 / UTF-16 / small text, a
+//! - byte fidelity: a blob ptk declines to window (Latin-1 / UTF-16 / small text, a
 //!   Latin-1 blob behind a cluster flag, or a blob with `--textconv` / a trailing
 //!   `-- <path>`) is emitted byte-identically to `git show` — no U+FFFD mojibake.
 //!
-//! It shells out to the real `git` and the built `rtk` binary, matching the repo's other
+//! It shells out to the real `git` and the built `ptk` binary, matching the repo's other
 //! integration tests (e.g. `diff_byte_accuracy_test.rs`).
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const RTK_BIN: &str = env!("CARGO_BIN_EXE_ptk");
+const PTK_BIN: &str = env!("CARGO_BIN_EXE_ptk");
 
 /// Number of fuzz iterations. Seeded, so this is deterministic across runs/CI.
 const ITERATIONS: usize = 600;
@@ -54,9 +54,9 @@ impl Rng {
     }
 }
 
-// ---- git / rtk helpers ---------------------------------------------------------------
+// ---- git / ptk helpers ---------------------------------------------------------------
 
-/// Env that isolates git and rtk from the developer's real config/identity/home.
+/// Env that isolates git and ptk from the developer's real config/identity/home.
 fn isolate(cmd: &mut Command, home: &Path) {
     cmd.env("HOME", home)
         .env("GIT_CONFIG_GLOBAL", home.join("nonexistent-global"))
@@ -100,11 +100,11 @@ fn cat_file_type(repo: &Path, home: &Path, arg: &str) -> Option<String> {
     }
 }
 
-fn rtk_show(repo: &Path, home: &Path, args: &[&str]) -> Output {
-    let mut cmd = Command::new(RTK_BIN);
+fn ptk_show(repo: &Path, home: &Path, args: &[&str]) -> Output {
+    let mut cmd = Command::new(PTK_BIN);
     cmd.arg("git").arg("show").args(args).current_dir(repo);
     isolate(&mut cmd, home);
-    cmd.output().expect("run rtk git show")
+    cmd.output().expect("run ptk git show")
 }
 
 // ---- hermetic repo -------------------------------------------------------------------
@@ -182,7 +182,7 @@ fn setup_repo() -> Repo {
 
 // ---- classification ------------------------------------------------------------------
 
-/// rtk windowed the blob iff its recovery hint is present (unique to blob windowing).
+/// ptk windowed the blob iff its recovery hint is present (unique to blob windowing).
 fn was_windowed(out: &Output) -> bool {
     String::from_utf8_lossy(&out.stdout).contains("[see remaining: git ")
 }
@@ -217,11 +217,11 @@ enum Kind {
     /// through BYTE-IDENTICALLY to git.
     ClusterLatin1,
     /// A content-transforming flag (`--textconv`) before a large blob (MINOR 1). The
-    /// `git show rev:path | tail` recovery hint omits the flag, so rtk must NOT window;
+    /// `git show rev:path | tail` recovery hint omits the flag, so ptk must NOT window;
     /// it passes the bytes through byte-identically to `git show <same args>`.
     TextconvLargeUtf8,
     /// A trailing `-- <pathspec>` beside a large blob (MINOR 2). Also omitted from the
-    /// hint, so rtk must NOT window; byte-identical passthrough.
+    /// hint, so ptk must NOT window; byte-identical passthrough.
     PathspecLargeUtf8,
 }
 
@@ -379,10 +379,10 @@ fn git_show_blob_classification_differential() {
 
         let object = kind_object(kind);
         let truth = cat_file_type(path, home, object); // ground truth for the object
-        let out = rtk_show(path, home, &arg_refs);
+        let out = ptk_show(path, home, &arg_refs);
         let windowed = was_windowed(&out);
 
-        // 0 misroutes: rtk must never window anything git does not call a `blob`. The
+        // 0 misroutes: ptk must never window anything git does not call a `blob`. The
         // only blob among our objects is the one the invocation targets, so a window
         // implies the targeted object is that blob (and truly a blob per cat-file).
         if windowed && truth.as_deref() != Some("blob") {
@@ -404,7 +404,7 @@ fn git_show_blob_classification_differential() {
                     assert!(out.status.success(), "windowed blob show should exit 0");
                 }
             }
-            // Blobs rtk declines to window must be byte-identical to plain `git show`.
+            // Blobs ptk declines to window must be byte-identical to plain `git show`.
             Kind::Small | Kind::Latin1 | Kind::Utf16 => {
                 assert!(
                     !windowed,
@@ -413,7 +413,7 @@ fn git_show_blob_classification_differential() {
                 let plain = git(path, home, &["show", object]);
                 if out.stdout != plain.stdout {
                     fidelity_breaks.push(format!(
-                        "`git show {}` differs from git (rtk {} vs git {} bytes)",
+                        "`git show {}` differs from git (ptk {} vs git {} bytes)",
                         args.join(" "),
                         out.stdout.len(),
                         plain.stdout.len()
@@ -443,13 +443,13 @@ fn git_show_blob_classification_differential() {
             Kind::ClusterLatin1 => {
                 assert!(!windowed, "latin-1 blob must never window: {args:?}");
                 // Compare against git run with the SAME args, not just `git show object`:
-                // the strongest invariant is "rtk == git for this exact command".
+                // the strongest invariant is "ptk == git for this exact command".
                 let mut full: Vec<&str> = vec!["show"];
                 full.extend(arg_refs.iter().copied());
                 let plain = git(path, home, &full);
                 if out.stdout != plain.stdout {
                     fidelity_breaks.push(format!(
-                        "cluster + latin1 `git show {}` differs from git (rtk {} vs git {} bytes)",
+                        "cluster + latin1 `git show {}` differs from git (ptk {} vs git {} bytes)",
                         args.join(" "),
                         out.stdout.len(),
                         plain.stdout.len()
@@ -457,7 +457,7 @@ fn git_show_blob_classification_differential() {
                 }
             }
             // MINOR 1/2: a content-transforming flag or a trailing pathspec makes the
-            // recovery hint diverge from git's bytes, so rtk must NOT window; it passes
+            // recovery hint diverge from git's bytes, so ptk must NOT window; it passes
             // through byte-identically to git run with the SAME args.
             Kind::TextconvLargeUtf8 | Kind::PathspecLargeUtf8 => {
                 assert!(
@@ -469,7 +469,7 @@ fn git_show_blob_classification_differential() {
                 let plain = git(path, home, &full);
                 if out.stdout != plain.stdout {
                     fidelity_breaks.push(format!(
-                        "`git show {}` differs from git (rtk {} vs git {} bytes)",
+                        "`git show {}` differs from git (ptk {} vs git {} bytes)",
                         args.join(" "),
                         out.stdout.len(),
                         plain.stdout.len()
@@ -504,7 +504,7 @@ fn windowed_blob_recovery_is_byte_exact() {
     let repo = setup_repo();
     let (path, home) = (repo.path.as_path(), repo.home.as_path());
 
-    let out = rtk_show(path, home, &["HEAD:large.txt"]);
+    let out = ptk_show(path, home, &["HEAD:large.txt"]);
     assert!(out.status.success());
     let shown = String::from_utf8(out.stdout).expect("windowed head is UTF-8");
     assert!(
@@ -551,7 +551,7 @@ fn cluster_flag_before_blob_windows_and_recovers_byte_exact() {
     let repo = setup_repo();
     let (path, home) = (repo.path.as_path(), repo.home.as_path());
 
-    let out = rtk_show(path, home, &["-wG", "x:y", "HEAD:large.txt"]);
+    let out = ptk_show(path, home, &["-wG", "x:y", "HEAD:large.txt"]);
     assert!(out.status.success());
     let shown = String::from_utf8(out.stdout).expect("windowed head is UTF-8");
     assert!(

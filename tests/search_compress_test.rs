@@ -5,7 +5,7 @@
 
 use std::process::Command;
 
-fn rtk() -> Command {
+fn ptk() -> Command {
     Command::new(env!("CARGO_BIN_EXE_ptk"))
 }
 
@@ -17,7 +17,7 @@ fn rg_available() -> bool {
         .unwrap_or(false)
 }
 
-/// `rtk grep` shells out to `grep`, never `rg` (`search.rs`: `Engine::Grep => "grep"`).
+/// `ptk grep` shells out to `grep`, never `rg` (`search.rs`: `Engine::Grep => "grep"`).
 /// Guarding a grep-engine test on `rg_available()` makes it silently skip -- and
 /// report success -- on a box without ripgrep, which is a false green.
 fn grep_available() -> bool {
@@ -46,10 +46,10 @@ fn single_file_context_shown_without_header() {
     let content =
         format!("before {long}\nMATCH {long}\nafter1 {long}\nafter2 {long}\nend {long}\n");
     let (_dir, path) = write_temp(&content);
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-A2", "MATCH", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -68,10 +68,10 @@ fn after_context_uses_dash_separator_for_context_lines() {
         return;
     }
     let (_dir, path) = write_temp("MATCH\nafter1\n");
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-nA1", "MATCH", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     let has_context_dash = stdout.lines().any(|l| l.contains("-after1"));
@@ -89,10 +89,10 @@ fn capped_single_file_shows_header() {
     let filler: String = (0..40).map(|i| format!("w{i} ")).collect();
     let content: String = (0..60).map(|i| format!("foo {i} {filler}\n")).collect();
     let (_dir, path) = write_temp(&content);
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "foo", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -107,10 +107,10 @@ fn true_no_match_exits_1() {
         return;
     }
     let (_dir, path) = write_temp("hello world\n");
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "zzzz_no_match_xyz", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
 
     assert_eq!(
         out.status.code(),
@@ -127,10 +127,10 @@ fn no_line_number_flag_produces_output_not_zero_matches() {
         return;
     }
     let (_dir, path) = write_temp("hello world\n");
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "-N", "hello", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -149,10 +149,10 @@ fn no_filename_flag_produces_output_not_zero_matches() {
         return;
     }
     let (_dir, path) = write_temp("hello world\n");
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-I", "hello", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -171,10 +171,10 @@ fn heading_flag_produces_output_not_zero_matches() {
         return;
     }
     let (_dir, path) = write_temp("hello world\n");
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "--heading", "hello", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -193,10 +193,10 @@ fn pretty_flag_produces_output_not_zero_matches() {
         return;
     }
     let (_dir, path) = write_temp("hello world\n");
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "-p", "hello", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -217,10 +217,10 @@ fn column_flag_output_has_no_nul() {
         return;
     }
     let (_dir, path) = write_temp("hello world\n");
-    let out = rtk()
+    let out = ptk()
         .args(["rg", "--column", "hello", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -258,16 +258,16 @@ fn bulky_grep_yields_token_savings() {
         .expect("rg");
     let raw_tokens = count_tokens(&String::from_utf8_lossy(&raw.stdout));
 
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "MATCH", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
-    let rtk_tokens = count_tokens(&String::from_utf8_lossy(&out.stdout));
+        .expect("ptk grep");
+    let ptk_tokens = count_tokens(&String::from_utf8_lossy(&out.stdout));
 
-    let savings = 100.0 - (rtk_tokens as f64 / raw_tokens as f64 * 100.0);
+    let savings = 100.0 - (ptk_tokens as f64 / raw_tokens as f64 * 100.0);
     assert!(
         savings >= 50.0,
-        "expected >=50% token savings, got {savings:.1}% (raw={raw_tokens}, rtk={rtk_tokens})"
+        "expected >=50% token savings, got {savings:.1}% (raw={raw_tokens}, ptk={ptk_tokens})"
     );
 }
 
@@ -283,10 +283,10 @@ fn grep_only_flags_fall_back_to_system_grep() {
     std::fs::write(dir.path().join("b.txt"), "DRAFT in text\n").expect("write");
     let path = dir.path().to_str().unwrap();
 
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-rn", "DRAFT", "--include=*.java", path])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -311,10 +311,10 @@ fn small_grep_not_worse_than_plain() {
         return;
     }
     let (_dir, path) = write_temp("foo\n");
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "foo", path.to_str().unwrap()])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -327,7 +327,7 @@ fn small_grep_not_worse_than_plain() {
     );
 }
 
-// --- a numeric pattern must not bind to rtk's removed `-l` short ---
+// --- a numeric pattern must not bind to ptk's removed `-l` short ---
 
 #[test]
 fn numeric_pattern_with_files_with_matches_flag() {
@@ -347,7 +347,7 @@ fn numeric_pattern_with_files_with_matches_flag() {
     let hit = dir.path().join("hit.txt");
     let miss = dir.path().join("miss.txt");
 
-    let out = rtk()
+    let out = ptk()
         .args([
             "grep",
             "-l",
@@ -356,7 +356,7 @@ fn numeric_pattern_with_files_with_matches_flag() {
             miss.to_str().unwrap(),
         ])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -375,15 +375,15 @@ fn numeric_pattern_with_files_with_matches_flag() {
     );
 }
 
-// --- #2628: rtk's own long options still bind after the short forms were removed ---
+// --- #2628: ptk's own long options still bind after the short forms were removed ---
 
 #[test]
-fn max_len_long_option_still_binds_to_rtk() {
+fn max_len_long_option_still_binds_to_ptk() {
     if !grep_available() {
         return;
     }
     // The other half of #2628: dropping the `-l` short must not stop the long
-    // form from reaching rtk's truncation. Needs a bulky match set -- a small
+    // form from reaching ptk's truncation. Needs a bulky match set -- a small
     // result passes through uncompressed under the never-worse-than-plain
     // guard, so a one-line file would prove nothing either way.
     let body: String = (0..60)
@@ -392,11 +392,11 @@ fn max_len_long_option_still_binds_to_rtk() {
     let (_dir, path) = write_temp(&body);
     let file = path.to_str().unwrap();
 
-    // Measure matched lines only. rtk's own trailer ("+N more ... [see
+    // Measure matched lines only. ptk's own trailer ("+N more ... [see
     // remaining: tail ...]") is fixed-width chrome that --max-len does not
     // govern, and it is the longest line in either run.
     let widest_match = |args: &[&str]| -> usize {
-        let out = rtk().args(args).output().expect("rtk grep");
+        let out = ptk().args(args).output().expect("ptk grep");
         assert!(
             out.status.success(),
             "stderr={}",
@@ -437,10 +437,10 @@ fn bundled_files_with_matches_cluster_lists_files() {
     std::fs::write(dir.path().join("c.txt"), "nothing here\n").expect("write");
     let path = dir.path().to_str().unwrap();
 
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-rln", "TODO", path])
         .output()
-        .expect("rtk grep");
+        .expect("ptk grep");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(
@@ -466,7 +466,7 @@ fn binary_match_is_skipped_unless_text_requested() {
     std::fs::write(&p, b"SECRET\x00\x01binary\xff\xfe").expect("write");
     let path = p.to_str().unwrap();
 
-    let out = rtk().args(["grep", "SECRET", path]).output().expect("rtk");
+    let out = ptk().args(["grep", "SECRET", path]).output().expect("ptk");
     assert_eq!(
         out.status.code(),
         Some(1),
@@ -474,10 +474,10 @@ fn binary_match_is_skipped_unless_text_requested() {
     );
     assert!(out.stdout.is_empty(), "no binary content by default");
 
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-a", "SECRET", path])
         .output()
-        .expect("rtk -a");
+        .expect("ptk -a");
     assert_eq!(out.status.code(), Some(0), "-a must surface the match");
     assert!(
         String::from_utf8_lossy(&out.stdout).contains("SECRET"),

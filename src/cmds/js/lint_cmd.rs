@@ -112,7 +112,7 @@ pub fn run(runner: Option<&str>, args: &[String], verbose: u8) -> Result<i32> {
 
     // sqlfluff owns its own argv and its own rendering: routing, format-flag
     // detection and failure handling live in `sqlfluff_cmd::plan` so this entry
-    // point and `rtk sqlfluff ...` cannot drift apart.
+    // point and `ptk sqlfluff ...` cannot drift apart.
     let sqlfluff = (linter == "sqlfluff").then(|| sqlfluff_cmd::plan(&effective_args[1..]));
 
     // Python linter use resolved_command() directly (they're on PATH via pip/pipx)
@@ -236,7 +236,7 @@ pub fn run(runner: Option<&str>, args: &[String], verbose: u8) -> Result<i32> {
     timer.track(
         &format!("{} {}", linter, effective_args[start_idx..].join(" ")),
         &format!(
-            "rtk lint {} {}",
+            "ptk lint {} {}",
             linter,
             effective_args[start_idx..].join(" ")
         ),
@@ -714,7 +714,7 @@ mod tests {
 
     #[test]
     fn test_detect_linter_after_npx_strip() {
-        // Simulates: rtk lint npx eslint src/ → after strip_pm_prefix, args = ["eslint", "src/"]
+        // Simulates: ptk lint npx eslint src/ → after strip_pm_prefix, args = ["eslint", "src/"]
         let full_args: Vec<String> = vec!["npx".into(), "eslint".into(), "src/".into()];
         let skip = strip_pm_prefix(&full_args);
         let effective = &full_args[skip..];

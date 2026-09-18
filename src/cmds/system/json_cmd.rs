@@ -25,12 +25,12 @@ fn validate_json_extension(file: &Path) -> Result<()> {
         };
         if let Some(fmt) = format_name {
             let mut msg = format!(
-                "{} is not a JSON file (detected {}). Use `rtk read` for non-JSON files.",
+                "{} is not a JSON file (detected {}). Use `ptk read` for non-JSON files.",
                 file.display(),
                 fmt
             );
             if ext == "toml" && file.file_name().is_some_and(|n| n == "Cargo.toml") {
-                msg.push_str(" Tip: use `rtk deps` for Cargo.toml.");
+                msg.push_str(" Tip: use `ptk deps` for Cargo.toml.");
             }
             bail!("{}", msg);
         }
@@ -54,7 +54,7 @@ pub fn run(file: &Path, max_depth: usize, schema_only: bool, verbose: u8) -> Res
     println!("{}", shown);
     timer.track(
         &format!("cat {}", file.display()),
-        "rtk json",
+        "ptk json",
         &content,
         &shown,
     );
@@ -77,14 +77,14 @@ pub fn run_stdin(max_depth: usize, schema_only: bool, verbose: u8) -> Result<()>
 
     let shown = render_json(&content, max_depth, schema_only)?;
     println!("{}", shown);
-    timer.track("cat - (stdin)", "rtk json -", &content, &shown);
+    timer.track("cat - (stdin)", "ptk json -", &content, &shown);
     Ok(())
 }
 
 /// Filter `content` and fall back to it verbatim if the filtered form isn't
 /// smaller. Strips a leading BOM once, up front, and compares/falls back
 /// against the *stripped* content — otherwise a raw fallback would still
-/// carry the BOM into piped output (`rtk json foo.json | jq .` failing to
+/// carry the BOM into piped output (`ptk json foo.json | jq .` failing to
 /// parse it) even though `filter_json_*` already tolerates a BOM on input.
 ///
 /// Returns `Cow` rather than an owned `String`: the raw-fallback case can
@@ -313,7 +313,7 @@ mod tests {
     #[test]
     fn test_cargo_toml_suggests_deps() {
         let err = validate_json_extension(Path::new("Cargo.toml")).unwrap_err();
-        assert!(err.to_string().contains("rtk deps"));
+        assert!(err.to_string().contains("ptk deps"));
     }
 
     #[test]
@@ -400,7 +400,7 @@ mod tests {
         // A minified BOM-prefixed package.json: compact_json pretty-prints
         // with indentation, so `filtered` ends up larger than the minified
         // raw and never_worse falls back to raw. If that comparison (and the
-        // returned string) still carries the BOM, `rtk json foo.json | jq .`
+        // returned string) still carries the BOM, `ptk json foo.json | jq .`
         // fails to parse — the exact bug this fix closes.
         let raw = "\u{feff}{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5}";
         let stripped = strip_leading_bom(raw);

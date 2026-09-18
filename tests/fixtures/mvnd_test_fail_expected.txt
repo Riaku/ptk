@@ -1,19 +1,19 @@
 [INFO] Scanning for projects...
-[INFO] -----------------< com.example.rtk:multifail-skeleton >-----------------
+[INFO] -----------------< com.example.ptk:multifail-skeleton >-----------------
 [INFO] Building multifail-skeleton 1.0.0-SNAPSHOT
-[INFO] Running com.example.rtk.BoomTest
-[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.089 s <<< FAILURE! -- in com.example.rtk.BoomTest
-[ERROR] com.example.rtk.BoomTest.boom -- Time elapsed: 0.046 s <<< ERROR!
+[INFO] Running com.example.ptk.BoomTest
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.089 s <<< FAILURE! -- in com.example.ptk.BoomTest
+[ERROR] com.example.ptk.BoomTest.boom -- Time elapsed: 0.046 s <<< ERROR!
 java.lang.IllegalStateException: boom: errors-only class for fixture capture
-	at com.example.rtk.BoomTest.boom(BoomTest.java:8)
-[INFO] Running com.example.rtk.CalcTest
-[ERROR] Tests run: 3, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 0.022 s <<< FAILURE! -- in com.example.rtk.CalcTest
-[ERROR] com.example.rtk.CalcTest.failOne -- Time elapsed: 0.007 s <<< FAILURE!
+	at com.example.ptk.BoomTest.boom(BoomTest.java:8)
+[INFO] Running com.example.ptk.CalcTest
+[ERROR] Tests run: 3, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 0.022 s <<< FAILURE! -- in com.example.ptk.CalcTest
+[ERROR] com.example.ptk.CalcTest.failOne -- Time elapsed: 0.007 s <<< FAILURE!
 org.opentest4j.AssertionFailedError: failOne: addition should equal five ==> expected: <5> but was: <4>
-	at com.example.rtk.CalcTest.failOne(CalcTest.java:12)
-[ERROR] com.example.rtk.CalcTest.failTwo -- Time elapsed: 0.004 s <<< ERROR!
+	at com.example.ptk.CalcTest.failOne(CalcTest.java:12)
+[ERROR] com.example.ptk.CalcTest.failTwo -- Time elapsed: 0.004 s <<< ERROR!
 java.lang.IllegalStateException: failTwo: induced error for fixture capture
-	at com.example.rtk.CalcTest.failTwo(CalcTest.java:17)
+	at com.example.ptk.CalcTest.failTwo(CalcTest.java:17)
 [INFO] Results:
 [ERROR] Failures: 
 [ERROR]   CalcTest.failOne:12 failOne: addition should equal five ==> expected: <5> but was: <4>

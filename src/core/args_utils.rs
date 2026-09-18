@@ -55,16 +55,16 @@ mod tests {
 
     #[test]
     fn test_single_dash_swallowed() {
-        // rtk git diff -- file → clap gave ["file"], restore "--"
-        let raw = vec!["rtk", "git", "diff", "--", "file"];
+        // ptk git diff -- file → clap gave ["file"], restore "--"
+        let raw = vec!["ptk", "git", "diff", "--", "file"];
         let parsed = vec!["file"];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["--", "file"]);
     }
 
     #[test]
     fn test_args_before_dash() {
-        // rtk cargo test name -- --nocapture → args before "--" stay before
-        let raw = vec!["rtk", "cargo", "test", "name", "--", "--nocapture"];
+        // ptk cargo test name -- --nocapture → args before "--" stay before
+        let raw = vec!["ptk", "cargo", "test", "name", "--", "--nocapture"];
         let parsed = vec!["name", "--nocapture"];
         assert_eq!(
             restore_with_raw(&parsed, &raw),
@@ -76,16 +76,16 @@ mod tests {
 
     #[test]
     fn test_multiple_dashes_all_swallowed() {
-        // rtk git diff -- -- -- → all 3 "--" swallowed, consecutive in output
-        let raw = vec!["rtk", "git", "diff", "--", "--", "--"];
+        // ptk git diff -- -- -- → all 3 "--" swallowed, consecutive in output
+        let raw = vec!["ptk", "git", "diff", "--", "--", "--"];
         let parsed: Vec<&str> = vec![];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["--", "--", "--"]);
     }
 
     #[test]
     fn test_dashes_with_args_between() {
-        // rtk git diff -- arg1 -- arg2 → both "--" consumed, preserve positions
-        let raw = vec!["rtk", "git", "diff", "--", "arg1", "--", "arg2"];
+        // ptk git diff -- arg1 -- arg2 → both "--" consumed, preserve positions
+        let raw = vec!["ptk", "git", "diff", "--", "arg1", "--", "arg2"];
         let parsed = vec!["arg1", "arg2"];
         // Result: each "--" inserted at its original position relative to args
         assert_eq!(
@@ -96,8 +96,8 @@ mod tests {
 
     #[test]
     fn test_multiple_dashes_some_preserved() {
-        // rtk git diff -- -- → 2 in raw, 1 preserved in parsed
-        let raw = vec!["rtk", "git", "diff", "--", "--"];
+        // ptk git diff -- -- → 2 in raw, 1 preserved in parsed
+        let raw = vec!["ptk", "git", "diff", "--", "--"];
         let parsed = vec!["--"];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["--", "--"]);
     }
@@ -106,9 +106,9 @@ mod tests {
 
     #[test]
     fn test_dash_already_preserved() {
-        // rtk cargo clippy -p pkg -- -D warnings → clap kept "--"
+        // ptk cargo clippy -p pkg -- -D warnings → clap kept "--"
         let raw = vec![
-            "rtk", "cargo", "clippy", "-p", "pkg", "--", "-D", "warnings",
+            "ptk", "cargo", "clippy", "-p", "pkg", "--", "-D", "warnings",
         ];
         let parsed = vec!["-p", "pkg", "--", "-D", "warnings"];
         assert_eq!(
@@ -119,8 +119,8 @@ mod tests {
 
     #[test]
     fn test_trailing_dash_preserved() {
-        // rtk git diff file -- → trailing "--" preserved
-        let raw = vec!["rtk", "git", "diff", "file", "--"];
+        // ptk git diff file -- → trailing "--" preserved
+        let raw = vec!["ptk", "git", "diff", "file", "--"];
         let parsed = vec!["file", "--"];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["file", "--"]);
     }
@@ -133,16 +133,16 @@ mod tests {
         // All should return args unchanged (no injection)
         let cases = vec![
             (
-                vec!["rtk", "git", "diff", "feature/auth"],
+                vec!["ptk", "git", "diff", "feature/auth"],
                 vec!["feature/auth"],
             ),
             (
-                vec!["rtk", "git", "diff", "main...feature"],
+                vec!["ptk", "git", "diff", "main...feature"],
                 vec!["main...feature"],
             ),
-            (vec!["rtk", "git", "diff", "main"], vec!["main"]),
+            (vec!["ptk", "git", "diff", "main"], vec!["main"]),
             (
-                vec!["rtk", "git", "diff", "--stat", "--cached"],
+                vec!["ptk", "git", "diff", "--stat", "--cached"],
                 vec!["--stat", "--cached"],
             ),
         ];
@@ -157,7 +157,7 @@ mod tests {
     fn test_duplicate_args_both_sides() {
         // -p pkg1 -p pkg2 -- -p pkg3 → restore after last -p
         let raw = vec![
-            "rtk", "cargo", "clippy", "-p", "p1", "-p", "p2", "--", "-p", "p3",
+            "ptk", "cargo", "clippy", "-p", "p1", "-p", "p2", "--", "-p", "p3",
         ];
         let parsed = vec!["-p", "p1", "-p", "p2", "-p", "p3"];
         assert_eq!(
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_empty_args() {
-        let raw = vec!["rtk", "cargo", "test"];
+        let raw = vec!["ptk", "cargo", "test"];
         let parsed: Vec<&str> = vec![];
         assert_eq!(restore_with_raw(&parsed, &raw), Vec::<String>::new());
     }
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn test_cargo_clippy_missing_dash() {
         // No "--" in original → no injection
-        let raw = vec!["rtk", "cargo", "clippy", "-D", "warnings"];
+        let raw = vec!["ptk", "cargo", "clippy", "-D", "warnings"];
         let parsed = vec!["-D", "warnings"];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["-D", "warnings"]);
     }
@@ -185,16 +185,16 @@ mod tests {
 
     #[test]
     fn test_positional_equals_subcommand() {
-        // rtk git diff -- diff: filename "diff" same value as subcommand token
-        let raw = vec!["rtk", "git", "diff", "--", "diff"];
+        // ptk git diff -- diff: filename "diff" same value as subcommand token
+        let raw = vec!["ptk", "git", "diff", "--", "diff"];
         let parsed = vec!["diff"];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["--", "diff"]);
     }
 
     #[test]
     fn test_cargo_test_named_cargo() {
-        // rtk cargo test cargo -- --nocapture: test named "cargo"
-        let raw = vec!["rtk", "cargo", "test", "cargo", "--", "--nocapture"];
+        // ptk cargo test cargo -- --nocapture: test named "cargo"
+        let raw = vec!["ptk", "cargo", "test", "cargo", "--", "--nocapture"];
         let parsed = vec!["cargo", "--nocapture"];
         assert_eq!(
             restore_with_raw(&parsed, &raw),
@@ -204,8 +204,8 @@ mod tests {
 
     #[test]
     fn test_consecutive_dashes_before_file() {
-        // rtk git diff -- -- file: stable regardless of how many "--" clap consumed
-        let raw = vec!["rtk", "git", "diff", "--", "--", "file"];
+        // ptk git diff -- -- file: stable regardless of how many "--" clap consumed
+        let raw = vec!["ptk", "git", "diff", "--", "--", "file"];
         // Case A: clap consumed one, kept second as positional
         let parsed_a = vec!["--", "file"];
         assert_eq!(restore_with_raw(&parsed_a, &raw), vec!["--", "--", "file"]);
@@ -218,16 +218,16 @@ mod tests {
 
     #[test]
     fn test_git_diff_ref_before_path() {
-        // rtk git diff HEAD -- file
-        let raw = vec!["rtk", "git", "diff", "HEAD", "--", "file"];
+        // ptk git diff HEAD -- file
+        let raw = vec!["ptk", "git", "diff", "HEAD", "--", "file"];
         let parsed = vec!["HEAD", "file"];
         assert_eq!(restore_with_raw(&parsed, &raw), vec!["HEAD", "--", "file"]);
     }
 
     #[test]
     fn test_git_diff_flags_before_path() {
-        // rtk git diff --cached -- file
-        let raw = vec!["rtk", "git", "diff", "--cached", "--", "file"];
+        // ptk git diff --cached -- file
+        let raw = vec!["ptk", "git", "diff", "--cached", "--", "file"];
         let parsed = vec!["--cached", "file"];
         assert_eq!(
             restore_with_raw(&parsed, &raw),
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_git_diff_multiple_files() {
         // Original issue: multiple files caused "fatal: bad revision"
-        let raw = vec!["rtk", "git", "diff", "--", "file1", "file2", "file3"];
+        let raw = vec!["ptk", "git", "diff", "--", "file1", "file2", "file3"];
         let parsed = vec!["file1", "file2", "file3"];
         assert_eq!(
             restore_with_raw(&parsed, &raw),

@@ -50,7 +50,7 @@
     "labels": ["enhancement", "infra"],
     "assignees": [],
     "reviewers": [{"username": "grace_review"}, {"username": "heidi_review"}],
-    "description": "Add AWS CLI support.\n\n![architecture](https://example.com/arch.png)\n\n## Commands\n- `rtk aws s3 ls`\n- `rtk aws ec2 describe-instances`\n- `rtk aws ecs list-services`\n\n## Token Savings\n| Command | Savings |\n|---------|--------|\n| s3 ls | 75% |\n| ec2 describe | 85% |\n| ecs list | 80% |\n",
+    "description": "Add AWS CLI support.\n\n![architecture](https://example.com/arch.png)\n\n## Commands\n- `ptk aws s3 ls`\n- `ptk aws ec2 describe-instances`\n- `ptk aws ecs list-services`\n\n## Token Savings\n| Command | Savings |\n|---------|--------|\n| s3 ls | 75% |\n| ec2 describe | 85% |\n| ecs list | 80% |\n",
     "head_pipeline": {"id": 98650, "status": "failed", "ref": "feat/aws-cli"}
   },
   {
@@ -122,7 +122,7 @@
     "labels": ["enhancement"],
     "assignees": [{"username": "lisa_feat"}],
     "reviewers": [{"username": "mike_review"}],
-    "description": "## Tee Output Recovery\n\nSave raw unfiltered output on command failure.\nPrint one-line hint so LLMs can re-read instead of re-run.\n\n### Configuration\n```toml\n[tee]\nenabled = true\ndir = \"~/.local/share/rtk/tee\"\nmax_files = 20\nmax_size = 1048576\n```\n",
+    "description": "## Tee Output Recovery\n\nSave raw unfiltered output on command failure.\nPrint one-line hint so LLMs can re-read instead of re-run.\n\n### Configuration\n```toml\n[tee]\nenabled = true\ndir = \"~/.local/share/ptk/tee\"\nmax_files = 20\nmax_size = 1048576\n```\n",
     "head_pipeline": {"id": 98400, "status": "success", "ref": "feat/tee-output"}
   },
   {
@@ -163,7 +163,7 @@
   },
   {
     "iid": 275,
-    "title": "feat(discover): add rtk discover command for missed savings analysis",
+    "title": "feat(discover): add ptk discover command for missed savings analysis",
     "state": "merged",
     "author": {"username": "quinn_dev", "name": "Quinn Developer", "id": 800},
     "web_url": "https://gitlab.example.com/acme/toolkit/-/merge_requests/275",
@@ -176,7 +176,7 @@
     "labels": ["enhancement", "analytics"],
     "assignees": [{"username": "quinn_dev"}],
     "reviewers": [{"username": "rachel_review"}, {"username": "sam_review"}],
-    "description": "Add `rtk discover` command that scans Claude Code JSONL sessions and reports missed savings opportunities.\n\n## Features\n- Classifies commands as Supported/Unsupported/Ignored\n- Groups by category with estimated token savings\n- Reports top missed commands\n\n## Example\n```\n$ rtk discover\nAnalyzed 1,234 commands across 45 sessions\n\nMissed savings by category:\n  Git: 234 commands, ~16,800 tokens\n  Cargo: 89 commands, ~7,120 tokens\n```\n",
+    "description": "Add `ptk discover` command that scans Claude Code JSONL sessions and reports missed savings opportunities.\n\n## Features\n- Classifies commands as Supported/Unsupported/Ignored\n- Groups by category with estimated token savings\n- Reports top missed commands\n\n## Example\n```\n$ ptk discover\nAnalyzed 1,234 commands across 45 sessions\n\nMissed savings by category:\n  Git: 234 commands, ~16,800 tokens\n  Cargo: 89 commands, ~7,120 tokens\n```\n",
     "head_pipeline": {"id": 98100, "status": "success", "ref": "feat/discover"}
   }
 ]

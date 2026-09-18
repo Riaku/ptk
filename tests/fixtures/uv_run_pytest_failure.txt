@@ -7,7 +7,7 @@ Downloading pygments (1.2MiB)
 Installed 5 packages in 7ms
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.5, pytest-8.4.1, pluggy-1.6.0
-rootdir: /private/tmp/rtk-uv-fixture
+rootdir: /private/tmp/ptk-uv-fixture
 configfile: pyproject.toml
 collected 2 items
 

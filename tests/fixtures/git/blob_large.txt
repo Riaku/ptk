@@ -56,7 +56,7 @@ pub enum AgentTarget {
 
 #[derive(Parser)]
 #[command(
-    name = "rtk",
+    name = "ptk",
     version,
     about = "Rust Token Killer - Minimize LLM token consumption",
     long_about = "A high-performance CLI proxy designed to filter and summarize system outputs before they reach your LLM context."
@@ -256,7 +256,7 @@ enum Commands {
 
     /// Find files with compact tree output (accepts native find flags like -name, -type)
     Find {
-        /// All find arguments (supports both RTK and native find syntax)
+        /// All find arguments (supports both PTK and native find syntax)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -332,7 +332,7 @@ enum Commands {
         extra_args: Vec<String>,
     },
 
-    /// Initialize rtk instructions for assistant CLI usage
+    /// Initialize ptk instructions for assistant CLI usage
     Init {
         /// Add to global assistant config directory instead of local project file
         #[arg(short, long)]

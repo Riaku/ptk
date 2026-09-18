@@ -40,8 +40,8 @@ pub struct RunOptions<'a> {
     pub filter_stdout_only: bool,
     pub skip_filter_on_failure: bool,
     pub no_trailing_newline: bool,
-    /// Forward rtk's own stdin to the child process. Needed for commands that
-    /// can read from a pipe (e.g. `cat file | rtk wc`); without it the child
+    /// Forward ptk's own stdin to the child process. Needed for commands that
+    /// can read from a pipe (e.g. `cat file | ptk wc`); without it the child
     /// gets an empty stdin and reports zero.
     pub inherit_stdin: bool,
 }
@@ -122,7 +122,7 @@ where
         if !result.raw_stderr.trim().is_empty() {
             eprint!("{}", result.raw_stderr);
         }
-        timer.track(cmd_label, &format!("rtk {}", cmd_label), raw, raw);
+        timer.track(cmd_label, &format!("ptk {}", cmd_label), raw, raw);
         return Ok(exit_code);
     }
 
@@ -139,7 +139,7 @@ where
         raw
     };
 
-    // stderr is forwarded unchanged below, so it costs the same whether or not rtk is
+    // stderr is forwarded unchanged below, so it costs the same whether or not ptk is
     // in the way. What the guard must not inflate is the stdout it replaces.
     let shown = if let Some(label) = opts.tee_label {
         print_with_hint(&filtered, raw, raw_for_tracking, label, exit_code)
@@ -167,7 +167,7 @@ where
     } else {
         Cow::Borrowed(shown.as_str())
     };
-    timer.track(cmd_label, &format!("rtk {}", cmd_label), raw, &emitted);
+    timer.track(cmd_label, &format!("ptk {}", cmd_label), raw, &emitted);
     Ok(exit_code)
 }
 
@@ -225,7 +225,7 @@ fn run_inner(
 
             timer.track(
                 &cmd_label,
-                &format!("rtk {}", cmd_label),
+                &format!("ptk {}", cmd_label),
                 &result.raw,
                 &result.filtered,
             );
@@ -236,7 +236,7 @@ fn run_inner(
                 stream::run_streaming(&mut cmd, StdinMode::Inherit, FilterMode::Passthrough)
                     .with_context(|| format!("Failed to run {}", tool_name))?;
 
-            timer.track_passthrough(&cmd_label, &format!("rtk {} (passthrough)", cmd_label));
+            timer.track_passthrough(&cmd_label, &format!("ptk {} (passthrough)", cmd_label));
             Ok(result.exit_code)
         }
     }
@@ -414,7 +414,7 @@ impl StreamFilter for ErrorStreamFilter {
 /// `display` is used only for logging, tee keys, and tracking, never executed.
 ///
 /// `tool` is the command the user actually ran. It keys tracking and the tee
-/// slug, so passing a real name keeps `rtk gain --history` showing invocations
+/// slug, so passing a real name keeps `ptk gain --history` showing invocations
 /// that exist and stops recovery files colliding across ecosystems.
 pub fn run_err_cmd(
     cmd: Command,
@@ -948,7 +948,7 @@ mod err_test_runner_tests {
     #[test]
     fn test_bun_module_load_error_survives_with_no_fail_marker() {
         // Bun prints no "(fail)" line when a test file cannot load, so the
-        // diagnostic is the only thing that says why rtk is exiting non-zero.
+        // diagnostic is the only thing that says why ptk is exiting non-zero.
         let raw = include_str!("../../tests/fixtures/bun_test_load_error_raw.txt");
         let out = extract_test_summary(raw, TestEcosystem::Bun);
         assert!(out.contains("[FAIL]"), "{out}");

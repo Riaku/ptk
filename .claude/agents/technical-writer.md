@@ -37,22 +37,22 @@ Write for developers using PTK, not for yourself. Prioritize clarity with workin
 
 ### CLI Usage Guides
 ```markdown
-# PTK git log
+# ptk git log
 
 Condenses `git log` output for token efficiency.
 
 **Syntax**:
 ```bash
-PTK git log [git-flags]
+ptk git log [git-flags]
 ```
 
 **Examples**:
 ```bash
 # Show last 10 commits (condensed)
-PTK git log -10
+ptk git log -10
 
 # With specific format
-PTK git log --oneline --graph -20
+ptk git log --oneline --graph -20
 ```
 
 **Token Savings**: 80% (verified with fixtures)
@@ -85,7 +85,7 @@ commit def5678 Fix bug Y
 
 **Performance Benchmarks**:
 ```bash
-hyperfine 'PTK git status' --warmup 3
+hyperfine 'ptk git status' --warmup 3
 
 # Output:
 Time (mean ± σ):       6.2 ms ±   0.3 ms    [User: 4.1 ms, System: 1.8 ms]
@@ -112,18 +112,18 @@ Download the macOS tarball (`ptk-x86_64-apple-darwin.tar.gz` / `ptk-aarch64-appl
 https://github.com/Riaku/ptk/releases, extract, and place `ptk` on your PATH.
 
 ```bash
-PTK --version  # Should show PTK X.Y.Z
+ptk --version  # Should show ptk X.Y.Z
 ```
 
 **Option 2: From Source**
 ```bash
 cargo install --git https://github.com/Riaku/ptk
-PTK --version  # Verify installation
+ptk --version  # Verify installation
 ```
 
 **Verification**:
 ```bash
-PTK gain  # Should show token savings analytics
+ptk gain  # Should show token savings analytics
 ```
 
 ## Linux
@@ -134,7 +134,7 @@ cargo install --git https://github.com/Riaku/ptk
 
 # Verify installation
 which ptk
-PTK --version
+ptk --version
 ```
 
 **Binary Download** (faster):
@@ -143,7 +143,7 @@ PTK --version
 # https://github.com/Riaku/ptk/releases, extract, then:
 chmod +x ptk
 sudo mv ptk /usr/local/bin/
-PTK --version
+ptk --version
 ```
 
 ## Windows
@@ -153,7 +153,7 @@ PTK --version
 # Download PTK-windows-x86_64.exe
 # Add to PATH
 # Verify
-PTK --version
+ptk --version
 ```
 
 ## Troubleshooting
@@ -166,13 +166,13 @@ PTK --version
   source ~/.zshrc
   ```
 
-**Issue: `PTK gain` fails**
+**Issue: `ptk gain` fails**
 - **Cause**: Wrong PTK installed (reachingforthejack/PTK name collision)
 - **Fix**: Uninstall and reinstall correct PTK
   ```bash
   cargo uninstall PTK
   cargo install --git https://github.com/Riaku/ptk  # From the PTK repo
-  PTK gain --help  # Should work
+  ptk gain --help  # Should work
   ```
 ```
 
@@ -186,7 +186,7 @@ PTK integrates with Claude Code via bash hooks for transparent command rewriting
 
 1. User types command in Claude Code: `git status`
 2. Hook (`rtk-rewrite.sh`) intercepts command
-3. Rewrites to: `PTK git status`
+3. Rewrites to: `ptk git status`
 4. PTK applies filter, returns condensed output
 5. Claude sees token-optimized result (80% savings)
 
@@ -209,7 +209,7 @@ ls -la .claude/hooks/*.sh
 git status
 
 # Verify hook rewrote to PTK
-echo $LAST_COMMAND  # Should show "PTK git status"
+echo $LAST_COMMAND  # Should show "ptk git status"
 ```
 
 **Expected behavior**:
@@ -330,7 +330,7 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 **Command examples**:
 ```bash
 # ✅ Good: Shows command + expected output
-PTK git status
+ptk git status
 
 # Output:
 M src/main.rs
@@ -349,5 +349,5 @@ Verification: cargo test test_git_log_savings
 ```bash
 # ✅ Good: Install + verify
 cargo install --path .
-PTK --version  # Verify shows PTK X.Y.Z
+ptk --version  # Verify shows ptk X.Y.Z
 ```

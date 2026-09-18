@@ -12,9 +12,9 @@
 [INFO] -------------------------------------------------------
 [INFO] Running org.apache.commons.cli.SolrCliTest
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in org.apache.commons.cli.SolrCliTest
-[INFO] Running org.apache.commons.cli.RtkInducedFailTest
-[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in org.apache.commons.cli.RtkInducedFailTest
-[ERROR] org.apache.commons.cli.RtkInducedFailTest.rtkInducedFailure -- Time elapsed: 0.025 s <<< FAILURE!
+[INFO] Running org.apache.commons.cli.PtkInducedFailTest
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in org.apache.commons.cli.PtkInducedFailTest
+[ERROR] org.apache.commons.cli.PtkInducedFailTest.ptkInducedFailure -- Time elapsed: 0.025 s <<< FAILURE!
 org.opentest4j.AssertionFailedError: expected: <expected> but was: <actual>
 	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
 	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
@@ -22,7 +22,7 @@ org.opentest4j.AssertionFailedError: expected: <expected> but was: <actual>
 	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
 	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
 	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1145)
-	at org.apache.commons.cli.RtkInducedFailTest.rtkInducedFailure(RtkInducedFailTest.java:25)
+	at org.apache.commons.cli.PtkInducedFailTest.ptkInducedFailure(PtkInducedFailTest.java:25)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
@@ -33,7 +33,7 @@ org.opentest4j.AssertionFailedError: expected: <expected> but was: <actual>
 [INFO] Results:
 [INFO]
 [ERROR] Failures:
-[ERROR]   RtkInducedFailTest.rtkInducedFailure:25 expected: <expected> but was: <actual>
+[ERROR]   PtkInducedFailTest.ptkInducedFailure:25 expected: <expected> but was: <actual>
 [INFO]
 [ERROR] Tests run: 978, Failures: 1, Errors: 0, Skipped: 61
 [INFO]

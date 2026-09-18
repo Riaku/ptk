@@ -27,7 +27,7 @@ fn glob_match_inner(pat: &[u8], name: &[u8]) -> bool {
     }
 }
 
-/// Parsed arguments from either native find or RTK find syntax.
+/// Parsed arguments from either native find or ptk find syntax.
 #[derive(Debug)]
 struct FindArgs {
     pattern: String,
@@ -96,7 +96,7 @@ fn leading_options_len(args: &[String]) -> usize {
     i.min(args.len())
 }
 
-/// The subset rtk walks itself: one path, each of -name/-iname (globs with * and ?
+/// The subset ptk walks itself: one path, each of -name/-iname (globs with * and ?
 /// only), -type f|d, -maxdepth N, -m/--max N, -t/--file-type f|d at most once.
 fn parse_subset(paths: &[String], expr: &[String]) -> Option<FindArgs> {
     if paths.len() > 1 {
@@ -141,10 +141,10 @@ fn parse_subset(paths: &[String], expr: &[String]) -> Option<FindArgs> {
 
 /// find syntax: `find [options] [paths...] [expression]` — paths end at the first
 /// token starting with `-`, `!` or a parenthesis, exactly like find.
-/// RTK syntax: `find <pattern> [path] [-m max] [-t type]` — used when the first
+/// PTK syntax: `find <pattern> [path] [-m max] [-t type]` — used when the first
 /// token contains `*` or `?`, or is not an existing directory.
 fn dispatch(original: &[String]) -> Result<Dispatch> {
-    let (args, max, file_type) = peel_trailing_rtk_flags(original);
+    let (args, max, file_type) = peel_trailing_ptk_flags(original);
     let legacy = !args.is_empty()
         && !is_expression_token(&args[0])
         && !looks_like_path(&args[0])
@@ -198,7 +198,7 @@ fn dispatch(original: &[String]) -> Result<Dispatch> {
     })
 }
 
-/// RTK syntax `find <pattern> [path] ...` rewritten as find syntax
+/// PTK syntax `find <pattern> [path] ...` rewritten as find syntax
 /// `[path] -name <pattern> ...` so every token after the pattern is dispatched
 /// like any find expression.
 fn legacy_to_find_syntax(args: &[String]) -> Vec<String> {
@@ -214,9 +214,9 @@ fn legacy_to_find_syntax(args: &[String]) -> Vec<String> {
     rebuilt
 }
 
-/// rtk's own flags are only recognized at the very end of the command line,
+/// ptk's own flags are only recognized at the very end of the command line,
 /// where they cannot be an -exec argument or a predicate value.
-fn peel_trailing_rtk_flags(args: &[String]) -> (Vec<String>, Option<usize>, Option<String>) {
+fn peel_trailing_ptk_flags(args: &[String]) -> (Vec<String>, Option<usize>, Option<String>) {
     let mut end = args.len();
     let mut max = None;
     let mut file_type = None;
@@ -253,7 +253,7 @@ fn run_compress(
 ) -> Result<i32> {
     let timer = tracking::TimedExecution::start();
     if verbose > 0 {
-        eprintln!("find: results from find, compressed by rtk");
+        eprintln!("find: results from find, compressed by ptk");
     }
     let max_results = max.unwrap_or(CAP_INVENTORY);
     let max_explicit = max.is_some();
@@ -291,7 +291,7 @@ fn run_compress(
         let mut stdout = std::io::stdout().lock();
         stdout.write_all(&raw)?;
         stdout.flush()?;
-        timer.track_passthrough(&track_cmd, "rtk find (passthrough)");
+        timer.track_passthrough(&track_cmd, "ptk find (passthrough)");
     } else {
         let files: Vec<String> = entries
             .iter()
@@ -634,7 +634,7 @@ fn render(
             Some(note) => crate::core::runner::emit_guarded(note, None, note),
             None => String::new(),
         };
-        timer.track(track_cmd, "rtk find", raw_output, &shown);
+        timer.track(track_cmd, "ptk find", raw_output, &shown);
         return shown;
     }
 
@@ -737,7 +737,7 @@ fn render(
     }
     let shown =
         crate::core::runner::emit_guarded(body.trim_end_matches('\n'), hint.as_deref(), &baseline);
-    timer.track(track_cmd, "rtk find", raw_output, &shown);
+    timer.track(track_cmd, "ptk find", raw_output, &shown);
     shown
 }
 
@@ -768,7 +768,7 @@ mod tests {
     }
 
     #[test]
-    fn rtk_flags_before_actions_reach_find_so_it_refuses_them() {
+    fn ptk_flags_before_actions_reach_find_so_it_refuses_them() {
         match dispatch(&args(&["*.rs", "src", "-delete", "-m", "1"])).unwrap() {
             Dispatch::Verbatim(a) => {
                 assert_eq!(a, args(&["src", "-name", "*.rs", "-delete", "-m", "1"]))
@@ -808,7 +808,7 @@ mod tests {
     }
 
     #[test]
-    fn leading_glob_token_is_rtk_pattern_syntax() {
+    fn leading_glob_token_is_ptk_pattern_syntax() {
         let p = parse_find_args(&args(&["*.rs", "src", "-m", "5"])).unwrap();
         assert_eq!(p.pattern, "*.rs");
         assert_eq!(p.path, "src");
@@ -817,7 +817,7 @@ mod tests {
     }
 
     #[test]
-    fn rtk_pattern_syntax_with_find_predicates_never_blocks() {
+    fn ptk_pattern_syntax_with_find_predicates_never_blocks() {
         match dispatch(&args(&["*.rs", "src", "-mtime", "+7", "-m", "5"])).unwrap() {
             Dispatch::Compress {
                 paths, expr, max, ..
@@ -837,17 +837,17 @@ mod tests {
     }
 
     #[test]
-    fn trailing_rtk_flags_are_peeled_in_every_class() {
+    fn trailing_ptk_flags_are_peeled_in_every_class() {
         let (rest, max, ty) =
-            peel_trailing_rtk_flags(&args(&[".", "-mtime", "-7", "-t", "d", "-m", "5"]));
+            peel_trailing_ptk_flags(&args(&[".", "-mtime", "-7", "-t", "d", "-m", "5"]));
         assert_eq!(rest, args(&[".", "-mtime", "-7"]));
         assert_eq!(max, Some(5));
         assert_eq!(ty.as_deref(), Some("d"));
-        let (rest, max, _) = peel_trailing_rtk_flags(&args(&[".", "-name", "-m"]));
+        let (rest, max, _) = peel_trailing_ptk_flags(&args(&[".", "-name", "-m"]));
         assert_eq!(rest, args(&[".", "-name", "-m"]));
         assert_eq!(max, None);
         let (rest, max, _) =
-            peel_trailing_rtk_flags(&args(&[".", "-exec", "grep", "-m", "1", "x", "{}", ";"]));
+            peel_trailing_ptk_flags(&args(&[".", "-exec", "grep", "-m", "1", "x", "{}", ";"]));
         assert_eq!(rest.len(), 8);
         assert_eq!(max, None);
         match dispatch(&args(&[".", "-mtime", "-7", "-m", "5"])).unwrap() {
@@ -905,7 +905,7 @@ mod tests {
     }
 
     #[test]
-    fn rtk_flags_mid_expression_reach_find_untouched() {
+    fn ptk_flags_mid_expression_reach_find_untouched() {
         assert_eq!(
             class(&[
                 ".", "-name", "*.rs", "-m", "5", "-exec", "grep", "-m", "1", "x", "{}", ";"
@@ -964,7 +964,7 @@ mod tests {
     }
 
     #[test]
-    fn subset_accepts_rtk_type_flag_and_iname() {
+    fn subset_accepts_ptk_type_flag_and_iname() {
         let p = parse_find_args(&args(&[
             "src", "-iname", "README*", "-t", "d", "--max", "3",
         ]))
@@ -1122,24 +1122,24 @@ mod tests {
         );
     }
 
-    // --- parse_find_args: RTK syntax ---
+    // --- parse_find_args: PTK syntax ---
 
     #[test]
-    fn parse_rtk_syntax_pattern_only() {
+    fn parse_ptk_syntax_pattern_only() {
         let parsed = parse_find_args(&args(&["*.rs"])).unwrap();
         assert_eq!(parsed.pattern, "*.rs");
         assert_eq!(parsed.path, ".");
     }
 
     #[test]
-    fn parse_rtk_syntax_pattern_and_path() {
+    fn parse_ptk_syntax_pattern_and_path() {
         let parsed = parse_find_args(&args(&["*.rs", "src"])).unwrap();
         assert_eq!(parsed.pattern, "*.rs");
         assert_eq!(parsed.path, "src");
     }
 
     #[test]
-    fn parse_rtk_syntax_with_flags() {
+    fn parse_ptk_syntax_with_flags() {
         let parsed = parse_find_args(&args(&["*.rs", "src", "-m", "10", "-t", "d"])).unwrap();
         assert_eq!(parsed.pattern, "*.rs");
         assert_eq!(parsed.path, "src");
@@ -1164,8 +1164,8 @@ mod tests {
     }
 
     #[test]
-    fn run_from_args_rtk_syntax() {
-        // Simulates: rtk find *.rs src
+    fn run_from_args_ptk_syntax() {
+        // Simulates: ptk find *.rs src
         let result = run_from_args(&args(&["*.rs", "src"]), 0);
         assert!(result.is_ok());
     }
@@ -1223,7 +1223,7 @@ mod tests {
     }
 
     #[test]
-    fn rtk_max_flag_marks_cap_explicit() {
+    fn ptk_max_flag_marks_cap_explicit() {
         let parsed = parse_find_args(&args(&["*.rs", "-m", "10"])).unwrap();
         assert!(parsed.max_explicit);
         let parsed = parse_find_args(&args(&["*.rs", "--max", "10"])).unwrap();
@@ -1346,7 +1346,7 @@ mod tests {
     #[test]
     fn native_run_returns_zero_on_success() {
         let tmp = tempfile::tempdir().unwrap();
-        temp_env::with_var("RTK_TEE_DIR", Some(tmp.path()), || {
+        temp_env::with_var("PTK_TEE_DIR", Some(tmp.path()), || {
             std::fs::write(tmp.path().join("a.txt"), "x").unwrap();
             let root = tmp.path().to_string_lossy().into_owned();
             assert_eq!(
@@ -1412,7 +1412,7 @@ mod tests {
     #[test]
     fn disclosure_survives_the_output_guard() {
         let tee = tempfile::tempdir().unwrap();
-        temp_env::with_var("RTK_TEE_DIR", Some(tee.path()), || {
+        temp_env::with_var("PTK_TEE_DIR", Some(tee.path()), || {
             let timer = tracking::TimedExecution::start();
             let shown = render(
                 vec!["visible.txt".to_string()],

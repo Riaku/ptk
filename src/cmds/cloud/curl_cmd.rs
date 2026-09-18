@@ -69,7 +69,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
             .context("Failed to write binary response to stdout")?;
         timer.track_passthrough(
             &format!("curl {}", args.join(" ")),
-            &format!("rtk curl {}", args.join(" ")),
+            &format!("ptk curl {}", args.join(" ")),
         );
         return Ok(exit_code);
     }
@@ -88,7 +88,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
 
     timer.track(
         &format!("curl {}", args.join(" ")),
-        &format!("rtk curl {}", args.join(" ")),
+        &format!("ptk curl {}", args.join(" ")),
         &raw,
         &shown,
     );
@@ -134,7 +134,7 @@ fn filter_curl_output(raw: &str, is_tty: bool) -> FilterResult<'_> {
     // We're about to truncate for a human reader. Write a tee file so they (or
     // the LLM in their stead) can recover the full body from the printed hint.
     let Some(hint) = force_tee_hint(raw, "curl") else {
-        // Tee disabled (RTK_TEE=0 or below MIN_TEE_SIZE): we have nowhere to
+        // Tee disabled (PTK_TEE=0 or below MIN_TEE_SIZE): we have nowhere to
         // point a recovery hint to, so pass through rather than emit an
         // unrecoverable truncation marker.
         return FilterResult {

@@ -4,9 +4,9 @@ Complete guide to analyzing your PTK token savings with temporal breakdowns and 
 
 ## Overview
 
-The `PTK gain` command provides comprehensive analytics for tracking your token savings across time periods.
+The `ptk gain` command provides comprehensive analytics for tracking your token savings across time periods.
 
-**Database Location**: `~/.local/share/PTK/history.db`
+**Database Location**: `~/.local/share/ptk/history.db`
 **Retention Policy**: 90 days
 **Scope**: Global across all projects, worktrees, and Claude sessions
 
@@ -14,25 +14,25 @@ The `PTK gain` command provides comprehensive analytics for tracking your token 
 
 ```bash
 # Default summary view
-PTK gain
+ptk gain
 
 # Temporal breakdowns
-PTK gain --daily          # All days since tracking started
-PTK gain --weekly         # Aggregated by week
-PTK gain --monthly        # Aggregated by month
-PTK gain --all            # Show all breakdowns at once
+ptk gain --daily          # All days since tracking started
+ptk gain --weekly         # Aggregated by week
+ptk gain --monthly        # Aggregated by month
+ptk gain --all            # Show all breakdowns at once
 
 # Export formats
-PTK gain --all --format json > savings.json
-PTK gain --all --format csv > savings.csv
+ptk gain --all --format json > savings.json
+ptk gain --all --format csv > savings.csv
 
 # Combined flags
-PTK gain --graph --history --quota    # Classic view with extras
-PTK gain --daily --weekly --monthly   # Multiple breakdowns
+ptk gain --graph --history --quota    # Classic view with extras
+ptk gain --daily --weekly --monthly   # Multiple breakdowns
 
 # Reset all tracking data
-PTK gain --reset          # prompts [y/N] before deleting
-PTK gain --reset --yes    # skip prompt (CI/scripts)
+ptk gain --reset          # prompts [y/N] before deleting
+ptk gain --reset --yes    # skip prompt (CI/scripts)
 ```
 
 ## Command Options
@@ -184,17 +184,17 @@ month,commands,input_tokens,output_tokens,saved_tokens,savings_pct
 
 ```bash
 # Generate weekly report every Monday
-PTK gain --weekly --format csv > reports/week-$(date +%Y-%W).csv
+ptk gain --weekly --format csv > reports/week-$(date +%Y-%W).csv
 
 # Compare this week vs last week
-PTK gain --weekly | tail -3
+ptk gain --weekly | tail -3
 ```
 
 ### Monthly Cost Analysis
 
 ```bash
 # Export monthly data for budget review
-PTK gain --monthly --format json | jq '.monthly[] |
+ptk gain --monthly --format json | jq '.monthly[] |
   {month, saved_tokens, quota_pct: (.saved_tokens / 6000000 * 100)}'
 ```
 
@@ -221,7 +221,7 @@ daily_df.plot(x='date', y='savings_pct', kind='line')
 
 ### Excel Analysis
 
-1. Export CSV: `PTK gain --all --format csv > PTK-data.csv`
+1. Export CSV: `ptk gain --all --format csv > PTK-data.csv`
 2. Open in Excel
 3. Create pivot tables:
    - Daily trends (line chart)
@@ -232,7 +232,7 @@ daily_df.plot(x='date', y='savings_pct', kind='line')
 
 ```bash
 # Generate dashboard data daily via cron
-0 0 * * * PTK gain --all --format json > /var/www/dashboard/PTK-stats.json
+0 0 * * * ptk gain --all --format json > /var/www/dashboard/PTK-stats.json
 
 # Serve with static site
 cat > index.html <<'EOF'
@@ -261,7 +261,7 @@ EOF
 
 ### Token Estimation
 
-`PTK gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). PTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which PTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
+`ptk gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). PTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which PTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
 
 ### Savings Calculation
 
@@ -278,13 +278,13 @@ Savings %       = (Saved / Input) × 100
 
 | Command | Bash output reduction | Mechanism |
 |---------|----------------------|-----------|
-| `PTK git status` | 77-93% | Compact stat format |
+| `ptk git status` | 77-93% | Compact stat format |
 | `PTK eslint` | 84% | Group by rule |
-| `PTK jest` | 94-99% | Show failures only |
-| `PTK vitest` | 94-99% | Show failures only |
-| `PTK find` | 75% | Tree format |
-| `PTK pnpm list` | 70-90% | Compact dependencies |
-| `PTK grep` | 70% | Truncate + group |
+| `ptk jest` | 94-99% | Show failures only |
+| `ptk vitest` | 94-99% | Show failures only |
+| `ptk find` | 75% | Tree format |
+| `ptk pnpm list` | 70-90% | Compact dependencies |
+| `ptk grep` | 70% | Truncate + group |
 
 ## Database Management
 
@@ -292,18 +292,18 @@ Savings %       = (Saved / Input) × 100
 
 ```bash
 # Location
-ls -lh ~/.local/share/PTK/history.db
+ls -lh ~/.local/share/ptk/history.db
 
 # Schema
-sqlite3 ~/.local/share/PTK/history.db ".schema"
+sqlite3 ~/.local/share/ptk/history.db ".schema"
 
 # Recent records
-sqlite3 ~/.local/share/PTK/history.db \
+sqlite3 ~/.local/share/ptk/history.db \
   "SELECT timestamp, RTK_cmd, saved_tokens FROM commands
    ORDER BY timestamp DESC LIMIT 10"
 
 # Total database size
-sqlite3 ~/.local/share/PTK/history.db \
+sqlite3 ~/.local/share/ptk/history.db \
   "SELECT COUNT(*),
           SUM(saved_tokens) as total_saved,
           MIN(DATE(timestamp)) as first_record,
@@ -315,24 +315,24 @@ sqlite3 ~/.local/share/PTK/history.db \
 
 ```bash
 # Backup
-cp ~/.local/share/PTK/history.db ~/backups/PTK-history-$(date +%Y%m%d).db
+cp ~/.local/share/ptk/history.db ~/backups/PTK-history-$(date +%Y%m%d).db
 
 # Restore
-cp ~/backups/PTK-history-20260128.db ~/.local/share/PTK/history.db
+cp ~/backups/PTK-history-20260128.db ~/.local/share/ptk/history.db
 
 # Export for migration
-sqlite3 ~/.local/share/PTK/history.db .dump > PTK-backup.sql
+sqlite3 ~/.local/share/ptk/history.db .dump > PTK-backup.sql
 ```
 
 ### Cleanup
 
 ```bash
 # Manual cleanup (older than 90 days)
-sqlite3 ~/.local/share/PTK/history.db \
+sqlite3 ~/.local/share/ptk/history.db \
   "DELETE FROM commands WHERE timestamp < datetime('now', '-90 days')"
 
 # Reset all data
-rm ~/.local/share/PTK/history.db
+rm ~/.local/share/ptk/history.db
 # Next PTK command will recreate database
 ```
 
@@ -355,7 +355,7 @@ jobs:
         run: cargo install --path .
       - name: Generate report
         run: |
-          PTK gain --weekly --format json > stats/week-$(date +%Y-%W).json
+          ptk gain --weekly --format json > stats/week-$(date +%Y-%W).json
       - name: Commit stats
         run: |
           git add stats/
@@ -392,24 +392,24 @@ def send_RTK_stats():
 
 ```bash
 # Check if database exists
-ls -lh ~/.local/share/PTK/history.db
+ls -lh ~/.local/share/ptk/history.db
 
 # Check record count
-sqlite3 ~/.local/share/PTK/history.db "SELECT COUNT(*) FROM commands"
+sqlite3 ~/.local/share/ptk/history.db "SELECT COUNT(*) FROM commands"
 
 # Run a tracked command to generate data
-PTK git status
+ptk git status
 ```
 
 ### Export fails
 
 ```bash
 # Check for pipe errors
-PTK gain --format json 2>&1 | tee /tmp/PTK-debug.log | jq .
+ptk gain --format json 2>&1 | tee /tmp/PTK-debug.log | jq .
 
 # Use release build to avoid warnings
 cargo build --release
-./target/release/PTK gain --format json
+./target/release/ptk gain --format json
 ```
 
 ### Incorrect statistics
@@ -421,7 +421,7 @@ Token estimation is a heuristic. For precise measurements:
 pip install tiktoken
 
 # Validate estimation
-PTK git status > output.txt
+ptk git status > output.txt
 python -c "
 import tiktoken
 enc = tiktoken.get_encoding('cl100k_base')
@@ -433,7 +433,7 @@ print(f'PTK estimate: {len(text) // 4}')
 
 ## Best Practices
 
-1. **Regular Exports**: `PTK gain --all --format json > monthly-$(date +%Y%m).json`
+1. **Regular Exports**: `ptk gain --all --format json > monthly-$(date +%Y%m).json`
 2. **Trend Analysis**: Compare week-over-week savings to identify optimization opportunities
 3. **Command Profiling**: Use `--history` to see which commands save the most
 4. **Backup Before Cleanup**: Always backup before manual database operations

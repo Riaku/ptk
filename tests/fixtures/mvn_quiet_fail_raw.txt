@@ -1,6 +1,6 @@
 [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.069 s <<< FAILURE! -- in x.FailTest
 [ERROR] x.FailTest.this_will_fail -- Time elapsed: 0.030 s <<< FAILURE!
-org.opentest4j.AssertionFailedError: deliberate failure for rtk -q filter testing ==> expected: <1> but was: <2>
+org.opentest4j.AssertionFailedError: deliberate failure for ptk -q filter testing ==> expected: <1> but was: <2>
 	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
 	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
 	at org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
@@ -12,7 +12,7 @@ org.opentest4j.AssertionFailedError: deliberate failure for rtk -q filter testin
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
 [ERROR] Failures: 
-[ERROR]   FailTest.this_will_fail:9 deliberate failure for rtk -q filter testing ==> expected: <1> but was: <2>
+[ERROR]   FailTest.this_will_fail:9 deliberate failure for ptk -q filter testing ==> expected: <1> but was: <2>
 [ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0
 [ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.5:test (default-test) on project mvnq: There are test failures.
 [ERROR] 

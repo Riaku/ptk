@@ -1,6 +1,6 @@
 //! Reads user settings from config.toml.
 
-use super::constants::{CONFIG_TOML, DEFAULT_HISTORY_DAYS, RTK_DATA_DIR};
+use super::constants::{CONFIG_TOML, DEFAULT_HISTORY_DAYS, PTK_DATA_DIR};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -31,11 +31,11 @@ pub struct Config {
     pub awareness: AwarenessConfig,
 }
 
-/// How much the agent is told about RTK by the instructions file `rtk init` writes.
+/// How much the agent is told about PTK by the instructions file `ptk init` writes.
 ///
-/// - `default`: output contract only. The agent never learns rtk exists.
-/// - `high`: adds what RTK is and its meta commands (`rtk gain`, `rtk proxy`, `RTK_DISABLED=1`).
-/// - `full`: adds "prefix every command with `rtk`". Required for agents without a command
+/// - `default`: output contract only. The agent never learns ptk exists.
+/// - `high`: adds what PTK is and its meta commands (`ptk gain`, `ptk proxy`, `PTK_DISABLED=1`).
+/// - `full`: adds "prefix every command with `ptk`". Required for agents without a command
 ///   hook; those agents always receive `full` regardless of this setting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -87,7 +87,7 @@ struct LegacyMapping {
 }
 
 /// The single source of truth for mapping a legacy `[tee]` section onto
-/// `[retriever]`, shared by `Config::load()` and `rtk config recall` so the
+/// `[retriever]`, shared by `Config::load()` and `ptk config recall` so the
 /// two paths can never disagree on the same input.
 fn map_legacy_tee(
     tee: &LegacyTeeConfig,
@@ -116,7 +116,7 @@ fn map_legacy_tee(
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct HooksConfig {
     /// Commands to exclude from auto-rewrite (e.g. ["curl", "playwright"]).
-    /// Survives `rtk init -g` re-runs since config.toml is user-owned.
+    /// Survives `ptk init -g` re-runs since config.toml is user-owned.
     #[serde(default)]
     pub exclude_commands: Vec<String>,
 
@@ -124,7 +124,7 @@ pub struct HooksConfig {
     /// to a filter, then re-prepended on the rewrite. For example, with
     /// `transparent_prefixes = ["docker exec mycontainer"]`, the command
     /// `docker exec mycontainer git status` rewrites to
-    /// `docker exec mycontainer rtk git status` instead of passing through
+    /// `docker exec mycontainer ptk git status` instead of passing through
     /// unrewritten.
     ///
     /// Useful for any per-project env wrapper that sits in front of every
@@ -243,7 +243,7 @@ pub fn limits() -> LimitsConfig {
 /// Get `(exclude_commands, transparent_prefixes)` for hook-rewrite decisions.
 /// Falls back to empty (no exclusions/prefixes) if config can't be loaded.
 /// Shared by every place that decides whether/how to rewrite a command
-/// (`hooks::hook_cmd`, `hooks::rewrite_cmd`, `discover`, `rtk rewrite`'s CLI
+/// (`hooks::hook_cmd`, `hooks::rewrite_cmd`, `discover`, `ptk rewrite`'s CLI
 /// entry point in `main.rs`) so they can't drift from each other.
 ///
 /// Reads the process-wide cached config (see `cached_config`), not a fresh
@@ -263,7 +263,7 @@ pub fn hook_rewrite_params() -> (Vec<String>, Vec<String>) {
 /// Process-wide cached `Config::load()` result, populated on first use.
 ///
 /// Safe for read-only callers on hot paths that may load config multiple times
-/// within a single `rtk` invocation (a `rtk` process is short-lived and exits
+/// within a single `ptk` invocation (a `ptk` process is short-lived and exits
 /// after one subcommand, so there's no cross-invocation staleness to worry
 /// about) — but NOT used by any path that mutates and saves config within the
 /// same process run (e.g. `hooks::init::save_telemetry_consent`'s load-mutate-save),
@@ -446,18 +446,21 @@ pub fn show_recall_mode() -> Result<()> {
     if config.migrated_from_legacy_tee {
         println!("source: legacy [tee] section (auto-migrated at load)");
     }
-    if std::env::var("RTK_RECALL").ok().as_deref() == Some("0")
-        || std::env::var("RTK_TEE").ok().as_deref() == Some("0")
+    if crate::core::env_compat::env_compat("RECALL")
+        .ok()
+        .as_deref()
+        == Some("0")
+        || crate::core::env_compat::env_compat("TEE").ok().as_deref() == Some("0")
     {
-        println!("note: RTK_RECALL=0/RTK_TEE=0 is set — recovery disabled for this environment");
+        println!("note: PTK_RECALL=0/PTK_TEE=0 is set — recovery disabled for this environment");
     }
-    println!("change with: rtk config recall <sqlite|tee|disabled>");
+    println!("change with: ptk config recall <sqlite|tee|disabled>");
     Ok(())
 }
 
 fn get_config_path() -> Result<PathBuf> {
     let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    Ok(config_dir.join(RTK_DATA_DIR).join(CONFIG_TOML))
+    Ok(config_dir.join(PTK_DATA_DIR).join(CONFIG_TOML))
 }
 
 pub fn show_config() -> Result<()> {
@@ -528,7 +531,7 @@ exclude_commands = ["curl", "gh"]
         let serialized = toml::to_string_pretty(&Config::default()).expect("serializable");
         assert!(
             serialized.contains("[awareness]") && serialized.contains("level = \"default\""),
-            "rtk config must show the awareness level, got:\n{serialized}"
+            "ptk config must show the awareness level, got:\n{serialized}"
         );
         let parsed: Config = toml::from_str(&serialized).expect("round trip");
         assert_eq!(parsed.awareness.level, AwarenessLevel::Default);
@@ -727,7 +730,7 @@ enabled = false
                 .unwrap()
                 .retriever
                 .tee_on_success,
-            "rtk config recall must carry the always intent over too"
+            "ptk config recall must carry the always intent over too"
         );
     }
 
@@ -786,7 +789,7 @@ enabled = false
                             reloaded.tee_max_file_size,
                             reloaded.tee_directory.clone()
                         ),
-                        "Config::load and rtk config recall must agree on: {orig}"
+                        "Config::load and ptk config recall must agree on: {orig}"
                     );
                 }
             }

@@ -40,7 +40,7 @@ When a user or LLM explicitly requests detailed output via flags (e.g., `git log
 
 Filters should be flag-aware: default output (no flags) gets aggressively compressed, but verbose/detailed flags should pass through more content. When in doubt, preserve correctness.
 
-> Example: `PTK cargo test` shows failures only (90% less bash output). But `PTK cargo test -- --nocapture` preserves all output because the user explicitly asked for it.
+> Example: `ptk cargo test` shows failures only (90% less bash output). But `ptk cargo test -- --nocapture` preserves all output because the user explicitly asked for it.
 
 ### Transparency
 
@@ -276,7 +276,7 @@ cargo fmt --all --check && cargo clippy --all-targets && cargo test
 - [ ] Any truncated list has a recovery hint (`force_tee_tail_hint` or `force_tee_hint`) and uses a `CAP_*` from `src/core/truncate.rs`
 - [ ] Edge cases covered
 - [ ] `cargo fmt --all --check && cargo clippy --all-targets && cargo test` passes
-- [ ] Manual test: run `PTK <cmd>` and inspect output
+- [ ] Manual test: run `ptk <cmd>` and inspect output
 
 ---
 

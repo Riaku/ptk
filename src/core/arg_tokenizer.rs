@@ -75,7 +75,7 @@ impl<'a> Token<'a> {
         self.attached.or_else(|| {
             // Indices address the vec this token came from; a caller holding a slice of it
             // (before_dashdash, `tokens[i + 1..]`) would otherwise index out of bounds, and a
-            // panic in a filter is the one thing RTK must never do.
+            // panic in a filter is the one thing PTK must never do.
             self.linked
                 .and_then(|index| tokens.get(index))
                 .map(|token| token.text)
@@ -126,12 +126,12 @@ pub fn before_dashdash<'t, 'a>(tokens: &'t [Token<'a>]) -> &'t [Token<'a>] {
     }
 }
 
-/// Where RTK's own flags have to be spliced into `args`: before the user's `--`, since
+/// Where PTK's own flags have to be spliced into `args`: before the user's `--`, since
 /// anything past the boundary is a pathspec or an argument forwarded to another program, not
 /// an option the tool will read. `args_len` when there is no boundary.
 ///
 /// Takes the **whole** token vec, never a slice: `dashdash_index` on a slice whose `--` was
-/// cut off reports "no boundary" and this returns `args_len`, which would splice RTK's flags
+/// cut off reports "no boundary" and this returns `args_len`, which would splice PTK's flags
 /// past the boundary -- the exact thing it exists to prevent.
 pub fn injection_point(tokens: &[Token<'_>], args_len: usize) -> usize {
     dashdash_index(tokens)
@@ -757,7 +757,7 @@ mod tests {
 
     #[test]
     fn required_value_long_flags_do_consume_next_token() {
-        // --diff-algorithm/--diff-filter take a required, separate-token value (rtk commit
+        // --diff-algorithm/--diff-filter take a required, separate-token value (ptk commit
         // 84169e2).
         for flag in ["diff-algorithm", "diff-filter"] {
             let args = owned(&[&format!("--{flag}"), "-p"]);

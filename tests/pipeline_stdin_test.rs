@@ -32,13 +32,13 @@ fn wc_reads_piped_stdin() {
 
 #[test]
 fn wc_preserves_native_failure_exit_code() {
-    let invalid_option = "--definitely-invalid-rtk-test-option";
-    let rtk = run_with_stdin(
+    let invalid_option = "--definitely-invalid-ptk-test-option";
+    let ptk = run_with_stdin(
         Command::new(env!("CARGO_BIN_EXE_ptk")).args(["wc", invalid_option]),
         b"input\n",
     );
     let native = run_with_stdin(Command::new("wc").arg(invalid_option), b"input\n");
 
-    assert!(!rtk.status.success());
-    assert_eq!(rtk.status.code(), native.status.code());
+    assert!(!ptk.status.success());
+    assert_eq!(ptk.status.code(), native.status.code());
 }

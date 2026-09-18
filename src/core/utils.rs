@@ -1,6 +1,6 @@
 //! Utility functions for text processing and command execution.
 //!
-//! Provides common helpers used across rtk commands:
+//! Provides common helpers used across ptk commands:
 //! - ANSI color code stripping
 //! - Text truncation
 //! - Command execution with error context
@@ -20,7 +20,7 @@ use std::sync::OnceLock;
 /// `days` is typically user-supplied (`--since <days>`) and unbounded. Naively
 /// building `chrono::Duration::days(days as i64)` and subtracting it from
 /// `Utc::now()` panics for a large enough value ("DateTime - TimeDelta
-/// overflowed") — this happened identically in `rtk discover --since` and `rtk
+/// overflowed") — this happened identically in `ptk discover --since` and `ptk
 /// hook audit --since` before both were routed through this helper. `days` is
 /// capped to `i64::MAX` before the `as i64` cast (a `u64` past `i64::MAX` would
 /// otherwise reinterpret as negative, turning "look back" into "look forward"),
@@ -42,7 +42,7 @@ pub fn days_ago_cutoff(days: u64) -> DateTime<Utc> {
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::truncate;
+/// use ptk::utils::truncate;
 /// assert_eq!(truncate("hello world", 8), "hello...");
 /// assert_eq!(truncate("hi", 10), "hi");
 /// ```
@@ -65,7 +65,7 @@ pub fn truncate(s: &str, max_len: usize) -> String {
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::strip_ansi;
+/// use ptk::utils::strip_ansi;
 /// let colored = "\x1b[31mError\x1b[0m";
 /// assert_eq!(strip_ansi(colored), "Error");
 /// ```
@@ -80,7 +80,7 @@ pub fn strip_ansi(text: &str) -> String {
 /// which serde_json refuses to parse. Windows editors (Notepad, PowerShell
 /// 5.1 `Out-File -Encoding utf8`) prepend one to hand-edited config files,
 /// and Cursor on Windows ships hook payloads with them. Strip defensively
-/// wherever RTK parses JSON a human or another tool may have written.
+/// wherever PTK parses JSON a human or another tool may have written.
 pub fn strip_leading_bom(input: &str) -> &str {
     let mut s = input;
     while let Some(rest) = s.strip_prefix('\u{feff}') {
@@ -113,7 +113,7 @@ pub fn from_json_str<'a, T: serde::Deserialize<'a>>(s: &'a str) -> serde_json::R
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::format_tokens;
+/// use ptk::utils::format_tokens;
 /// assert_eq!(format_tokens(1_234_567), "1.2M");
 /// assert_eq!(format_tokens(59_234), "59.2K");
 /// assert_eq!(format_tokens(694), "694");
@@ -138,7 +138,7 @@ pub fn format_tokens(n: usize) -> String {
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::format_usd;
+/// use ptk::utils::format_usd;
 /// assert_eq!(format_usd(1234.567), "$1234.57");
 /// assert_eq!(format_usd(12.345), "$12.35");
 /// assert_eq!(format_usd(0.123), "$0.12");
@@ -165,7 +165,7 @@ pub fn format_usd(amount: f64) -> String {
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::format_cpt;
+/// use ptk::utils::format_cpt;
 /// assert_eq!(format_cpt(0.000003), "$3.00/MTok");
 /// assert_eq!(format_cpt(0.0000038), "$3.80/MTok");
 /// assert_eq!(format_cpt(0.00000386), "$3.86/MTok");
@@ -182,7 +182,7 @@ pub fn format_cpt(cpt: f64) -> String {
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::join_with_overflow;
+/// use ptk::utils::join_with_overflow;
 /// let items = vec!["a".to_string(), "b".to_string()];
 /// assert_eq!(join_with_overflow(&items, 5, 3, "items"), "a\nb\n... +2 more items");
 /// assert_eq!(join_with_overflow(&items, 2, 3, "items"), "a\nb");
@@ -199,7 +199,7 @@ pub fn join_with_overflow(items: &[String], total: usize, max: usize, label: &st
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::truncate_iso_date;
+/// use ptk::utils::truncate_iso_date;
 /// assert_eq!(truncate_iso_date("2024-01-15T10:30:00Z"), "2024-01-15");
 /// assert_eq!(truncate_iso_date("2024-01-15"), "2024-01-15");
 /// assert_eq!(truncate_iso_date("short"), "short");
@@ -213,7 +213,7 @@ pub fn truncate_iso_date(date: &str) -> &str {
 ///
 /// # Examples
 /// ```
-/// use rtk::utils::ok_confirmation;
+/// use ptk::utils::ok_confirmation;
 /// assert_eq!(ok_confirmation("merged", "#42"), "ok merged #42");
 /// assert_eq!(ok_confirmation("created", "PR #5 https://..."), "ok created PR #5 https://...");
 /// ```
@@ -236,11 +236,11 @@ pub fn exit_code_from_output(output: &std::process::Output, label: &str) -> i32 
             {
                 use std::os::unix::process::ExitStatusExt;
                 if let Some(sig) = output.status.signal() {
-                    eprintln!("[rtk] {}: process terminated by signal {}", label, sig);
+                    eprintln!("[ptk] {}: process terminated by signal {}", label, sig);
                     return 128 + sig;
                 }
             }
-            eprintln!("[rtk] {}: process terminated by signal", label);
+            eprintln!("[ptk] {}: process terminated by signal", label);
             1
         }
     }
@@ -257,11 +257,11 @@ pub fn exit_code_from_status(status: &std::process::ExitStatus, label: &str) -> 
             {
                 use std::os::unix::process::ExitStatusExt;
                 if let Some(sig) = status.signal() {
-                    eprintln!("[rtk] {}: process terminated by signal {}", label, sig);
+                    eprintln!("[ptk] {}: process terminated by signal {}", label, sig);
                     return 128 + sig;
                 }
             }
-            eprintln!("[rtk] {}: process terminated by signal", label);
+            eprintln!("[ptk] {}: process terminated by signal", label);
             1
         }
     }
@@ -271,7 +271,7 @@ pub fn exit_code_from_status(status: &std::process::ExitStatus, label: &str) -> 
 /// when filter parsing fails. Logs a diagnostic to stderr.
 pub fn fallback_tail(output: &str, label: &str, n: usize) -> String {
     eprintln!(
-        "[rtk] {}: output format not recognized, showing last {} lines",
+        "[ptk] {}: output format not recognized, showing last {} lines",
         label, n
     );
     let lines: Vec<&str> = output.lines().collect();
@@ -281,7 +281,7 @@ pub fn fallback_tail(output: &str, label: &str, n: usize) -> String {
 
 /// Create a directory owner-only (0700 on Unix), tightening one that already exists.
 /// Serializes tests across modules that mutate process-global recall env vars
-/// (`RTK_RECALL`, `RTK_TEE`): a static declared inside one test module is not
+/// (`PTK_RECALL`, `PTK_TEE`): a static declared inside one test module is not
 /// shared with other modules, so those tests would not actually serialize.
 #[cfg(test)]
 pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -338,7 +338,7 @@ fn set_owner_only(path: &std::path::Path, mode: u32) {
     use std::os::unix::fs::PermissionsExt;
     // Skip the chmod syscall once permissions already match. This runs on every
     // `Tracker::new()` call, which is now on the PreToolUse hook's hot path for
-    // *every* Bash tool call (not just RTK-covered ones — see rtk-ai/rtk#3206's
+    // *every* Bash tool call (not just PTK-covered ones — see rtk-ai/rtk#3206's
     // hook_decisions ground-truth logging), under the project's <10ms latency
     // budget, so a redundant chmod on the already-correct common case adds up.
     // Falls through to chmod on any metadata-read failure, erring toward
@@ -379,7 +379,7 @@ pub fn count_tokens(text: &str) -> usize {
 ///
 /// # Examples
 /// ```no_run
-/// use rtk::utils::detect_package_manager;
+/// use ptk::utils::detect_package_manager;
 /// let pm = detect_package_manager();
 /// // "pnpm" for pnpm-lock.yaml, "yarn" for yarn.lock, "bun" for bun.lock(b), else "npm"
 /// ```
@@ -410,7 +410,7 @@ pub fn package_manager_exec(tool: &str) -> Command {
 
 /// What the npm arm does when `tool` is not installed. `npx` fetches on demand
 /// by default, which is right for a tool the user named themselves and
-/// surprising for one rtk picked on their behalf.
+/// surprising for one ptk picked on their behalf.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MissingTool {
     Fetch,
@@ -425,7 +425,7 @@ pub enum MissingTool {
 pub fn exec_runner(runner: Option<&str>, missing: MissingTool) -> &str {
     match runner {
         Some(named) => named,
-        // Nothing was named and rtk may fetch: npx is the only runner that can,
+        // Nothing was named and ptk may fetch: npx is the only runner that can,
         // and lockfile detection would hand `pnpm exec` a tool the project
         // does not have.
         None if missing == MissingTool::Fetch => "npx",
@@ -440,9 +440,9 @@ pub fn exec_runner(runner: Option<&str>, missing: MissingTool) -> &str {
 /// Build a Command that runs `tool`, preferring the package runner the user
 /// actually named over lockfile detection.
 ///
-/// RTK forwards what was typed rather than substituting an engine for it: a
+/// PTK forwards what was typed rather than substituting an engine for it: a
 /// user who types `bunx tsc` must not get `pnpm` because a lockfile is present.
-/// Detection applies only when nothing was named, as with a bare `rtk tsc`.
+/// Detection applies only when nothing was named, as with a bare `ptk tsc`.
 ///
 /// A tool already on PATH is run directly only when no runner was named.
 pub fn tool_exec(runner: Option<&str>, tool: &str, missing: MissingTool) -> Command {
@@ -549,7 +549,7 @@ pub fn resolved_command(name: &str) -> Command {
 /// continue recognizing the common layout even when the repo is not configured.
 pub fn composer_bin_dirs() -> Vec<PathBuf> {
     // Resolution depends only on the process's env + cwd composer.json, both
-    // constant for a single rtk invocation. The rewrite hot path queries this
+    // constant for a single ptk invocation. The rewrite hot path queries this
     // several times per command segment, so read the file once and cache.
     static CACHE: OnceLock<Vec<PathBuf>> = OnceLock::new();
     CACHE
@@ -733,7 +733,7 @@ fn warn_unmapped_codepage(cp: u16) {
     static WARNED: std::sync::Once = std::sync::Once::new();
     WARNED.call_once(|| {
         eprintln!(
-            "[rtk] warning: no decoder for console code page {}; \
+            "[ptk] warning: no decoder for console code page {}; \
              non-UTF-8 output will be shown with replacement characters",
             cp
         );
@@ -749,8 +749,8 @@ fn output_codepage() -> Option<u16> {
 
 /// Windows: the console output code page, cached after the first lookup.
 ///
-/// `GetConsoleOutputCP` describes the console rtk is attached to, which the
-/// child inherits. It returns 0 when there is no console — rtk running under a
+/// `GetConsoleOutputCP` describes the console ptk is attached to, which the
+/// child inherits. It returns 0 when there is no console — ptk running under a
 /// hook with its output piped, the common case flagged in review — and a
 /// console program writing to a pipe uses the ANSI code page instead, so
 /// `GetACP` is the fallback rather than giving up and decoding lossily.
@@ -814,8 +814,8 @@ mod tests {
         struct Borrowed<'a> {
             name: &'a str,
         }
-        let b: Borrowed = from_json_str("\u{feff}{\"name\": \"rtk\"}").unwrap();
-        assert_eq!(b.name, "rtk");
+        let b: Borrowed = from_json_str("\u{feff}{\"name\": \"ptk\"}").unwrap();
+        assert_eq!(b.name, "ptk");
     }
 
     #[test]
@@ -831,7 +831,7 @@ mod tests {
 
     #[test]
     fn test_days_ago_cutoff_does_not_panic_on_huge_since_days() {
-        // rtk-ai/rtk#3206 review: `rtk discover --since 100000000` and `rtk hook
+        // rtk-ai/rtk#3206 review: `ptk discover --since 100000000` and `ptk hook
         // audit --since 100000000` both panicked with "DateTime - TimeDelta
         // overflowed". Must clamp instead of crashing.
         assert_eq!(days_ago_cutoff(100_000_000), DateTime::<Utc>::MIN_UTC);
@@ -985,7 +985,7 @@ mod tests {
 
     #[test]
     fn test_detect_package_manager_default() {
-        // In the test environment (rtk repo), there's no JS lockfile
+        // In the test environment (ptk repo), there's no JS lockfile
         // so it should default to "npm"
         let pm = detect_package_manager();
         assert!(["pnpm", "yarn", "bun", "npm"].contains(&pm));
@@ -1017,13 +1017,13 @@ mod tests {
 
     #[test]
     fn test_truncate_multibyte_cyrillic_issue_2787() {
-        // Regression: `rtk gain --history` panicked slicing this at byte 22,
+        // Regression: `ptk gain --history` panicked slicing this at byte 22,
         // which falls inside 'н' (Cyrillic chars are 2 bytes each)
-        let cmd = "rtk ls -la Ародинамический расчёт Новый";
+        let cmd = "ptk ls -la Ародинамический расчёт Новый";
         let result = truncate(cmd, 25);
         assert_eq!(result.chars().count(), 25);
         assert!(result.ends_with("..."));
-        assert_eq!(result, "rtk ls -la Ародинамиче...");
+        assert_eq!(result, "ptk ls -la Ародинамиче...");
     }
 
     // ===== resolve_binary tests (issue #212) =====
@@ -1339,7 +1339,7 @@ mod tests {
     #[cfg(unix)]
     fn test_create_private_dir_is_owner_only() {
         let tmp = tempfile::tempdir().unwrap();
-        let nested = tmp.path().join("rtk").join("tee");
+        let nested = tmp.path().join("ptk").join("tee");
         create_private_dir(&nested).unwrap();
         assert_eq!(mode_of(&nested), 0o700);
     }
@@ -1632,8 +1632,8 @@ mod tests {
     #[test]
     fn test_missing_tool_policy_controls_npx_no_install() {
         // Semantics are per caller: a tool the user named may be fetched, one
-        // rtk chose may not. Changing either would change what runs, not what
-        // is printed, which is not rtk's job.
+        // ptk chose may not. Changing either would change what runs, not what
+        // is printed, which is not ptk's job.
         let args: Vec<String> =
             tool_exec(Some("npm"), "definitely-not-installed", MissingTool::Fetch)
                 .get_args()
@@ -1662,7 +1662,7 @@ mod tests {
         assert_ne!(exec_runner(None, MissingTool::Fail), "bun");
         assert_ne!(exec_runner(None, MissingTool::Fail), "bunx");
 
-        // Nothing named and rtk may fetch: npx is the only runner that can.
+        // Nothing named and ptk may fetch: npx is the only runner that can.
         assert_eq!(exec_runner(None, MissingTool::Fetch), "npx");
     }
 }

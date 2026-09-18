@@ -116,7 +116,10 @@ cmd                         12345        Normal
 powershell                  67890        Normal
 "#;
         let filtered = filter_format_table(sample);
-        assert_eq!(filtered, "Name  Id  PriorityClass\ncmd  12345  Normal\npowershell  67890  Normal");
+        assert_eq!(
+            filtered,
+            "Name  Id  PriorityClass\ncmd  12345  Normal\npowershell  67890  Normal"
+        );
     }
 
     #[test]
@@ -130,6 +133,9 @@ Id            : 67890
 ProcessName   : powershell
 "#;
         let filtered = filter_format_list(sample);
-        assert_eq!(filtered, "Id: 12345\nProcessName: cmd\n\nId: 67890\nProcessName: powershell");
+        assert_eq!(
+            filtered,
+            "Id: 12345\nProcessName: cmd\n\nId: 67890\nProcessName: powershell"
+        );
     }
 }

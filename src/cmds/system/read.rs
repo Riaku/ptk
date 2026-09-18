@@ -36,7 +36,7 @@ pub fn run(
             .context("Failed to write line window")?;
         timer.track(
             &format!("cat {}", file.display()),
-            "rtk read",
+            "ptk read",
             &String::from_utf8_lossy(&bytes),
             &String::from_utf8_lossy(window),
         );
@@ -63,7 +63,7 @@ pub fn run(
     // Safety: if filter emptied a non-empty file, fall back to raw content
     if filtered.trim().is_empty() && !content.trim().is_empty() {
         eprintln!(
-            "rtk: warning: filter produced empty output for {} ({} bytes), showing raw content",
+            "ptk: warning: filter produced empty output for {} ({} bytes), showing raw content",
             file.display(),
             content.len()
         );
@@ -86,7 +86,7 @@ pub fn run(
 
     filtered = apply_line_window(&filtered, max_lines, head_lines, tail_lines, &lang);
 
-    let (raw, rtk_output) = if line_numbers {
+    let (raw, ptk_output) = if line_numbers {
         (
             format_with_line_numbers(&content),
             format_with_line_numbers(&filtered),
@@ -94,9 +94,9 @@ pub fn run(
     } else {
         (content.clone(), filtered.clone())
     };
-    let shown = never_worse(&raw, &rtk_output);
+    let shown = never_worse(&raw, &ptk_output);
     print!("{}", shown);
-    timer.track(&format!("cat {}", file.display()), "rtk read", &raw, shown);
+    timer.track(&format!("cat {}", file.display()), "ptk read", &raw, shown);
     Ok(())
 }
 
@@ -130,7 +130,7 @@ pub fn run_stdin(
             .context("Failed to write line window")?;
         timer.track(
             "cat - (stdin)",
-            "rtk read -",
+            "ptk read -",
             &String::from_utf8_lossy(&bytes),
             &String::from_utf8_lossy(window),
         );
@@ -165,7 +165,7 @@ pub fn run_stdin(
 
     filtered = apply_line_window(&filtered, max_lines, head_lines, tail_lines, &lang);
 
-    let (raw, rtk_output) = if line_numbers {
+    let (raw, ptk_output) = if line_numbers {
         (
             format_with_line_numbers(&content),
             format_with_line_numbers(&filtered),
@@ -173,10 +173,10 @@ pub fn run_stdin(
     } else {
         (content.clone(), filtered.clone())
     };
-    let shown = never_worse(&raw, &rtk_output);
+    let shown = never_worse(&raw, &ptk_output);
     print!("{}", shown);
 
-    timer.track("cat - (stdin)", "rtk read -", &raw, shown);
+    timer.track("cat - (stdin)", "ptk read -", &raw, shown);
     Ok(())
 }
 
@@ -487,17 +487,17 @@ fn main() {{
         assert!(output.contains("more lines"));
     }
 
-    fn rtk_bin() -> std::path::PathBuf {
+    fn ptk_bin() -> std::path::PathBuf {
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("target")
             .join("debug")
-            .join("rtk")
+            .join("ptk")
     }
 
     #[test]
     #[ignore]
     fn test_read_two_valid_files_concatenated() {
-        let bin = rtk_bin();
+        let bin = ptk_bin();
         assert!(bin.exists(), "Run `cargo build` first");
 
         let mut f1 = NamedTempFile::with_suffix(".txt").unwrap();
@@ -512,7 +512,7 @@ fn main() {{
                 &f2.path().to_string_lossy(),
             ])
             .output()
-            .expect("failed to run rtk read");
+            .expect("failed to run ptk read");
 
         assert!(output.status.success());
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -523,7 +523,7 @@ fn main() {{
     #[test]
     #[ignore]
     fn test_read_valid_and_nonexistent() {
-        let bin = rtk_bin();
+        let bin = ptk_bin();
         assert!(bin.exists(), "Run `cargo build` first");
 
         let mut f1 = NamedTempFile::with_suffix(".txt").unwrap();
@@ -533,10 +533,10 @@ fn main() {{
             .args([
                 "read",
                 &f1.path().to_string_lossy(),
-                "/tmp/rtk_nonexistent_file.txt",
+                "/tmp/ptk_nonexistent_file.txt",
             ])
             .output()
-            .expect("failed to run rtk read");
+            .expect("failed to run ptk read");
 
         assert!(
             !output.status.success(),
@@ -549,7 +549,7 @@ fn main() {{
             "valid file should still be printed"
         );
         assert!(
-            stderr.contains("rtk_nonexistent_file"),
+            stderr.contains("ptk_nonexistent_file"),
             "should report missing file on stderr"
         );
     }
@@ -557,14 +557,14 @@ fn main() {{
     #[test]
     #[ignore]
     fn test_read_stdin_dedup_warning() {
-        let bin = rtk_bin();
+        let bin = ptk_bin();
         assert!(bin.exists(), "Run `cargo build` first");
 
         let output = std::process::Command::new(&bin)
             .args(["read", "-", "-"])
             .stdin(std::process::Stdio::piped())
             .output()
-            .expect("failed to run rtk read");
+            .expect("failed to run ptk read");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(

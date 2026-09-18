@@ -427,7 +427,7 @@ fn run_list(depth: usize, args: &[String], verbose: u8) -> Result<i32> {
 
     timer.track(
         &format!("pnpm list --depth={}", depth),
-        &format!("rtk pnpm list --depth={}", depth),
+        &format!("ptk pnpm list --depth={}", depth),
         &result.stdout,
         shown,
     );
@@ -481,7 +481,7 @@ fn run_outdated(args: &[String], verbose: u8) -> Result<i32> {
     let shown = never_worse(&combined, &display);
     println!("{}", shown);
 
-    timer.track("pnpm outdated", "rtk pnpm outdated", &combined, shown);
+    timer.track("pnpm outdated", "ptk pnpm outdated", &combined, shown);
 
     Ok(0)
 }
@@ -513,7 +513,7 @@ fn run_install(args: &[String], verbose: u8) -> Result<i32> {
     let shown = never_worse(&combined, &filtered);
     println!("{}", shown);
 
-    timer.track("pnpm install", "rtk pnpm install", &combined, shown);
+    timer.track("pnpm install", "ptk pnpm install", &combined, shown);
 
     Ok(0)
 }

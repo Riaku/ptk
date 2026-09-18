@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 
-PLUGIN_PATH = Path(__file__).resolve().parents[1] / "rtk-rewrite" / "__init__.py"
+PLUGIN_PATH = Path(__file__).resolve().parents[1] / "ptk-rewrite" / "__init__.py"
 
 
 class FakeContext:
@@ -29,7 +29,7 @@ class FakeCompletedProcess:
         self.stderr = stderr
 
 
-def load_plugin_module(path=PLUGIN_PATH, module_name="rtk_rewrite_plugin"):
+def load_plugin_module(path=PLUGIN_PATH, module_name="ptk_rewrite_plugin"):
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load Hermes plugin from {path}")
@@ -38,43 +38,43 @@ def load_plugin_module(path=PLUGIN_PATH, module_name="rtk_rewrite_plugin"):
     return module
 
 
-def write_fake_rtk(bin_dir):
-    fake_rtk = bin_dir / "rtk"
-    fake_rtk.write_text(
+def write_fake_ptk(bin_dir):
+    fake_ptk = bin_dir / "ptk"
+    fake_ptk.write_text(
         "\n".join(
             [
                 f"#!{sys.executable}",
                 "import sys",
                 "if sys.argv[1:] == ['rewrite', 'git status']:",
-                "    print('rtk git status')",
+                "    print('ptk git status')",
                 "    raise SystemExit(0)",
-                "print('unexpected rtk args:', sys.argv[1:], file=sys.stderr)",
+                "print('unexpected ptk args:', sys.argv[1:], file=sys.stderr)",
                 "raise SystemExit(1)",
                 "",
             ]
         )
     )
-    fake_rtk.chmod(fake_rtk.stat().st_mode | stat.S_IXUSR)
-    return fake_rtk
+    fake_ptk.chmod(fake_ptk.stat().st_mode | stat.S_IXUSR)
+    return fake_ptk
 
 
 class RtkRewritePluginTest(unittest.TestCase):
     def load_callback(self):
         module = load_plugin_module()
-        module._rtk_available = None
-        module._rtk_missing_warned = False
+        module._ptk_available = None
+        module._ptk_missing_warned = False
         ctx = FakeContext()
 
-        with mock.patch.object(module.shutil, "which", return_value="/usr/bin/rtk"):
+        with mock.patch.object(module.shutil, "which", return_value="/usr/bin/ptk"):
             module.register(ctx)
 
         self.assertIn("pre_tool_call", ctx.hooks)
         return module, ctx.hooks["pre_tool_call"]
 
-    def test_missing_rtk_skips_registering_pre_tool_call(self):
+    def test_missing_ptk_skips_registering_pre_tool_call(self):
         module = load_plugin_module()
-        module._rtk_available = None
-        module._rtk_missing_warned = False
+        module._ptk_available = None
+        module._ptk_missing_warned = False
         ctx = FakeContext()
 
         with mock.patch.object(module.shutil, "which", return_value=None):
@@ -83,46 +83,46 @@ class RtkRewritePluginTest(unittest.TestCase):
 
         self.assertNotIn("pre_tool_call", ctx.hooks)
         self.assertEqual(
-            "rtk: hermes plugin warning: rtk binary not found in PATH; Hermes hook not registered\n",
+            "ptk: hermes plugin warning: ptk binary not found in PATH; Hermes hook not registered\n",
             stderr.getvalue(),
         )
 
-    def test_missing_rtk_warns_only_once(self):
+    def test_missing_ptk_warns_only_once(self):
         module = load_plugin_module()
-        module._rtk_available = None
-        module._rtk_missing_warned = False
+        module._ptk_available = None
+        module._ptk_missing_warned = False
 
         with mock.patch.object(module.shutil, "which", return_value=None):
             with mock.patch.object(module.sys, "stderr", new_callable=io.StringIO) as stderr:
-                self.assertFalse(module._check_rtk())
-                self.assertFalse(module._check_rtk())
+                self.assertFalse(module._check_ptk())
+                self.assertFalse(module._check_ptk())
 
         self.assertEqual(
-            "rtk: hermes plugin warning: rtk binary not found in PATH; Hermes hook not registered\n",
+            "ptk: hermes plugin warning: ptk binary not found in PATH; Hermes hook not registered\n",
             stderr.getvalue(),
         )
 
-    def test_check_rtk_found_is_quiet(self):
+    def test_check_ptk_found_is_quiet(self):
         module = load_plugin_module()
-        module._rtk_available = None
-        module._rtk_missing_warned = False
+        module._ptk_available = None
+        module._ptk_missing_warned = False
 
-        with mock.patch.object(module.shutil, "which", return_value="/usr/bin/rtk"):
+        with mock.patch.object(module.shutil, "which", return_value="/usr/bin/ptk"):
             with mock.patch.object(module.sys, "stderr", new_callable=io.StringIO) as stderr:
-                self.assertTrue(module._check_rtk())
+                self.assertTrue(module._check_ptk())
 
         self.assertEqual("", stderr.getvalue())
 
-    def test_check_rtk_caches_result_across_calls(self):
+    def test_check_ptk_caches_result_across_calls(self):
         module = load_plugin_module()
-        module._rtk_available = None
-        module._rtk_missing_warned = False
+        module._ptk_available = None
+        module._ptk_missing_warned = False
 
-        with mock.patch.object(module.shutil, "which", return_value="/usr/bin/rtk") as which:
-            self.assertTrue(module._check_rtk())
-            self.assertTrue(module._check_rtk())
+        with mock.patch.object(module.shutil, "which", return_value="/usr/bin/ptk") as which:
+            self.assertTrue(module._check_ptk())
+            self.assertTrue(module._check_ptk())
 
-        which.assert_called_once_with("rtk")
+        which.assert_called_once_with("ptk")
 
     def test_rewrite_success_mutates_same_terminal_args_dict(self):
         module, callback = self.load_callback()
@@ -131,11 +131,11 @@ class RtkRewritePluginTest(unittest.TestCase):
         with mock.patch.object(
             module.subprocess,
             "run",
-            return_value=FakeCompletedProcess(stdout="rtk git status\n"),
+            return_value=FakeCompletedProcess(stdout="ptk git status\n"),
         ):
             callback(tool_name="terminal", args=args)
 
-        self.assertEqual({"command": "rtk git status"}, args)
+        self.assertEqual({"command": "ptk git status"}, args)
 
     def test_rewrite_returncode_three_mutates_same_terminal_args_dict(self):
         module, callback = self.load_callback()
@@ -144,11 +144,11 @@ class RtkRewritePluginTest(unittest.TestCase):
         with mock.patch.object(
             module.subprocess,
             "run",
-            return_value=FakeCompletedProcess(returncode=3, stdout="rtk git status\n"),
+            return_value=FakeCompletedProcess(returncode=3, stdout="ptk git status\n"),
         ):
             callback(tool_name="terminal", args=args)
 
-        self.assertEqual({"command": "rtk git status"}, args)
+        self.assertEqual({"command": "ptk git status"}, args)
 
     def test_rewrite_returncode_zero_mutates_when_rewrite_changes_command(self):
         module, callback = self.load_callback()
@@ -157,11 +157,11 @@ class RtkRewritePluginTest(unittest.TestCase):
         with mock.patch.object(
             module.subprocess,
             "run",
-            return_value=FakeCompletedProcess(stdout="rtk git status\n"),
+            return_value=FakeCompletedProcess(stdout="ptk git status\n"),
         ):
             callback(tool_name="terminal", args=args)
 
-        self.assertEqual({"command": "rtk git status"}, args)
+        self.assertEqual({"command": "ptk git status"}, args)
 
     def test_expected_passthrough_returncodes_do_not_warn_or_mutate(self):
         for returncode in (1, 2):
@@ -174,7 +174,7 @@ class RtkRewritePluginTest(unittest.TestCase):
                     "run",
                     return_value=FakeCompletedProcess(
                         returncode=returncode,
-                        stdout="rtk git status\n",
+                        stdout="ptk git status\n",
                         stderr="unexpected stderr",
                     ),
                 ):
@@ -191,25 +191,25 @@ class RtkRewritePluginTest(unittest.TestCase):
         with mock.patch.object(
             module.subprocess,
             "run",
-            return_value=FakeCompletedProcess(returncode=4, stdout="rtk git status\n", stderr="bad news"),
+            return_value=FakeCompletedProcess(returncode=4, stdout="ptk git status\n", stderr="bad news"),
         ):
             with mock.patch.object(module.sys, "stderr", new_callable=io.StringIO) as stderr:
                 callback(tool_name="terminal", args=args)
 
         self.assertEqual({"command": "git status"}, args)
-        self.assertEqual("rtk: hermes plugin warning: rtk rewrite failed with exit 4: bad news\n", stderr.getvalue())
+        self.assertEqual("ptk: hermes plugin warning: ptk rewrite failed with exit 4: bad news\n", stderr.getvalue())
 
     def test_rewrite_timeout_warns_and_preserves_original_command(self):
         module, callback = self.load_callback()
         args = {"command": "git status"}
 
-        timeout = subprocess.TimeoutExpired(cmd=["rtk", "rewrite", "git status"], timeout=2)
+        timeout = subprocess.TimeoutExpired(cmd=["ptk", "rewrite", "git status"], timeout=2)
         with mock.patch.object(module.subprocess, "run", side_effect=timeout):
             with mock.patch.object(module.sys, "stderr", new_callable=io.StringIO) as stderr:
                 callback(tool_name="terminal", args=args)
 
         self.assertEqual({"command": "git status"}, args)
-        self.assertEqual("rtk: hermes plugin warning: rtk rewrite timed out\n", stderr.getvalue())
+        self.assertEqual("ptk: hermes plugin warning: ptk rewrite timed out\n", stderr.getvalue())
 
     def test_file_not_found_preserves_original_command(self):
         module, callback = self.load_callback()
@@ -220,7 +220,7 @@ class RtkRewritePluginTest(unittest.TestCase):
                 callback(tool_name="terminal", args=args)
 
         self.assertEqual({"command": "git status"}, args)
-        self.assertIn("rtk: hermes plugin warning:", stderr.getvalue())
+        self.assertIn("ptk: hermes plugin warning:", stderr.getvalue())
 
     def test_unexpected_exception_prints_warning_and_keeps_command(self):
         module, callback = self.load_callback()
@@ -231,7 +231,7 @@ class RtkRewritePluginTest(unittest.TestCase):
                 callback(tool_name="terminal", args=args)
 
         self.assertEqual({"command": "git status"}, args)
-        self.assertEqual("rtk: hermes plugin warning: boom\n", stderr.getvalue())
+        self.assertEqual("ptk: hermes plugin warning: boom\n", stderr.getvalue())
 
     def test_non_terminal_tool_is_noop(self):
         module, callback = self.load_callback()
@@ -293,7 +293,7 @@ class RtkRewritePluginTest(unittest.TestCase):
 
 class InstalledRtkRewritePluginTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("cargo"), "cargo is required for installed flow")
-    def test_cargo_init_installs_importable_plugin_that_rewrites_with_fake_rtk(self):
+    def test_cargo_init_installs_importable_plugin_that_rewrites_with_fake_ptk(self):
         repo_root = Path(__file__).resolve().parents[3]
         self.assertTrue((repo_root / "Cargo.toml").exists(), "repo_root must point at the repository root")
         real_home = Path(os.path.expanduser("~"))
@@ -301,12 +301,12 @@ class InstalledRtkRewritePluginTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as bin_dir:
             home_path = Path(home)
             fake_bin = Path(bin_dir)
-            write_fake_rtk(fake_bin)
+            write_fake_ptk(fake_bin)
 
             env = os.environ.copy()
             env["HOME"] = str(home_path)
             env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
-            env["RTK_TELEMETRY_DISABLED"] = "1"
+            env["PTK_TELEMETRY_DISABLED"] = "1"
             env["CARGO_TERM_COLOR"] = "never"
             env.setdefault("RUSTUP_TOOLCHAIN", "stable")
             if "RUSTUP_HOME" not in env and (real_home / ".rustup").exists():
@@ -330,13 +330,13 @@ class InstalledRtkRewritePluginTest(unittest.TestCase):
                 msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
             )
 
-            plugin_dir = home_path / ".hermes" / "plugins" / "rtk-rewrite"
+            plugin_dir = home_path / ".hermes" / "plugins" / "ptk-rewrite"
             init_path = plugin_dir / "__init__.py"
             manifest_path = plugin_dir / "plugin.yaml"
             self.assertTrue(init_path.exists(), "installed plugin __init__.py must exist")
             self.assertTrue(manifest_path.exists(), "installed plugin.yaml must exist")
 
-            module = load_plugin_module(init_path, "installed_rtk_rewrite_plugin")
+            module = load_plugin_module(init_path, "installed_ptk_rewrite_plugin")
             ctx = FakeContext()
             with mock.patch.dict(os.environ, {"PATH": env["PATH"]}):
                 module.register(ctx)
@@ -345,7 +345,7 @@ class InstalledRtkRewritePluginTest(unittest.TestCase):
                 args = {"command": "git status"}
                 callback(tool_name="terminal", args=args)
 
-            self.assertEqual({"command": "rtk git status"}, args)
+            self.assertEqual({"command": "ptk git status"}, args)
 
 
 if __name__ == "__main__":

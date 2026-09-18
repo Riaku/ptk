@@ -1830,7 +1830,7 @@ pub fn run(args: &[String], verbose: u8) -> Result<i32> {
     run_tool(args, false, verbose)
 }
 
-/// `rtk mvnd` — Maven Daemon. Non-interactive `mvnd` output is plain Maven
+/// `ptk mvnd` — Maven Daemon. Non-interactive `mvnd` output is plain Maven
 /// output (the rolling console UI only engages on a TTY), so the same phase
 /// detection and filters apply; only the executed binary differs.
 pub fn run_daemon(args: &[String], verbose: u8) -> Result<i32> {
@@ -1927,10 +1927,10 @@ mod tests {
     fn daemon_mode_building_keeper_drops_app_log_spam_on_tagged_lane() {
         let mut i = String::from(
             "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] ----------------------< com.example.rtk:child-a >-----------------------\n\
+             [child-a] [INFO] ----------------------< com.example.ptk:child-a >-----------------------\n\
              [child-a] [INFO] Building child-a 1.0.0-SNAPSHOT                                    [1/1]\n\
-             [child-a] [INFO] Running com.example.rtk.APassTest\n\
-             [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.rtk.APassTest\n",
+             [child-a] [INFO] Running com.example.ptk.APassTest\n\
+             [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.ptk.APassTest\n",
         );
         for n in 0..50 {
             i.push_str(&format!(
@@ -1944,7 +1944,7 @@ mod tests {
             "app-log spam shaped like a Building header is dropped on a tagged lane; got:\n{o}"
         );
         assert!(
-            o.contains("< com.example.rtk:child-a >") && o.contains("BUILD SUCCESS"),
+            o.contains("< com.example.ptk:child-a >") && o.contains("BUILD SUCCESS"),
             "genuine module banner and footer survive; got:\n{o}"
         );
         assert!(
@@ -1988,8 +1988,8 @@ mod tests {
     fn app_log_running_lines_dropped_in_green_daemon_run() {
         let mut i = String::from(
             "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.APassTest\n\
-             [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.rtk.APassTest\n",
+             [child-a] [INFO] Running com.example.ptk.APassTest\n\
+             [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.ptk.APassTest\n",
         );
         for n in 0..200 {
             i.push_str(&format!(
@@ -2023,22 +2023,22 @@ mod tests {
     #[test]
     fn app_log_running_line_rides_raw_owner_inside_failing_block() {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.AFailTest\n\
+                  [child-a] [INFO] Running com.example.ptk.AFailTest\n\
                   [main] [INFO] Running the widget pipeline for tenant acme\n\
-                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.AFailTest\n\
-                  [child-a] [ERROR] com.example.rtk.AFailTest.foo -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.AFailTest\n\
+                  [child-a] [ERROR] com.example.ptk.AFailTest.foo -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: boom\n\
-                  \tat com.example.rtk.AFailTest.foo(AFailTest.java:10)\n\
+                  \tat com.example.ptk.AFailTest.foo(AFailTest.java:10)\n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
         let running = o
-            .find("Running com.example.rtk.AFailTest")
+            .find("Running com.example.ptk.AFailTest")
             .expect("Running kept");
         let pipeline = o
             .find("Running the widget pipeline for tenant acme")
             .expect("app-log line kept, buffered inside the block");
         let close = o
-            .find("<<< FAILURE! -- in com.example.rtk.AFailTest")
+            .find("<<< FAILURE! -- in com.example.ptk.AFailTest")
             .expect("close line kept");
         assert!(
             running < pipeline && pipeline < close,
@@ -2053,12 +2053,12 @@ mod tests {
     #[test]
     fn real_running_line_still_mints_a_lane() {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.AFailTest\n\
-                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.02 s <<< FAILURE! -- in com.example.rtk.AFailTest\n\
+                  [child-a] [INFO] Running com.example.ptk.AFailTest\n\
+                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.02 s <<< FAILURE! -- in com.example.ptk.AFailTest\n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
         assert!(
-            o.contains("Running com.example.rtk.AFailTest"),
+            o.contains("Running com.example.ptk.AFailTest"),
             "a genuine class-start line opens the lane and is kept with its failing \
              block; got:\n{o}"
         );
@@ -2310,29 +2310,29 @@ mod tests {
     /// summary before the reactor footer).
     fn assert_fuller_two_module_probe_engages_cap(filter: fn(&str, usize) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-b] [INFO] ----------------------< com.example.rtk:child-b >-----------------------\n\
+             [child-b] [INFO] ----------------------< com.example.ptk:child-b >-----------------------\n\
              [child-b] [INFO] Building child-b 1.0.0-SNAPSHOT\n\
-             [child-a] [INFO] ----------------------< com.example.rtk:child-a >-----------------------\n\
+             [child-a] [INFO] ----------------------< com.example.ptk:child-a >-----------------------\n\
              [child-a] [INFO] Building child-a 1.0.0-SNAPSHOT\n\
-             [child-a] [INFO] Running com.example.rtk.AMultiFailTest\n\
-             [child-b] [INFO] Running com.example.rtk.BMultiFailTest\n\
-             [child-a] [ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.AMultiFailTest\n\
-             [child-a] [ERROR] com.example.rtk.AMultiFailTest.first -- Time elapsed: 0.02 s <<< FAILURE!\n\
+             [child-a] [INFO] Running com.example.ptk.AMultiFailTest\n\
+             [child-b] [INFO] Running com.example.ptk.BMultiFailTest\n\
+             [child-a] [ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.AMultiFailTest\n\
+             [child-a] [ERROR] com.example.ptk.AMultiFailTest.first -- Time elapsed: 0.02 s <<< FAILURE!\n\
              java.lang.AssertionError: a1 boom\n\
-             \tat com.example.rtk.AMultiFailTest.first(AMultiFailTest.java:10)\n\
+             \tat com.example.ptk.AMultiFailTest.first(AMultiFailTest.java:10)\n\
              [child-a] [INFO] \n\
-             [child-b] [ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.04 s <<< FAILURE! -- in com.example.rtk.BMultiFailTest\n\
-             [child-b] [ERROR] com.example.rtk.BMultiFailTest.first -- Time elapsed: 0.02 s <<< FAILURE!\n\
+             [child-b] [ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.04 s <<< FAILURE! -- in com.example.ptk.BMultiFailTest\n\
+             [child-b] [ERROR] com.example.ptk.BMultiFailTest.first -- Time elapsed: 0.02 s <<< FAILURE!\n\
              java.lang.AssertionError: b1 boom\n\
-             \tat com.example.rtk.BMultiFailTest.first(BMultiFailTest.java:10)\n\
+             \tat com.example.ptk.BMultiFailTest.first(BMultiFailTest.java:10)\n\
              [child-b] [INFO] \n\
-             [child-a] [ERROR] com.example.rtk.AMultiFailTest.second -- Time elapsed: 0.02 s <<< FAILURE!\n\
+             [child-a] [ERROR] com.example.ptk.AMultiFailTest.second -- Time elapsed: 0.02 s <<< FAILURE!\n\
              java.lang.AssertionError: a2 boom\n\
-             \tat com.example.rtk.AMultiFailTest.second(AMultiFailTest.java:20)\n\
+             \tat com.example.ptk.AMultiFailTest.second(AMultiFailTest.java:20)\n\
              [child-a] [INFO] \n\
-             [child-b] [ERROR] com.example.rtk.BMultiFailTest.second -- Time elapsed: 0.02 s <<< FAILURE!\n\
+             [child-b] [ERROR] com.example.ptk.BMultiFailTest.second -- Time elapsed: 0.02 s <<< FAILURE!\n\
              java.lang.AssertionError: b2 boom\n\
-             \tat com.example.rtk.BMultiFailTest.second(BMultiFailTest.java:20)\n\
+             \tat com.example.ptk.BMultiFailTest.second(BMultiFailTest.java:20)\n\
              [child-b] [INFO] \n\
              [child-a] [INFO] Results:\n\
              [child-b] [INFO] Results:\n\
@@ -2400,10 +2400,10 @@ mod tests {
         // Ordering: banners, Running, and the capped summary all survive in
         // a sane relative order, ending at the reactor footer.
         let banner_a = o
-            .find("< com.example.rtk:child-a >")
+            .find("< com.example.ptk:child-a >")
             .expect("child-a banner kept");
         let running_a = o
-            .find("Running com.example.rtk.AMultiFailTest")
+            .find("Running com.example.ptk.AMultiFailTest")
             .expect("child-a Running kept");
         let build_failure = o.rfind("BUILD FAILURE").expect("footer kept");
         assert!(
@@ -2625,10 +2625,10 @@ mod tests {
     fn mvnd_test_fail_preserves_failures() {
         let i = include_str!("../../../tests/fixtures/mvnd_test_fail_raw.txt");
         let o = filter_surefire(i, true);
-        assert!(o.contains("[INFO] Running com.example.rtk.BoomTest"));
-        assert!(o.contains("[INFO] Running com.example.rtk.CalcTest"));
+        assert!(o.contains("[INFO] Running com.example.ptk.BoomTest"));
+        assert!(o.contains("[INFO] Running com.example.ptk.CalcTest"));
         assert!(o.contains("failOne: addition should equal five ==> expected: <5> but was: <4>"));
-        assert!(o.contains("at com.example.rtk.CalcTest.failOne(CalcTest.java:12)"));
+        assert!(o.contains("at com.example.ptk.CalcTest.failOne(CalcTest.java:12)"));
         assert!(o.contains("[ERROR]   CalcTest.failOne:12"));
         assert!(o.contains("[ERROR] Tests run: 16, Failures: 1, Errors: 2, Skipped: 0"));
         // Passing classes are collapsed entirely.
@@ -2662,13 +2662,13 @@ mod tests {
     fn mvnd_parallel_reactor_fail_preserves_diagnostics() {
         let i = include_str!("../../../tests/fixtures/mvnd_reactor_fail_raw.txt");
         let o = filter_surefire(i, true);
-        assert!(o.contains("[child-a] [INFO] Running com.example.rtk.ParallelFailTest"));
+        assert!(o.contains("[child-a] [INFO] Running com.example.ptk.ParallelFailTest"));
         assert!(o.contains(
             "[child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed:"
         ));
         assert!(o.contains("parallel reactor diagnostic ==> expected: <1> but was: <2>"));
         assert!(o.contains(
-            "at com.example.rtk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)"
+            "at com.example.ptk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)"
         ));
         assert!(o.contains("[child-a] [ERROR]   ParallelFailTest.reactorDiagnostic:10"));
         assert!(o.contains("[child-a] [ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0"));
@@ -2711,15 +2711,15 @@ mod tests {
     /// both entry points that drive the lane machinery.
     fn assert_interleaved_trail_survives(filter: fn(&str) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.ParallelFailTest\n\
-             [child-b] [INFO] Running com.example.rtk.PassBetaTest\n\
-             [child-b] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.rtk.PassBetaTest\n\
-             [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.153 s <<< FAILURE! -- in com.example.rtk.ParallelFailTest\n\
-             [child-a] [ERROR] com.example.rtk.ParallelFailTest.reactorDiagnostic -- Time elapsed: 0.098 s <<< FAILURE!\n\
-             [child-b] [INFO] Running com.example.rtk.PassGammaTest\n\
+             [child-a] [INFO] Running com.example.ptk.ParallelFailTest\n\
+             [child-b] [INFO] Running com.example.ptk.PassBetaTest\n\
+             [child-b] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.ptk.PassBetaTest\n\
+             [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.153 s <<< FAILURE! -- in com.example.ptk.ParallelFailTest\n\
+             [child-a] [ERROR] com.example.ptk.ParallelFailTest.reactorDiagnostic -- Time elapsed: 0.098 s <<< FAILURE!\n\
+             [child-b] [INFO] Running com.example.ptk.PassGammaTest\n\
              org.opentest4j.AssertionFailedError: parallel reactor diagnostic ==> expected: <1> but was: <2>\n\
-             \tat com.example.rtk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)\n\
-             [child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.example.rtk.PassGammaTest\n\
+             \tat com.example.ptk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)\n\
+             [child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.example.ptk.PassGammaTest\n\
              [child-a] [INFO] \n\
              [INFO] BUILD FAILURE\n";
         let o = filter(i);
@@ -2729,7 +2729,7 @@ mod tests {
         );
         assert!(
             o.contains(
-                "at com.example.rtk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)"
+                "at com.example.ptk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)"
             ),
             "user frame survives the interleave; got:\n{o}"
         );
@@ -2753,11 +2753,11 @@ mod tests {
     /// guessed lane that may drop them.
     fn assert_ambiguous_raw_line_preserved(filter: fn(&str) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.PassAlphaTest\n\
-             [child-b] [INFO] Running com.example.rtk.PassBetaTest\n\
+             [child-a] [INFO] Running com.example.ptk.PassAlphaTest\n\
+             [child-b] [INFO] Running com.example.ptk.PassBetaTest\n\
              java.lang.IllegalStateException: stray reactor stdout\n\
-             [child-a] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in com.example.rtk.PassAlphaTest\n\
-             [child-b] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.rtk.PassBetaTest\n\
+             [child-a] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in com.example.ptk.PassAlphaTest\n\
+             [child-b] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.ptk.PassBetaTest\n\
              [INFO] BUILD SUCCESS\n";
         let o = filter(i);
         assert!(
@@ -2783,10 +2783,10 @@ mod tests {
     #[test]
     fn mvnd_parallel_compile_keeps_interleaved_continuations() {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/rtk/A.java:[7,9] cannot find symbol\n\
+             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/ptk/A.java:[7,9] cannot find symbol\n\
              [child-b] [INFO] Compiling 1 source file with javac [debug target 21] to target\\classes\n\
              \x20 symbol:   variable bar\n\
-             \x20 location: class com.example.rtk.A\n\
+             \x20 location: class com.example.ptk.A\n\
              [INFO] BUILD FAILURE\n";
         let o = filter_compile(i, true);
         assert!(
@@ -2794,7 +2794,7 @@ mod tests {
             "continuation survives the interleave; got:\n{o}"
         );
         assert!(
-            o.contains("location: class com.example.rtk.A"),
+            o.contains("location: class com.example.ptk.A"),
             "continuation survives the interleave; got:\n{o}"
         );
     }
@@ -2818,8 +2818,8 @@ mod tests {
     /// the regression.
     fn assert_summary_cap_shared_across_lanes(filter: fn(&str, usize) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.ChildAPass\n\
-             [child-b] [INFO] Running com.example.rtk.ChildBPass\n\
+             [child-a] [INFO] Running com.example.ptk.ChildAPass\n\
+             [child-b] [INFO] Running com.example.ptk.ChildBPass\n\
              [child-a] [ERROR] Failures: \n\
              [child-a] [ERROR]   ChildATest.one:11 boom a1\n\
              [child-b] [ERROR] Failures: \n\
@@ -2880,8 +2880,8 @@ mod tests {
     /// looking complete when it silently isn't.
     fn assert_shared_budget_race_attributes_tails_per_lane(filter: fn(&str, usize) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.ChildAPass\n\
-             [child-b] [INFO] Running com.example.rtk.ChildBPass\n\
+             [child-a] [INFO] Running com.example.ptk.ChildAPass\n\
+             [child-b] [INFO] Running com.example.ptk.ChildBPass\n\
              [child-a] [ERROR] Failures: \n\
              [child-a] [ERROR]   ChildATest.one:11 boom a1\n\
              [child-a] [ERROR]   ChildATest.two:12 boom a2\n\
@@ -2943,8 +2943,8 @@ mod tests {
     /// each get a fresh `cap`.
     fn assert_summary_cap_spans_sequential_lanes(filter: fn(&str, usize) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.ChildAPass\n\
-             [child-b] [INFO] Running com.example.rtk.ChildBPass\n\
+             [child-a] [INFO] Running com.example.ptk.ChildAPass\n\
+             [child-b] [INFO] Running com.example.ptk.ChildBPass\n\
              [child-a] [ERROR] Failures: \n\
              [child-a] [ERROR]   ChildATest.one:11 boom a1\n\
              [child-a] [ERROR]   ChildATest.two:12 boom a2\n\
@@ -3064,8 +3064,8 @@ mod tests {
     /// `handle_aggregate` covers.
     fn assert_truncated_summary_flushes_per_lane_tail(filter: fn(&str, usize) -> String) {
         let i = "[INFO] BUILD FAILURE\n\
-             [child-a] [INFO] Running com.example.rtk.ChildAPass\n\
-             [child-b] [INFO] Running com.example.rtk.ChildBPass\n\
+             [child-a] [INFO] Running com.example.ptk.ChildAPass\n\
+             [child-b] [INFO] Running com.example.ptk.ChildBPass\n\
              [child-a] [ERROR] Failures: \n\
              [child-a] [ERROR]   ChildATest.one:11 boom a1\n\
              [child-a] [ERROR]   ChildATest.two:12 boom a2\n\
@@ -3155,11 +3155,11 @@ mod tests {
     fn same_goal_banners_from_different_lanes_do_not_reset_budget() {
         let i = "[INFO] Scanning for projects...\n\
                   [child-a] [INFO] --- surefire:3.5.5:test (default-test) @ child-a ---\n\
-                  [child-a] [INFO] Running com.example.rtk.AOneTest\n\
-                  [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.rtk.AOneTest\n\
+                  [child-a] [INFO] Running com.example.ptk.AOneTest\n\
+                  [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.ptk.AOneTest\n\
                   [child-b] [INFO] --- surefire:3.5.5:test (default-test) @ child-b ---\n\
-                  [child-b] [INFO] Running com.example.rtk.BOneTest\n\
-                  [child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.rtk.BOneTest\n\
+                  [child-b] [INFO] Running com.example.ptk.BOneTest\n\
+                  [child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.ptk.BOneTest\n\
                   [child-a] [ERROR] Failures:\n\
                   [child-a] [ERROR]   entryA1\n\
                   [child-a] [ERROR]   entryA2\n\
@@ -3191,10 +3191,10 @@ mod tests {
     /// `filter_compile`.
     fn assert_interleaved_compile_continuation_survives(filter: fn(&str) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/rtk/A.java:[7,9] cannot find symbol\n\
+             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/ptk/A.java:[7,9] cannot find symbol\n\
              [child-b] [INFO] Compiling 1 source file with javac [debug target 21] to target\\classes\n\
              \x20 symbol:   variable bar\n\
-             \x20 location: class com.example.rtk.A\n\
+             \x20 location: class com.example.ptk.A\n\
              [INFO] BUILD FAILURE\n";
         let o = filter(i);
         assert!(
@@ -3202,7 +3202,7 @@ mod tests {
             "continuation survives the interleave; got:\n{o}"
         );
         assert!(
-            o.contains("location: class com.example.rtk.A"),
+            o.contains("location: class com.example.ptk.A"),
             "continuation survives the interleave; got:\n{o}"
         );
     }
@@ -3265,37 +3265,37 @@ mod tests {
     /// raw exception message, raw user frame, blank trail terminator. Line
     /// shapes copied from `mvnd_reactor_fail_raw.txt`.
     const SWEEP_FAIL_A: [&str; 6] = [
-        "[child-a] [INFO] Running com.example.rtk.ParallelFailTest",
-        "[child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.153 s <<< FAILURE! -- in com.example.rtk.ParallelFailTest",
-        "[child-a] [ERROR] com.example.rtk.ParallelFailTest.reactorDiagnostic -- Time elapsed: 0.098 s <<< FAILURE!",
+        "[child-a] [INFO] Running com.example.ptk.ParallelFailTest",
+        "[child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.153 s <<< FAILURE! -- in com.example.ptk.ParallelFailTest",
+        "[child-a] [ERROR] com.example.ptk.ParallelFailTest.reactorDiagnostic -- Time elapsed: 0.098 s <<< FAILURE!",
         "org.opentest4j.AssertionFailedError: parallel reactor diagnostic ==> expected: <1> but was: <2>",
-        "\tat com.example.rtk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)",
+        "\tat com.example.ptk.ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)",
         "[child-a] [INFO] ",
     ];
 
     /// child-b: two passing classes (open/close, open/close).
     const SWEEP_PASS_B: [&str; 4] = [
-        "[child-b] [INFO] Running com.example.rtk.PassBetaTest",
-        "[child-b] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.rtk.PassBetaTest",
-        "[child-b] [INFO] Running com.example.rtk.PassGammaTest",
-        "[child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.example.rtk.PassGammaTest",
+        "[child-b] [INFO] Running com.example.ptk.PassBetaTest",
+        "[child-b] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.ptk.PassBetaTest",
+        "[child-b] [INFO] Running com.example.ptk.PassGammaTest",
+        "[child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.example.ptk.PassGammaTest",
     ];
 
     /// child-a variant: a compile error with raw indented continuations —
     /// arming a continuation must survive racing another module's open block.
     const SWEEP_COMPILE_A: [&str; 3] = [
-        "[child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/rtk/A.java:[7,9] cannot find symbol",
+        "[child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/ptk/A.java:[7,9] cannot find symbol",
         "  symbol:   variable bar",
-        "  location: class com.example.rtk.A",
+        "  location: class com.example.ptk.A",
     ];
 
     /// child-b variant: one failing class of its own, for the capped sweep.
     const SWEEP_FAIL_B: [&str; 6] = [
-        "[child-b] [INFO] Running com.example.rtk.OtherFailTest",
-        "[child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.120 s <<< FAILURE! -- in com.example.rtk.OtherFailTest",
-        "[child-b] [ERROR] com.example.rtk.OtherFailTest.otherDiagnostic -- Time elapsed: 0.080 s <<< FAILURE!",
+        "[child-b] [INFO] Running com.example.ptk.OtherFailTest",
+        "[child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.120 s <<< FAILURE! -- in com.example.ptk.OtherFailTest",
+        "[child-b] [ERROR] com.example.ptk.OtherFailTest.otherDiagnostic -- Time elapsed: 0.080 s <<< FAILURE!",
         "org.opentest4j.AssertionFailedError: other reactor diagnostic ==> expected: <3> but was: <4>",
-        "\tat com.example.rtk.OtherFailTest.otherDiagnostic(OtherFailTest.java:8)",
+        "\tat com.example.ptk.OtherFailTest.otherDiagnostic(OtherFailTest.java:8)",
         "[child-b] [INFO] ",
     ];
 
@@ -3309,7 +3309,7 @@ mod tests {
             assert!(
                 o.contains("expected: <1> but was: <2>")
                     && o.contains("ParallelFailTest.reactorDiagnostic(ParallelFailTest.java:10)")
-                    && o.contains("<<< FAILURE! -- in com.example.rtk.ParallelFailTest"),
+                    && o.contains("<<< FAILURE! -- in com.example.ptk.ParallelFailTest"),
                 "merge #{n} lost failure signal;\ninput:\n{i}\noutput:\n{o}"
             );
             assert!(
@@ -3338,8 +3338,8 @@ mod tests {
         for (n, m) in merges(&SWEEP_FAIL_A, &SWEEP_FAIL_B).iter().enumerate() {
             let i = sweep_input(m);
             let o = filter(&i, 1);
-            let a = o.contains("<<< FAILURE! -- in com.example.rtk.ParallelFailTest");
-            let b = o.contains("<<< FAILURE! -- in com.example.rtk.OtherFailTest");
+            let a = o.contains("<<< FAILURE! -- in com.example.ptk.ParallelFailTest");
+            let b = o.contains("<<< FAILURE! -- in com.example.ptk.OtherFailTest");
             assert!(
                 a != b,
                 "merge #{n}: exactly one class admitted under cap=1;\ninput:\n{i}\noutput:\n{o}"
@@ -3386,7 +3386,7 @@ mod tests {
             let o = filter(&i);
             assert!(
                 o.contains("symbol:   variable bar")
-                    && o.contains("location: class com.example.rtk.A"),
+                    && o.contains("location: class com.example.ptk.A"),
                 "merge #{n} lost compile continuation;\ninput:\n{i}\noutput:\n{o}"
             );
             assert!(
@@ -3416,13 +3416,13 @@ mod tests {
             let o = filter(&i);
             assert!(
                 o.contains("symbol:   variable bar")
-                    && o.contains("location: class com.example.rtk.A"),
+                    && o.contains("location: class com.example.ptk.A"),
                 "merge #{n} lost compile continuation;\ninput:\n{i}\noutput:\n{o}"
             );
             assert!(
                 o.contains("expected: <3> but was: <4>")
                     && o.contains("OtherFailTest.otherDiagnostic(OtherFailTest.java:8)")
-                    && o.contains("<<< FAILURE! -- in com.example.rtk.OtherFailTest"),
+                    && o.contains("<<< FAILURE! -- in com.example.ptk.OtherFailTest"),
                 "merge #{n} lost failure signal;\ninput:\n{i}\noutput:\n{o}"
             );
         }
@@ -3446,20 +3446,20 @@ mod tests {
     /// dropping trail.
     fn assert_continuation_survives_dropping_trail(filter: fn(&str, usize) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [INFO] Running com.example.rtk.ParallelFailTest\n\
-             [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.153 s <<< FAILURE! -- in com.example.rtk.ParallelFailTest\n\
+             [child-a] [INFO] Running com.example.ptk.ParallelFailTest\n\
+             [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.153 s <<< FAILURE! -- in com.example.ptk.ParallelFailTest\n\
              org.opentest4j.AssertionFailedError: parallel reactor diagnostic ==> expected: <1> but was: <2>\n\
              [child-a] [INFO] \n\
-             [child-b] [INFO] Running com.example.rtk.OtherFailTest\n\
-             [child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.120 s <<< FAILURE! -- in com.example.rtk.OtherFailTest\n\
-             [child-c] [ERROR] /C:/work/child-c/src/main/java/com/example/rtk/C.java:[7,9] cannot find symbol\n\
+             [child-b] [INFO] Running com.example.ptk.OtherFailTest\n\
+             [child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.120 s <<< FAILURE! -- in com.example.ptk.OtherFailTest\n\
+             [child-c] [ERROR] /C:/work/child-c/src/main/java/com/example/ptk/C.java:[7,9] cannot find symbol\n\
              \x20 symbol:   variable bar\n\
-             \x20 location: class com.example.rtk.C\n\
+             \x20 location: class com.example.ptk.C\n\
              [child-b] [INFO] \n\
              [INFO] BUILD FAILURE\n";
         let o = filter(i, 1);
         assert!(
-            o.contains("symbol:   variable bar") && o.contains("location: class com.example.rtk.C"),
+            o.contains("symbol:   variable bar") && o.contains("location: class com.example.ptk.C"),
             "continuations survive a concurrent dropping trail; got:\n{o}"
         );
         assert!(
@@ -3488,10 +3488,10 @@ mod tests {
     /// verbatim past a green close.
     fn assert_block_entry_retires_armed_claim(filter: fn(&str) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/rtk/A.java:[7,9] cannot find symbol\n\
-             [child-a] [INFO] Running com.example.rtk.PassAlphaTest\n\
+             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/ptk/A.java:[7,9] cannot find symbol\n\
+             [child-a] [INFO] Running com.example.ptk.PassAlphaTest\n\
              stray in-block stdout line\n\
-             [child-a] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in com.example.rtk.PassAlphaTest\n\
+             [child-a] [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in com.example.ptk.PassAlphaTest\n\
              [INFO] BUILD FAILURE\n";
         let o = filter(i);
         assert!(
@@ -3526,7 +3526,7 @@ mod tests {
             let o = filter(&i);
             assert!(
                 o.contains("symbol:   variable bar")
-                    && o.contains("location: class com.example.rtk.A"),
+                    && o.contains("location: class com.example.ptk.A"),
                 "stray at position #{n} disarmed the continuation;\ninput:\n{i}\noutput:\n{o}"
             );
         }
@@ -3560,7 +3560,7 @@ mod tests {
             let o = filter(&i);
             assert!(
                 o.contains("symbol:   variable bar")
-                    && o.contains("location: class com.example.rtk.A"),
+                    && o.contains("location: class com.example.ptk.A"),
                 "WARNING interloper at position #{n} disarmed the continuation;\ninput:\n{i}\noutput:\n{o}"
             );
         }
@@ -3606,7 +3606,7 @@ mod tests {
             let o = filter(&i);
             assert!(
                 o.contains("symbol:   variable bar")
-                    && o.contains("location: class com.example.rtk.A"),
+                    && o.contains("location: class com.example.ptk.A"),
                 "ERROR interloper at position #{n} disarmed the continuation;\ninput:\n{i}\noutput:\n{o}"
             );
         }
@@ -3631,14 +3631,14 @@ mod tests {
     /// blocks (Surefire's multi-failure shape) — `trail_rearm` carries the
     /// keep/drop decision across the blanks.
     const SWEEP_MULTIFAIL_A: [&str; 9] = [
-        "[child-a] [INFO] Running com.example.rtk.MultiFailTest",
-        "[child-a] [ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.051 s <<< FAILURE! -- in com.example.rtk.MultiFailTest",
-        "[child-a] [ERROR] com.example.rtk.MultiFailTest.first -- Time elapsed: 0.020 s <<< FAILURE!",
+        "[child-a] [INFO] Running com.example.ptk.MultiFailTest",
+        "[child-a] [ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.051 s <<< FAILURE! -- in com.example.ptk.MultiFailTest",
+        "[child-a] [ERROR] com.example.ptk.MultiFailTest.first -- Time elapsed: 0.020 s <<< FAILURE!",
         "org.opentest4j.AssertionFailedError: boomFirst ==> expected: <1> but was: <2>",
         "[child-a] [INFO] ",
-        "[child-a] [ERROR] com.example.rtk.MultiFailTest.second -- Time elapsed: 0.030 s <<< FAILURE!",
+        "[child-a] [ERROR] com.example.ptk.MultiFailTest.second -- Time elapsed: 0.030 s <<< FAILURE!",
         "java.lang.IllegalStateException: boomSecond",
-        "\tat com.example.rtk.MultiFailTest.second(MultiFailTest.java:30)",
+        "\tat com.example.ptk.MultiFailTest.second(MultiFailTest.java:30)",
         "[child-a] [INFO] ",
     ];
 
@@ -3658,7 +3658,7 @@ mod tests {
                     && o.contains("boomSecond")
                     && o.contains("MultiFailTest.first")
                     && o.contains("MultiFailTest.second")
-                    && o.contains("at com.example.rtk.MultiFailTest.second(MultiFailTest.java:30)"),
+                    && o.contains("at com.example.ptk.MultiFailTest.second(MultiFailTest.java:30)"),
                 "stray at position #{n} broke the multi-failure trail;\ninput:\n{i}\noutput:\n{o}"
             );
         }
@@ -3777,14 +3777,14 @@ mod tests {
     /// matrix; in `filter_compile` this is the `route → None` arm.
     fn assert_two_armed_lanes_preserve_continuations(filter: fn(&str) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/rtk/A.java:[7,9] cannot find symbol\n\
-             [child-b] [ERROR] /C:/work/child-b/src/main/java/com/example/rtk/B.java:[3,5] cannot find symbol\n\
+             [child-a] [ERROR] /C:/work/child-a/src/main/java/com/example/ptk/A.java:[7,9] cannot find symbol\n\
+             [child-b] [ERROR] /C:/work/child-b/src/main/java/com/example/ptk/B.java:[3,5] cannot find symbol\n\
              \x20 symbol:   variable bar\n\
-             \x20 location: class com.example.rtk.A\n\
+             \x20 location: class com.example.ptk.A\n\
              [INFO] BUILD FAILURE\n";
         let o = filter(i);
         assert!(
-            o.contains("symbol:   variable bar") && o.contains("location: class com.example.rtk.A"),
+            o.contains("symbol:   variable bar") && o.contains("location: class com.example.ptk.A"),
             "ambiguous continuations preserved verbatim; got:\n{o}"
         );
     }
@@ -3925,7 +3925,7 @@ mod tests {
             o
         );
         assert!(
-            o.contains("at org.apache.commons.cli.RtkInducedFailTest.rtkInducedFailure"),
+            o.contains("at org.apache.commons.cli.PtkInducedFailTest.ptkInducedFailure"),
             "user-code frame preserved; got:\n{}",
             o
         );
@@ -4017,12 +4017,12 @@ mod tests {
             o
         );
         assert!(
-            o.contains("at com.example.rtk.CalcTest.failOne(CalcTest.java:12)"),
+            o.contains("at com.example.ptk.CalcTest.failOne(CalcTest.java:12)"),
             "first user frame preserved; got:\n{}",
             o
         );
         assert!(
-            o.contains("at com.example.rtk.CalcTest.failTwo(CalcTest.java:17)"),
+            o.contains("at com.example.ptk.CalcTest.failTwo(CalcTest.java:17)"),
             "second user frame preserved; got:\n{}",
             o
         );
@@ -4181,15 +4181,15 @@ mod tests {
         let expected = "[INFO] Scanning for projects...\n\
                         [INFO] ----------------------< commons-cli:commons-cli >-----------------------\n\
                         [INFO] Building Apache Commons CLI 1.11.1-SNAPSHOT\n\
-                        [INFO] Running org.apache.commons.cli.RtkInducedFailTest\n\
-                        [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in org.apache.commons.cli.RtkInducedFailTest\n\
-                        [ERROR] org.apache.commons.cli.RtkInducedFailTest.rtkInducedFailure -- Time elapsed: 0.025 s <<< FAILURE!\n\
+                        [INFO] Running org.apache.commons.cli.PtkInducedFailTest\n\
+                        [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in org.apache.commons.cli.PtkInducedFailTest\n\
+                        [ERROR] org.apache.commons.cli.PtkInducedFailTest.ptkInducedFailure -- Time elapsed: 0.025 s <<< FAILURE!\n\
                         org.opentest4j.AssertionFailedError: expected: <expected> but was: <actual>\n\
-                        \tat org.apache.commons.cli.RtkInducedFailTest.rtkInducedFailure(RtkInducedFailTest.java:25)\n\
+                        \tat org.apache.commons.cli.PtkInducedFailTest.ptkInducedFailure(PtkInducedFailTest.java:25)\n\
                         \n\
                         [INFO] Results:\n\
                         [ERROR] Failures:\n\
-                        [ERROR]   RtkInducedFailTest.rtkInducedFailure:25 expected: <expected> but was: <actual>\n\
+                        [ERROR]   PtkInducedFailTest.ptkInducedFailure:25 expected: <expected> but was: <actual>\n\
                         [ERROR] Tests run: 978, Failures: 1, Errors: 0, Skipped: 61\n\
                         [INFO] BUILD FAILURE\n\
                         [INFO] Total time:  01:05 min\n\
@@ -4256,7 +4256,7 @@ mod tests {
     /// fixture capture; other versions may emit `ERROR!`).
     #[test]
     fn close_line_matches_error_marker() {
-        let line = "[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.006 s <<< ERROR! -- in com.example.rtk.BoomTest";
+        let line = "[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.006 s <<< ERROR! -- in com.example.ptk.BoomTest";
         let caps = CLOSE
             .captures(line)
             .expect("CLOSE must match an ERROR!-marked close line");
@@ -4970,8 +4970,8 @@ mod tests {
     #[test]
     fn split_lane_requires_real_level_in_second_bracket() {
         assert_eq!(
-            split_lane("[child-a] [INFO] Running com.example.rtk.FooTest", true),
-            (Some("child-a"), "[INFO] Running com.example.rtk.FooTest")
+            split_lane("[child-a] [INFO] Running com.example.ptk.FooTest", true),
+            (Some("child-a"), "[INFO] Running com.example.ptk.FooTest")
         );
         assert_eq!(
             split_lane("[main] [status] app started", true),
@@ -4982,8 +4982,8 @@ mod tests {
             (Some(""), "[INFO] plain single-bracket line")
         );
         assert_eq!(
-            split_lane("at com.example.rtk.FooTest.bar(FooTest.java:1)", true),
-            (None, "at com.example.rtk.FooTest.bar(FooTest.java:1)")
+            split_lane("at com.example.ptk.FooTest.bar(FooTest.java:1)", true),
+            (None, "at com.example.ptk.FooTest.bar(FooTest.java:1)")
         );
         // Bracket-shaped but not Maven's own `[LEVEL] ...` output and not a
         // real `[tag] [LEVEL]` module line either: raw, not root-keyed.
@@ -5029,14 +5029,14 @@ mod tests {
     #[test]
     fn slf4j_thread_tag_does_not_mint_phantom_lane_in_plain_mvn() {
         let i = "[INFO] Scanning for projects...\n\
-                  [INFO] Running com.example.rtk.MyTest\n\
+                  [INFO] Running com.example.ptk.MyTest\n\
                   [main] [INFO] Running the widget pipeline\n\
                   [main] [INFO] connecting to db\n\
                   [main] [INFO] connection refused\n\
-                  [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.MyTest\n\
-                  [ERROR] com.example.rtk.MyTest.testFoo -- Time elapsed: 0.05 s <<< FAILURE!\n\
+                  [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.MyTest\n\
+                  [ERROR] com.example.ptk.MyTest.testFoo -- Time elapsed: 0.05 s <<< FAILURE!\n\
                   java.lang.AssertionError: boom\n\
-                  \tat com.example.rtk.MyTest.testFoo(MyTest.java:10)\n\
+                  \tat com.example.ptk.MyTest.testFoo(MyTest.java:10)\n\
                   \n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, false);
@@ -5094,19 +5094,19 @@ mod tests {
     fn failsafe_only_module_gets_fresh_budget_via_phase_marker() {
         let i = "[INFO] Scanning for projects...\n\
                   [child-a] [INFO] --- surefire:3.5.5:test (default-test) @ child-a ---\n\
-                  [child-a] [INFO] Running com.example.rtk.AMultiFailTest\n\
-                  [child-a] [ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.AMultiFailTest\n\
-                  [child-a] [ERROR] com.example.rtk.AMultiFailTest.one -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [INFO] Running com.example.ptk.AMultiFailTest\n\
+                  [child-a] [ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.AMultiFailTest\n\
+                  [child-a] [ERROR] com.example.ptk.AMultiFailTest.one -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: a1 boom\n\
-                  \tat com.example.rtk.AMultiFailTest.one(AMultiFailTest.java:10)\n\
+                  \tat com.example.ptk.AMultiFailTest.one(AMultiFailTest.java:10)\n\
                   [child-a] [INFO] \n\
-                  [child-a] [ERROR] com.example.rtk.AMultiFailTest.two -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [ERROR] com.example.ptk.AMultiFailTest.two -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: a2 boom\n\
-                  \tat com.example.rtk.AMultiFailTest.two(AMultiFailTest.java:20)\n\
+                  \tat com.example.ptk.AMultiFailTest.two(AMultiFailTest.java:20)\n\
                   [child-a] [INFO] \n\
-                  [child-a] [ERROR] com.example.rtk.AMultiFailTest.three -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [ERROR] com.example.ptk.AMultiFailTest.three -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: a3 boom\n\
-                  \tat com.example.rtk.AMultiFailTest.three(AMultiFailTest.java:30)\n\
+                  \tat com.example.ptk.AMultiFailTest.three(AMultiFailTest.java:30)\n\
                   [child-a] [INFO] \n\
                   [child-a] [INFO] Results:\n\
                   [child-a] [ERROR] Failures: \n\
@@ -5115,11 +5115,11 @@ mod tests {
                   [child-a] [ERROR]   AMultiFailTest.three:30 a3 boom\n\
                   [child-a] [ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0\n\
                   [child-b] [INFO] --- failsafe:3.5.5:integration-test (default-integration-test) @ child-b ---\n\
-                  [child-b] [INFO] Running com.example.rtk.BIT\n\
-                  [child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.BIT\n\
-                  [child-b] [ERROR] com.example.rtk.BIT.only -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-b] [INFO] Running com.example.ptk.BIT\n\
+                  [child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.BIT\n\
+                  [child-b] [ERROR] com.example.ptk.BIT.only -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: b1 boom\n\
-                  \tat com.example.rtk.BIT.only(BIT.java:5)\n\
+                  \tat com.example.ptk.BIT.only(BIT.java:5)\n\
                   [child-b] [INFO] \n\
                   [child-b] [INFO] Results:\n\
                   [child-b] [ERROR] Failures: \n\
@@ -5162,19 +5162,19 @@ mod tests {
     fn failsafe_only_module_gets_fresh_budget_with_old_plugin_banner_spelling() {
         let i = "[INFO] Scanning for projects...\n\
                   [child-a] [INFO] --- maven-surefire-plugin:2.22.2:test (default-test) @ child-a ---\n\
-                  [child-a] [INFO] Running com.example.rtk.AMultiFailTest\n\
-                  [child-a] [ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.AMultiFailTest\n\
-                  [child-a] [ERROR] com.example.rtk.AMultiFailTest.one -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [INFO] Running com.example.ptk.AMultiFailTest\n\
+                  [child-a] [ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.AMultiFailTest\n\
+                  [child-a] [ERROR] com.example.ptk.AMultiFailTest.one -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: a1 boom\n\
-                  \tat com.example.rtk.AMultiFailTest.one(AMultiFailTest.java:10)\n\
+                  \tat com.example.ptk.AMultiFailTest.one(AMultiFailTest.java:10)\n\
                   [child-a] [INFO] \n\
-                  [child-a] [ERROR] com.example.rtk.AMultiFailTest.two -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [ERROR] com.example.ptk.AMultiFailTest.two -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: a2 boom\n\
-                  \tat com.example.rtk.AMultiFailTest.two(AMultiFailTest.java:20)\n\
+                  \tat com.example.ptk.AMultiFailTest.two(AMultiFailTest.java:20)\n\
                   [child-a] [INFO] \n\
-                  [child-a] [ERROR] com.example.rtk.AMultiFailTest.three -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-a] [ERROR] com.example.ptk.AMultiFailTest.three -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: a3 boom\n\
-                  \tat com.example.rtk.AMultiFailTest.three(AMultiFailTest.java:30)\n\
+                  \tat com.example.ptk.AMultiFailTest.three(AMultiFailTest.java:30)\n\
                   [child-a] [INFO] \n\
                   [child-a] [INFO] Results:\n\
                   [child-a] [ERROR] Failures: \n\
@@ -5183,11 +5183,11 @@ mod tests {
                   [child-a] [ERROR]   AMultiFailTest.three:30 a3 boom\n\
                   [child-a] [ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0\n\
                   [child-b] [INFO] --- maven-failsafe-plugin:2.22.2:integration-test (default-integration-test) @ child-b ---\n\
-                  [child-b] [INFO] Running com.example.rtk.BIT\n\
-                  [child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.BIT\n\
-                  [child-b] [ERROR] com.example.rtk.BIT.only -- Time elapsed: 0.02 s <<< FAILURE!\n\
+                  [child-b] [INFO] Running com.example.ptk.BIT\n\
+                  [child-b] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.BIT\n\
+                  [child-b] [ERROR] com.example.ptk.BIT.only -- Time elapsed: 0.02 s <<< FAILURE!\n\
                   java.lang.AssertionError: b1 boom\n\
-                  \tat com.example.rtk.BIT.only(BIT.java:5)\n\
+                  \tat com.example.ptk.BIT.only(BIT.java:5)\n\
                   [child-b] [INFO] \n\
                   [child-b] [INFO] Results:\n\
                   [child-b] [ERROR] Failures: \n\
@@ -5219,13 +5219,13 @@ mod tests {
     /// and rides along with the rest of the failing block's content.
     #[test]
     fn app_log_line_survives_inside_failing_block() {
-        let i = "[INFO] Running com.example.rtk.MyTest\n\
+        let i = "[INFO] Running com.example.ptk.MyTest\n\
                   [main] [INFO] app started with config=/etc/foo.yml\n\
                   plain stdout line\n\
-                  [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.MyTest\n\
-                  [ERROR] com.example.rtk.MyTest.testFoo -- Time elapsed: 0.05 s <<< FAILURE!\n\
+                  [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.MyTest\n\
+                  [ERROR] com.example.ptk.MyTest.testFoo -- Time elapsed: 0.05 s <<< FAILURE!\n\
                   java.lang.AssertionError: expected <1> but was <2>\n\
-                  \tat com.example.rtk.MyTest.testFoo(MyTest.java:10)\n\
+                  \tat com.example.ptk.MyTest.testFoo(MyTest.java:10)\n\
                   \n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
@@ -5246,13 +5246,13 @@ mod tests {
     #[test]
     fn genuine_mvnd_module_tags_still_lane_split() {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.FailTest\n\
-                  [child-b] [INFO] Running com.example.rtk.PassTest\n\
-                  [child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in com.example.rtk.PassTest\n\
-                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.020 s <<< FAILURE! -- in com.example.rtk.FailTest\n\
-                  [child-a] [ERROR] com.example.rtk.FailTest.bar -- Time elapsed: 0.020 s <<< FAILURE!\n\
+                  [child-a] [INFO] Running com.example.ptk.FailTest\n\
+                  [child-b] [INFO] Running com.example.ptk.PassTest\n\
+                  [child-b] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in com.example.ptk.PassTest\n\
+                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.020 s <<< FAILURE! -- in com.example.ptk.FailTest\n\
+                  [child-a] [ERROR] com.example.ptk.FailTest.bar -- Time elapsed: 0.020 s <<< FAILURE!\n\
                   org.opentest4j.AssertionFailedError: expected: <1> but was: <2>\n\
-                  \tat com.example.rtk.FailTest.bar(FailTest.java:5)\n\
+                  \tat com.example.ptk.FailTest.bar(FailTest.java:5)\n\
                   \n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
@@ -5281,16 +5281,16 @@ mod tests {
     /// survive as part of the trail, same as any other continuation line.
     fn assert_bracket_leading_trail_line_survives(filter: fn(&str) -> String) {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.FooTest\n\
-                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.FooTest\n\
-                  [child-a] [ERROR] com.example.rtk.FooTest.bar -- Time elapsed: 0.05 s <<< FAILURE!\n\
+                  [child-a] [INFO] Running com.example.ptk.FooTest\n\
+                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.FooTest\n\
+                  [child-a] [ERROR] com.example.ptk.FooTest.bar -- Time elapsed: 0.05 s <<< FAILURE!\n\
                   org.opentest4j.AssertionFailedError: collections differ\n\
                   [1, 2] != [1, 3]\n\
                   [boom] weird bracket assertion line\n\
                   [1, 2]\n\
                   [boom]\n\
                   [] [INFO] started\n\
-                  \tat com.example.rtk.FooTest.bar(FooTest.java:5)\n\
+                  \tat com.example.ptk.FooTest.bar(FooTest.java:5)\n\
                   \n\
                   [INFO] BUILD FAILURE\n";
         let o = filter(i);
@@ -5319,7 +5319,7 @@ mod tests {
             "empty-tag line survives, not swallowed as root-keyed; got:\n{o}"
         );
         assert!(
-            o.contains("at com.example.rtk.FooTest.bar(FooTest.java:5)"),
+            o.contains("at com.example.ptk.FooTest.bar(FooTest.java:5)"),
             "user frame still survives too; got:\n{o}"
         );
     }
@@ -5347,18 +5347,18 @@ mod tests {
         let i = "[INFO] Scanning for projects...\n\
                   [Server] [ERROR] connection refused to db\n\
                   [Cache] [ERROR] connection refused to cache\n\
-                  [INFO] Running com.example.rtk.RealTest\n\
-                  [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.RealTest\n\
-                  [ERROR] com.example.rtk.RealTest.foo -- Time elapsed: 0.05 s <<< FAILURE!\n\
+                  [INFO] Running com.example.ptk.RealTest\n\
+                  [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.RealTest\n\
+                  [ERROR] com.example.ptk.RealTest.foo -- Time elapsed: 0.05 s <<< FAILURE!\n\
                   java.lang.AssertionError: boom\n\
-                  \tat com.example.rtk.RealTest.foo(RealTest.java:5)\n\
+                  \tat com.example.ptk.RealTest.foo(RealTest.java:5)\n\
                   \tat org.junit.jupiter.engine.execution.SomeThing.invoke(SomeThing.java:1)\n\
                   \tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\
                   \n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
         assert!(
-            o.contains("at com.example.rtk.RealTest.foo(RealTest.java:5)"),
+            o.contains("at com.example.ptk.RealTest.foo(RealTest.java:5)"),
             "the single user frame survives; got:\n{o}"
         );
         assert!(
@@ -5385,23 +5385,23 @@ mod tests {
     #[test]
     fn app_log_error_stays_in_order_inside_failing_block() {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.SlowTest\n\
+                  [child-a] [INFO] Running com.example.ptk.SlowTest\n\
                   [Server] [ERROR] connection refused\n\
-                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.SlowTest\n\
-                  [child-a] [ERROR] com.example.rtk.SlowTest.foo -- Time elapsed: 0.05 s <<< FAILURE!\n\
+                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.SlowTest\n\
+                  [child-a] [ERROR] com.example.ptk.SlowTest.foo -- Time elapsed: 0.05 s <<< FAILURE!\n\
                   java.lang.AssertionError: boom\n\
-                  \tat com.example.rtk.SlowTest.foo(SlowTest.java:5)\n\
+                  \tat com.example.ptk.SlowTest.foo(SlowTest.java:5)\n\
                   [child-a] [INFO] \n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
         let running = o
-            .find("Running com.example.rtk.SlowTest")
+            .find("Running com.example.ptk.SlowTest")
             .expect("Running kept");
         let server = o
             .find("[Server] [ERROR] connection refused")
             .expect("app log line kept, buffered inside the block");
         let close = o
-            .find("<<< FAILURE! -- in com.example.rtk.SlowTest")
+            .find("<<< FAILURE! -- in com.example.ptk.SlowTest")
             .expect("close line kept");
         assert!(
             running < server && server < close,
@@ -5424,19 +5424,19 @@ mod tests {
     #[test]
     fn tagged_trail_terminates_on_no_trailing_space_blank() {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.SlowTest\n\
-                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.rtk.SlowTest\n\
-                  [child-a] [ERROR] com.example.rtk.SlowTest.foo -- Time elapsed: 0.05 s <<< FAILURE!\n\
+                  [child-a] [INFO] Running com.example.ptk.SlowTest\n\
+                  [child-a] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! -- in com.example.ptk.SlowTest\n\
+                  [child-a] [ERROR] com.example.ptk.SlowTest.foo -- Time elapsed: 0.05 s <<< FAILURE!\n\
                   java.lang.AssertionError: boom\n\
-                  \tat com.example.rtk.SlowTest.foo(SlowTest.java:5)\n\
+                  \tat com.example.ptk.SlowTest.foo(SlowTest.java:5)\n\
                   \tat org.junit.jupiter.api.Assertions.fail(Assertions.java:1)\n\
                   [child-a] [INFO]\n\
-                  [child-a] [INFO] Running com.example.rtk.NextTest\n\
-                  [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.rtk.NextTest\n\
+                  [child-a] [INFO] Running com.example.ptk.NextTest\n\
+                  [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 s -- in com.example.ptk.NextTest\n\
                   [INFO] BUILD FAILURE\n";
         let o = filter_surefire(i, true);
         assert!(
-            o.contains("at com.example.rtk.SlowTest.foo(SlowTest.java:5)"),
+            o.contains("at com.example.ptk.SlowTest.foo(SlowTest.java:5)"),
             "user frame survives; got:\n{o}"
         );
         assert!(
@@ -5459,9 +5459,9 @@ mod tests {
     #[test]
     fn app_log_error_dropped_with_green_close_block() {
         let i = "[INFO] Scanning for projects...\n\
-                  [child-a] [INFO] Running com.example.rtk.SlowTest\n\
+                  [child-a] [INFO] Running com.example.ptk.SlowTest\n\
                   [Server] [ERROR] connection refused\n\
-                  [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.05 s -- in com.example.rtk.SlowTest\n\
+                  [child-a] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.05 s -- in com.example.ptk.SlowTest\n\
                   [INFO] BUILD SUCCESS\n";
         let o = filter_surefire(i, true);
         assert!(
@@ -5490,7 +5490,7 @@ mod tests {
         // the fix it targets.
         for n in 0..(MAX_LANES + 50) {
             i.push_str(&format!(
-                "[tag{n}] [INFO] Running com.example.rtk.Tag{n}Test\n"
+                "[tag{n}] [INFO] Running com.example.ptk.Tag{n}Test\n"
             ));
         }
         // One more never-seen tag, past the cap: a genuine failing test
@@ -5500,8 +5500,8 @@ mod tests {
         // the cap is exceeded, so this doesn't get misrouted onto an
         // unrelated lane and corrupt or drop it).
         i.push_str(
-            "[overflow-mod] [INFO] Running com.example.rtk.OverflowTest\n\
-             [overflow-mod] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.01 s <<< FAILURE! -- in com.example.rtk.OverflowTest\n",
+            "[overflow-mod] [INFO] Running com.example.ptk.OverflowTest\n\
+             [overflow-mod] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.01 s <<< FAILURE! -- in com.example.ptk.OverflowTest\n",
         );
         i.push_str("[INFO] BUILD FAILURE\n");
 
@@ -5521,8 +5521,8 @@ mod tests {
         let o = filter_surefire(&i, true);
         assert!(!o.is_empty(), "capped run still produces output");
         assert!(
-            o.contains("Running com.example.rtk.OverflowTest")
-                && o.contains("<<< FAILURE! -- in com.example.rtk.OverflowTest"),
+            o.contains("Running com.example.ptk.OverflowTest")
+                && o.contains("<<< FAILURE! -- in com.example.ptk.OverflowTest"),
             "an overflow (past-cap) module's own failing diagnostics must survive \
              (preserved verbatim), not be lost to a misrouted guess; got:\n{o}"
         );

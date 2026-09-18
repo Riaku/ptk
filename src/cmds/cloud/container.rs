@@ -45,7 +45,7 @@ where
         |stdout| match serde_json::from_str::<Value>(stdout) {
             Ok(json) => filter_fn(&json),
             Err(e) => {
-                eprintln!("[rtk] {}: JSON parse failed: {}", tool, e);
+                eprintln!("[ptk] {}: JSON parse failed: {}", tool, e);
                 stdout.to_string()
             }
         },
@@ -63,7 +63,7 @@ fn docker_ps(_verbose: u8) -> Result<i32> {
     if !base.success() {
         eprint!("{}", base.stderr);
         print!("{}", base.stdout);
-        timer.track("docker ps", "rtk docker ps", &base.stdout, &base.stdout);
+        timer.track("docker ps", "ptk docker ps", &base.stdout, &base.stdout);
         return Ok(base.exit_code);
     }
     let raw = base.stdout;
@@ -79,12 +79,12 @@ fn docker_ps(_verbose: u8) -> Result<i32> {
         Some(r) => r.stdout,
         None => {
             print!("{}", raw);
-            timer.track("docker ps", "rtk docker ps", &raw, &raw);
+            timer.track("docker ps", "ptk docker ps", &raw, &raw);
             return Ok(0);
         }
     };
 
-    let mut rtk = String::new();
+    let mut ptk = String::new();
 
     const MAX_CONTAINERS: usize = CAP_LIST;
     let lines: Vec<String> = stdout
@@ -93,21 +93,21 @@ fn docker_ps(_verbose: u8) -> Result<i32> {
         .filter_map(|line| format_container_line(line, true))
         .collect();
 
-    rtk.push_str(&format!("[docker] {} containers:\n", lines.len()));
+    ptk.push_str(&format!("[docker] {} containers:\n", lines.len()));
     for entry in lines.iter().take(MAX_CONTAINERS) {
-        rtk.push_str(entry);
+        ptk.push_str(entry);
     }
     if lines.len() > MAX_CONTAINERS {
-        rtk.push_str(&format!("  … +{} more\n", lines.len() - MAX_CONTAINERS));
+        ptk.push_str(&format!("  … +{} more\n", lines.len() - MAX_CONTAINERS));
         let full: String = lines.concat();
         if let Some(hint) = crate::core::tee::force_tee_hint(&full, "docker-ps") {
-            rtk.push_str(&format!("{}\n", hint));
+            ptk.push_str(&format!("{}\n", hint));
         }
     }
 
-    let shown = never_worse(&raw, &rtk);
+    let shown = never_worse(&raw, &ptk);
     print!("{}", shown);
-    timer.track("docker ps", "rtk docker ps", &raw, shown);
+    timer.track("docker ps", "ptk docker ps", &raw, shown);
     Ok(0)
 }
 
@@ -121,7 +121,7 @@ fn docker_ps_all(_verbose: u8) -> Result<i32> {
         print!("{}", base.stdout);
         timer.track(
             "docker ps -a",
-            "rtk docker ps -a",
+            "ptk docker ps -a",
             &base.stdout,
             &base.stdout,
         );
@@ -141,7 +141,7 @@ fn docker_ps_all(_verbose: u8) -> Result<i32> {
         Some(r) => r.stdout,
         None => {
             print!("{}", raw);
-            timer.track("docker ps -a", "rtk docker ps -a", &raw, &raw);
+            timer.track("docker ps -a", "ptk docker ps -a", &raw, &raw);
             return Ok(0);
         }
     };
@@ -164,27 +164,27 @@ fn docker_ps_all(_verbose: u8) -> Result<i32> {
     const MAX_CONTAINERS: usize = 20;
     let truncated = running_lines.len() > MAX_CONTAINERS || stopped_lines.len() > MAX_CONTAINERS;
 
-    let mut rtk = String::new();
-    rtk.push_str(&format!("[docker] {} running:\n", running_lines.len()));
+    let mut ptk = String::new();
+    ptk.push_str(&format!("[docker] {} running:\n", running_lines.len()));
     for l in running_lines.iter().take(MAX_CONTAINERS) {
-        rtk.push_str(l);
+        ptk.push_str(l);
     }
     if running_lines.len() > MAX_CONTAINERS {
-        rtk.push_str(&format!(
+        ptk.push_str(&format!(
             "  … +{} more\n",
             running_lines.len() - MAX_CONTAINERS
         ));
     }
     if !stopped_lines.is_empty() {
-        rtk.push_str(&format!(
+        ptk.push_str(&format!(
             "[docker] {} stopped/exited:\n",
             stopped_lines.len()
         ));
         for l in stopped_lines.iter().take(MAX_CONTAINERS) {
-            rtk.push_str(l);
+            ptk.push_str(l);
         }
         if stopped_lines.len() > MAX_CONTAINERS {
-            rtk.push_str(&format!(
+            ptk.push_str(&format!(
                 "  … +{} more\n",
                 stopped_lines.len() - MAX_CONTAINERS
             ));
@@ -197,13 +197,13 @@ fn docker_ps_all(_verbose: u8) -> Result<i32> {
             .cloned()
             .collect();
         if let Some(hint) = crate::core::tee::force_tee_hint(&full, "docker-ps-a") {
-            rtk.push_str(&format!("{}\n", hint));
+            ptk.push_str(&format!("{}\n", hint));
         }
     }
 
-    let shown = never_worse(&raw, &rtk);
+    let shown = never_worse(&raw, &ptk);
     print!("{}", shown);
-    timer.track("docker ps -a", "rtk docker ps -a", &raw, shown);
+    timer.track("docker ps -a", "ptk docker ps -a", &raw, shown);
     Ok(0)
 }
 
@@ -246,7 +246,7 @@ fn docker_images(_verbose: u8) -> Result<i32> {
         print!("{}", base.stdout);
         timer.track(
             "docker images",
-            "rtk docker images",
+            "ptk docker images",
             &base.stdout,
             &base.stdout,
         );
@@ -265,13 +265,13 @@ fn docker_images(_verbose: u8) -> Result<i32> {
         Some(r) => r.stdout,
         None => {
             print!("{}", raw);
-            timer.track("docker images", "rtk docker images", &raw, &raw);
+            timer.track("docker images", "ptk docker images", &raw, &raw);
             return Ok(0);
         }
     };
 
     let lines: Vec<&str> = stdout.lines().collect();
-    let mut rtk = String::new();
+    let mut ptk = String::new();
 
     let mut total_size_mb: f64 = 0.0;
     for line in &lines {
@@ -294,7 +294,7 @@ fn docker_images(_verbose: u8) -> Result<i32> {
     } else {
         format!("{:.0}MB", total_size_mb)
     };
-    rtk.push_str(&format!(
+    ptk.push_str(&format!(
         "[docker] {} images ({})\n",
         lines.len(),
         total_display
@@ -312,33 +312,33 @@ fn docker_images(_verbose: u8) -> Result<i32> {
         })
         .collect();
 
-    let mut full_rtk = rtk.clone();
+    let mut full_rtk = ptk.clone();
     for l in &image_lines {
         full_rtk.push_str(l);
     }
 
     for l in image_lines.iter().take(MAX_IMAGES) {
-        rtk.push_str(l);
+        ptk.push_str(l);
     }
     if image_lines.len() > MAX_IMAGES {
-        rtk.push_str(&format!("  … +{} more\n", image_lines.len() - MAX_IMAGES));
+        ptk.push_str(&format!("  … +{} more\n", image_lines.len() - MAX_IMAGES));
         if let Some(hint) =
             crate::core::tee::force_tee_tail_hint(&full_rtk, "docker-images", MAX_IMAGES + 2)
         {
-            rtk.push_str(&format!("{}\n", hint));
+            ptk.push_str(&format!("{}\n", hint));
         }
     }
 
-    let shown = never_worse(&raw, &rtk);
+    let shown = never_worse(&raw, &ptk);
     print!("{}", shown);
-    timer.track("docker images", "rtk docker images", &raw, shown);
+    timer.track("docker images", "ptk docker images", &raw, shown);
     Ok(0)
 }
 
 fn docker_logs(args: &[String], _verbose: u8) -> Result<i32> {
     let container = args.first().map(|s| s.as_str()).unwrap_or("");
     if container.is_empty() {
-        println!("Usage: rtk docker logs <container>");
+        println!("Usage: ptk docker logs <container>");
         return Ok(0);
     }
 
@@ -518,7 +518,7 @@ fn format_kubectl_services(json: &Value) -> String {
 pub fn k8s_logs(tool: &str, args: &[String], _verbose: u8) -> Result<i32> {
     let pod = args.first().map(|s| s.as_str()).unwrap_or("");
     if pod.is_empty() {
-        println!("Usage: rtk {} logs <pod>", tool);
+        println!("Usage: ptk {} logs <pod>", tool);
         return Ok(0);
     }
 
@@ -733,20 +733,20 @@ pub fn run_compose_ps(all: bool, verbose: u8) -> Result<i32> {
         eprintln!("raw docker compose ps:\n{}", raw);
     }
 
-    let rtk = format_compose_ps(&structured);
-    let shown = never_worse(&raw, &rtk);
+    let ptk = format_compose_ps(&structured);
+    let shown = never_worse(&raw, &ptk);
     println!("{}", shown);
     let label = if all {
         "docker compose ps -a"
     } else {
         "docker compose ps"
     };
-    let rtk_label = if all {
-        "rtk docker compose ps -a"
+    let ptk_label = if all {
+        "ptk docker compose ps -a"
     } else {
-        "rtk docker compose ps"
+        "ptk docker compose ps"
     };
-    timer.track(label, rtk_label, &raw, shown);
+    timer.track(label, ptk_label, &raw, shown);
     Ok(0)
 }
 

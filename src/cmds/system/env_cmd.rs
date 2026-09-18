@@ -125,7 +125,7 @@ pub fn run(filter: Option<&str>, verbose: u8) -> Result<()> {
     });
     let shown_body = never_worse(&raw, &body);
     print!("{}", shown_body);
-    timer.track("env", "rtk env", &raw, shown_body);
+    timer.track("env", "ptk env", &raw, shown_body);
     Ok(())
 }
 

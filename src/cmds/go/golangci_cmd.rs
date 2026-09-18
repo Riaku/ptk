@@ -308,11 +308,11 @@ const OUTPUT_PATH_FLAGS: &[&str] = &[
     "output.text.path",
 ];
 
-/// True when RTK's own `--output.json.path stdout` would collide with what the user asked for:
+/// True when PTK's own `--output.json.path stdout` would collide with what the user asked for:
 /// they already configured the json sink (whatever its destination -- golangci takes one path
 /// per format), or they directed some other format at stdout, where two reports would
 /// interleave and the json parse would choke on whichever landed first. A *file* sink for some
-/// other format takes nothing away from stdout, so RTK still injects there or it is left with
+/// other format takes nothing away from stdout, so PTK still injects there or it is left with
 /// nothing to parse.
 fn has_output_flag(args: &[String]) -> bool {
     let tokens = arg_tokenizer::tokenize_grammar(args, &run_takes_value, Dialect::Posix);
@@ -622,7 +622,7 @@ mod tests {
     #[test]
     fn test_classify_invocation_dashdash_before_subcommand_is_passthrough() {
         // `--` ends option parsing before any subcommand was found; golangci-lint's own
-        // parser gets to decide what follows, not rtk's filter.
+        // parser gets to decide what follows, not ptk's filter.
         assert_eq!(
             classify_invocation(&["--".into(), "run".into()]),
             Invocation::Passthrough
@@ -713,7 +713,7 @@ mod tests {
 
     #[test]
     fn test_has_output_flag_sees_every_output_destination() {
-        // golangci-lint 2.x has one --output.<format>.path per format; RTK injecting a second
+        // golangci-lint 2.x has one --output.<format>.path per format; PTK injecting a second
         // sink makes it write two reports to stdout and the JSON parse then fails.
         for flag in [
             "--output.text.path",
@@ -961,7 +961,7 @@ mod tests {
         let json = raw.lines().next().unwrap_or("");
         let filtered = filter_golangci_json(json, 2);
         // golangci-lint emits its JSON on a single line, so whitespace-word counting
-        // measures indentation rather than content. Use the estimator RTK bills with.
+        // measures indentation rather than content. Use the estimator PTK bills with.
         let raw_tokens = estimate_tokens(json) as f64;
         let filtered_tokens = estimate_tokens(&filtered) as f64;
         let savings = 100.0 - (filtered_tokens / raw_tokens * 100.0);

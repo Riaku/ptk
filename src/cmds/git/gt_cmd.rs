@@ -72,8 +72,8 @@ fn run_gt_filtered(
     } else {
         format!("gt {} {}", subcmd_str, args.join(" "))
     };
-    let rtk_label = format!("rtk {}", label);
-    timer.track(&label, &rtk_label, &raw, &shown);
+    let ptk_label = format!("ptk {}", label);
+    timer.track(&label, &ptk_label, &raw, &shown);
 
     Ok(cmd_output.exit_code)
 }
@@ -134,7 +134,7 @@ pub fn run_other(args: &[OsString], verbose: u8) -> Result<i32> {
         .collect();
 
     // gt passes unknown subcommands to git, so "gt status" = "git status".
-    // Route known git commands to RTK's git filters for token savings.
+    // Route known git commands to PTK's git filters for token savings.
     match subcommand.as_ref() {
         "status" => crate::git_cmd::run(
             crate::git_cmd::GitCommand::Status,

@@ -1,7 +1,7 @@
 //! Filters SQLFluff SQL linter output.
 //!
-//! `plan` is the single statement of how rtk invokes sqlfluff and how it
-//! reads the result back; both `rtk sqlfluff ...` and `rtk lint sqlfluff ...`
+//! `plan` is the single statement of how ptk invokes sqlfluff and how it
+//! reads the result back; both `ptk sqlfluff ...` and `ptk lint sqlfluff ...`
 //! go through it so the two entry points cannot drift apart.
 
 use crate::core::config;
@@ -49,14 +49,14 @@ struct SqlfluffFile {
     violations: Vec<SqlfluffViolation>,
 }
 
-/// How rtk should invoke sqlfluff, and how to read the result back.
+/// How ptk should invoke sqlfluff, and how to read the result back.
 ///
-/// Both entry points - `rtk sqlfluff ...` and `rtk lint sqlfluff ...` - build
+/// Both entry points - `ptk sqlfluff ...` and `ptk lint sqlfluff ...` - build
 /// one of these and hand it the raw stdout afterwards, so the "is this lint
 /// JSON?" decision is stated once instead of once per call site.
 pub struct Invocation {
     /// Full sqlfluff argv (subcommand included), with `--format json` appended
-    /// when rtk owns the output format.
+    /// when ptk owns the output format.
     pub args: Vec<String>,
     /// Whether stdout is expected to be `sqlfluff lint --format json` output.
     expect_json: bool,
@@ -67,7 +67,7 @@ pub fn plan(args: &[String]) -> Invocation {
     // Route to the lint filter only for explicit lint invocations (or a bare
     // call, which we make explicit). sqlfluff's other subcommands - and any
     // unknown bareword, be it a typo or a future subcommand - pass through
-    // untouched so sqlfluff errors on its own input instead of rtk silently
+    // untouched so sqlfluff errors on its own input instead of ptk silently
     // reinterpreting it as `lint <path>`.
     let is_lint = args.is_empty() || args[0] == "lint";
 
@@ -82,8 +82,8 @@ pub fn plan(args: &[String]) -> Invocation {
     });
 
     // Known limitation: joined short-flag forms such as `-fhuman` are not
-    // recognized above, so rtk would still append `--format json`; sqlfluff's
-    // last-value-wins then runs in the user's format while rtk still tries to
+    // recognized above, so ptk would still append `--format json`; sqlfluff's
+    // last-value-wins then runs in the user's format while ptk still tries to
     // JSON-parse it and reports a parse failure. Proper flag-value parsing
     // belongs to the arg-tokenizer migration (#3681) - fix it there.
 
@@ -170,7 +170,7 @@ fn render_lint_json(output: &str, exit_code: i32) -> String {
             // Non-negotiable fallback rule (rust-patterns.md): if the filter
             // fails, pass the raw command output through unchanged and warn
             // on stderr - never block the user with a mangled summary.
-            eprintln!("rtk: filter warning: sqlfluff JSON filter failed to parse output: {e}");
+            eprintln!("ptk: filter warning: sqlfluff JSON filter failed to parse output: {e}");
             return output.to_string();
         }
     };
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_render_summarizes_violations_on_exit_1_via_lint_entry_point() {
-        // `rtk lint sqlfluff lint ...` reaches the same plan, so both entry
+        // `ptk lint sqlfluff lint ...` reaches the same plan, so both entry
         // points must produce byte-identical output for identical input.
         let direct = plan(&["lint".to_string(), "models/".to_string()]);
         let via_lint = plan(&["lint".to_string(), "models/".to_string()]);

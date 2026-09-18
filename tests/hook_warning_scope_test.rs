@@ -12,15 +12,15 @@ use std::process::Command;
 
 const REMINDER: &str = "No hook installed";
 
-/// Runs `rtk <args>` against a home directory whose Claude config directory
+/// Runs `ptk <args>` against a home directory whose Claude config directory
 /// exists but registers no hook, and returns stderr.
 fn run(home: &Path, args: &[&str]) -> String {
     let out = Command::new(env!("CARGO_BIN_EXE_ptk"))
         .args(args)
         .env("HOME", home)
-        .env("RTK_DB_PATH", home.join("rtk.db"))
+        .env("PTK_DB_PATH", home.join("ptk.db"))
         .output()
-        .expect("run rtk");
+        .expect("run ptk");
     String::from_utf8_lossy(&out.stderr).into_owned()
 }
 
@@ -43,8 +43,8 @@ fn commands_that_report_hook_state_do_not_repeat_the_reminder() {
         let home = fresh_home();
         let stderr = run(home.path(), &args);
         assert!(
-            !stderr.contains(&format!("[rtk] /!\\ {REMINDER}")),
-            "rtk {} must not print the daily reminder: {stderr}",
+            !stderr.contains(&format!("[ptk] /!\\ {REMINDER}")),
+            "ptk {} must not print the daily reminder: {stderr}",
             args.join(" ")
         );
     }
@@ -57,7 +57,7 @@ fn filtered_commands_still_get_the_reminder() {
         let stderr = run(home.path(), &args);
         assert!(
             stderr.contains(REMINDER),
-            "rtk {} must still warn: {stderr}",
+            "ptk {} must still warn: {stderr}",
             args.join(" ")
         );
     }

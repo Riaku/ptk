@@ -1,4 +1,4 @@
-//! Sets up RTK hooks so AI coding agents automatically route commands through RTK.
+//! Sets up PTK hooks so AI coding agents automatically route commands through PTK.
 
 use anyhow::{Context, Result};
 use std::ffi::OsString;
@@ -28,16 +28,16 @@ use super::{is_claude_hook_command, is_codex_hook_command};
 use crate::core::config::AwarenessLevel;
 
 // Embedded OpenCode plugin (auto-rewrite)
-const OPENCODE_PLUGIN: &str = include_str!("../../hooks/opencode/rtk.ts");
+const OPENCODE_PLUGIN: &str = include_str!("../../hooks/opencode/ptk.ts");
 
 // Embedded Pi extension (auto-rewrite)
-const PI_PLUGIN: &str = include_str!("../../hooks/pi/rtk.ts");
+const PI_PLUGIN: &str = include_str!("../../hooks/pi/ptk.ts");
 
-// Stable code marker used to recognize a modified RTK extension without
+// Stable code marker used to recognize a modified PTK extension without
 // relying on explanatory comments that users may remove. The marker matches
 // both the current `pi.exec` call and older stock revisions that imported
 // `exec` locally before invoking it.
-const PI_PLUGIN_REWRITE_MARKER: &str = "exec(\"rtk\", [\"rewrite\"";
+const PI_PLUGIN_REWRITE_MARKER: &str = "exec(\"ptk\", [\"rewrite\"";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PiCompatibleAgent {
@@ -97,6 +97,7 @@ impl PiCompatibleAgent {
 // The history-based test below verifies that this list remains append-only
 // for every revision in the current checkout's ancestor history.
 const KNOWN_PI_PLUGIN_HASHES: &[&str] = &[
+    "4c455e642c22944ff4d2d43bd02857f4e22dc62729d878775a2180e024b6a2c9",
     "5e80e811e689adc9d5ae5a59d1d5702060ca0c10320fea7cffd83c659026f1c5",
     "2cbb2a7a9081275d6eda140d9e375f6772b5c354e7fe931c554c371ad8836c6e",
     "94e80d1a5c159ea38ba8913f7c5b9d9b5c89bf7c204f1e583bfac2ed7fc40ab9",
@@ -109,13 +110,34 @@ const KNOWN_PI_PLUGIN_HASHES: &[&str] = &[
     "3eb16108f51a29c2a62a453d5c97a6ea2da8aea1061da34c50fdcfaa32dc0ff7",
 ];
 
-// Embedded agent-neutral RTK awareness instructions, one file per `awareness.level`.
-const RTK_AWARENESS_DEFAULT: &str = include_str!("../../hooks/rtk-awareness.md");
-const RTK_AWARENESS_HIGH: &str = include_str!("../../hooks/rtk-awareness-high.md");
-const RTK_AWARENESS_FULL: &str = include_str!("../../hooks/rtk-awareness-full.md");
+// Embedded agent-neutral PTK awareness instructions, one file per `awareness.level`.
+const PTK_AWARENESS_DEFAULT: &str = include_str!("../../hooks/ptk-awareness.md");
+const PTK_AWARENESS_HIGH: &str = include_str!("../../hooks/ptk-awareness-high.md");
+const PTK_AWARENESS_FULL: &str = include_str!("../../hooks/ptk-awareness-full.md");
 
-/// Template written by `rtk init` when no filters.toml exists yet.
-const FILTERS_TEMPLATE: &str = r#"# Project-local RTK filters — commit this file with your repo.
+/// Legacy `rtk-instructions` block markers from pre-rename installs. These are
+/// normalized to the current `ptk-instructions` markers by
+/// [`normalize_legacy_block_markers`] so block upsert/removal transparently
+/// migrates files written before the RTK->PTK rename.
+const LEGACY_BLOCK_START: &str = "<!-- rtk-instructions";
+const LEGACY_BLOCK_END: &str = "<!-- /rtk-instructions -->";
+
+/// Rewrite legacy `rtk-instructions` markers to the current `ptk-instructions`
+/// markers so the block helpers detect, migrate, and remove pre-rename blocks.
+fn normalize_legacy_block_markers(content: &str) -> std::borrow::Cow<'_, str> {
+    if content.contains(LEGACY_BLOCK_START) || content.contains(LEGACY_BLOCK_END) {
+        std::borrow::Cow::Owned(
+            content
+                .replace(LEGACY_BLOCK_START, PTK_BLOCK_START)
+                .replace(LEGACY_BLOCK_END, PTK_BLOCK_END),
+        )
+    } else {
+        std::borrow::Cow::Borrowed(content)
+    }
+}
+
+/// Template written by `ptk init` when no filters.toml exists yet.
+const FILTERS_TEMPLATE: &str = r#"# Project-local PTK filters — commit this file with your repo.
 # Filters here override user-global and built-in filters.
 # Docs: https://github.com/rtk-ai/rtk#custom-filters
 schema_version = 1
@@ -130,9 +152,9 @@ schema_version = 1
 # on_empty = "my-tool: ok"
 "#;
 
-/// Template for user-global filters (~/.config/rtk/filters.toml).
-const FILTERS_GLOBAL_TEMPLATE: &str = r#"# User-global RTK filters — apply to all your projects.
-# Project-local .rtk/filters.toml takes precedence over these.
+/// Template for user-global filters (~/.config/ptk/filters.toml).
+const FILTERS_GLOBAL_TEMPLATE: &str = r#"# User-global PTK filters — apply to all your projects.
+# Project-local .ptk/filters.toml takes precedence over these.
 # Docs: https://github.com/rtk-ai/rtk#custom-filters
 schema_version = 1
 
@@ -145,15 +167,15 @@ schema_version = 1
 # max_lines = 40
 "#;
 
-const RTK_MD: &str = "RTK.md";
+const PTK_MD: &str = "PTK.md";
 const CLAUDE_MD: &str = "CLAUDE.md";
 const AGENTS_MD: &str = "AGENTS.md";
-const RTK_MD_REF: &str = "@RTK.md";
+const PTK_MD_REF: &str = "@PTK.md";
 const GEMINI_MD: &str = "GEMINI.md";
 
-const RTK_BLOCK_START: &str = "<!-- rtk-instructions";
-const RTK_BLOCK_VERSION: &str = "v2";
-const RTK_BLOCK_END: &str = "<!-- /rtk-instructions -->";
+const PTK_BLOCK_START: &str = "<!-- ptk-instructions";
+const PTK_BLOCK_VERSION: &str = "v2";
+const PTK_BLOCK_END: &str = "<!-- /ptk-instructions -->";
 
 /// Control flow for settings.json patching
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -197,14 +219,14 @@ pub struct InitContext {
 
 fn awareness_content(level: AwarenessLevel) -> &'static str {
     match level {
-        AwarenessLevel::Default => RTK_AWARENESS_DEFAULT,
-        AwarenessLevel::High => RTK_AWARENESS_HIGH,
-        AwarenessLevel::Full => RTK_AWARENESS_FULL,
+        AwarenessLevel::Default => PTK_AWARENESS_DEFAULT,
+        AwarenessLevel::High => PTK_AWARENESS_HIGH,
+        AwarenessLevel::Full => PTK_AWARENESS_FULL,
     }
 }
 
-/// Agents without a command hook must prefix `rtk` themselves, which only the `full` level
-/// teaches, so they always receive `RTK_AWARENESS_FULL`. This prints the one-line note that
+/// Agents without a command hook must prefix `ptk` themselves, which only the `full` level
+/// teaches, so they always receive `PTK_AWARENESS_FULL`. This prints the one-line note that
 /// tells the user why their configured `awareness.level` was not applied.
 fn print_rules_only_awareness_note(agent: &str, ctx: InitContext) {
     let prefix = if ctx.dry_run { "[dry-run] " } else { "  " };
@@ -217,14 +239,14 @@ fn print_rules_only_awareness_note(agent: &str, ctx: InitContext) {
         )
     };
     println!(
-        "{prefix}Awareness: full — {agent} has no command hook, so the agent is told to prefix rtk itself{ignored}"
+        "{prefix}Awareness: full — {agent} has no command hook, so the agent is told to prefix ptk itself{ignored}"
     );
 }
 
-/// Wrap an awareness file in the `<!-- rtk-instructions -->` markers used by
-/// `write_rtk_block`, so it can be upserted into a shared file like AGENTS.md.
-fn rtk_block(body: &str) -> String {
-    format!("{RTK_BLOCK_START} {RTK_BLOCK_VERSION} -->\n{body}{RTK_BLOCK_END}\n")
+/// Wrap an awareness file in the `<!-- ptk-instructions -->` markers used by
+/// `write_ptk_block`, so it can be upserted into a shared file like AGENTS.md.
+fn ptk_block(body: &str) -> String {
+    format!("{PTK_BLOCK_START} {PTK_BLOCK_VERSION} -->\n{body}{PTK_BLOCK_END}\n")
 }
 
 /// Shared dry-run footer printed at the end of every init sub-mode.
@@ -233,128 +255,128 @@ fn print_dry_run_footer() {
 }
 
 // Legacy full instructions for backward compatibility (--claude-md mode)
-const RTK_INSTRUCTIONS: &str = r##"<!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
+const PTK_INSTRUCTIONS: &str = r##"<!-- ptk-instructions v2 -->
+# PTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule
 
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
+**Always prefix commands with `ptk`**. If PTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means PTK is always safe to use.
 
-**Important**: Even in command chains with `&&`, use `rtk`:
+**Important**: Even in command chains with `&&`, use `ptk`:
 ```bash
 # ❌ Wrong
 git add . && git commit -m "msg" && git push
 
 # ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
+ptk git add . && ptk git commit -m "msg" && ptk git push
 ```
 
-## RTK Commands by Workflow
+## PTK Commands by Workflow
 
 ### Build & Compile (80-90% savings)
 ```bash
-rtk cargo build         # Cargo build output
-rtk cargo check         # Cargo check output
-rtk cargo clippy        # Clippy warnings grouped by file (80%)
-rtk tsc                 # TypeScript errors grouped by file/code (83%)
-rtk lint                # ESLint/Biome violations grouped (84%)
-rtk prettier --check    # Files needing format only (70%)
-rtk next build          # Next.js build with route metrics (87%)
+ptk cargo build         # Cargo build output
+ptk cargo check         # Cargo check output
+ptk cargo clippy        # Clippy warnings grouped by file (80%)
+ptk tsc                 # TypeScript errors grouped by file/code (83%)
+ptk lint                # ESLint/Biome violations grouped (84%)
+ptk prettier --check    # Files needing format only (70%)
+ptk next build          # Next.js build with route metrics (87%)
 ```
 
 ### Test (60-99% savings)
 ```bash
-rtk cargo test          # Cargo test failures only (90%)
-rtk go test             # Go test failures only (90%)
-rtk jest                # Jest failures only (99.5%)
-rtk vitest              # Vitest failures only (99.5%)
-rtk playwright test     # Playwright failures only (94%)
-rtk pytest              # Python test failures only (90%)
-rtk rake test           # Ruby test failures only (90%)
-rtk rspec               # RSpec test failures only (60%)
-rtk test <cmd>          # Generic test wrapper - failures only
+ptk cargo test          # Cargo test failures only (90%)
+ptk go test             # Go test failures only (90%)
+ptk jest                # Jest failures only (99.5%)
+ptk vitest              # Vitest failures only (99.5%)
+ptk playwright test     # Playwright failures only (94%)
+ptk pytest              # Python test failures only (90%)
+ptk rake test           # Ruby test failures only (90%)
+ptk rspec               # RSpec test failures only (60%)
+ptk test <cmd>          # Generic test wrapper - failures only
 ```
 
 ### Git (59-80% savings)
 ```bash
-rtk git status          # Compact status
-rtk git log             # Compact log (works with all git flags)
-rtk git diff            # Compact diff (80%)
-rtk git show            # Compact show (80%)
-rtk git add             # Ultra-compact confirmations (59%)
-rtk git commit          # Ultra-compact confirmations (59%)
-rtk git push            # Ultra-compact confirmations
-rtk git pull            # Ultra-compact confirmations
-rtk git branch          # Compact branch list
-rtk git fetch           # Compact fetch
-rtk git stash           # Compact stash
-rtk git worktree        # Compact worktree
+ptk git status          # Compact status
+ptk git log             # Compact log (works with all git flags)
+ptk git diff            # Compact diff (80%)
+ptk git show            # Compact show (80%)
+ptk git add             # Ultra-compact confirmations (59%)
+ptk git commit          # Ultra-compact confirmations (59%)
+ptk git push            # Ultra-compact confirmations
+ptk git pull            # Ultra-compact confirmations
+ptk git branch          # Compact branch list
+ptk git fetch           # Compact fetch
+ptk git stash           # Compact stash
+ptk git worktree        # Compact worktree
 ```
 
 Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
 
 ### GitHub (26-87% savings)
 ```bash
-rtk gh pr view <num>    # Compact PR view (87%)
-rtk gh pr checks        # Compact PR checks (79%)
-rtk gh run list         # Compact workflow runs (82%)
-rtk gh issue list       # Compact issue list (80%)
-rtk gh api              # Compact API responses (26%)
+ptk gh pr view <num>    # Compact PR view (87%)
+ptk gh pr checks        # Compact PR checks (79%)
+ptk gh run list         # Compact workflow runs (82%)
+ptk gh issue list       # Compact issue list (80%)
+ptk gh api              # Compact API responses (26%)
 ```
 
 ### JavaScript/TypeScript Tooling (70-90% savings)
 ```bash
-rtk pnpm list           # Compact dependency tree (70%)
-rtk pnpm outdated       # Compact outdated packages (80%)
-rtk pnpm install        # Compact install output (90%)
-rtk npm run <script>    # Compact npm script output
-rtk npx <cmd>           # Compact npx command output
-rtk prisma              # Prisma without ASCII art (88%)
-rtk uv run <cmd>        # Compact uv project command output
+ptk pnpm list           # Compact dependency tree (70%)
+ptk pnpm outdated       # Compact outdated packages (80%)
+ptk pnpm install        # Compact install output (90%)
+ptk npm run <script>    # Compact npm script output
+ptk npx <cmd>           # Compact npx command output
+ptk prisma              # Prisma without ASCII art (88%)
+ptk uv run <cmd>        # Compact uv project command output
 ```
 
 ### Files & Search (60-75% savings)
 ```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
-rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
-rtk find <pattern>      # Find grouped by directory (70%)
+ptk ls <path>           # Tree format, compact (65%)
+ptk read <file>         # Code reading with filtering (60%)
+ptk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
+ptk find <pattern>      # Find grouped by directory (70%)
 ```
 
 ### Analysis & Debug (70-90% savings)
 ```bash
-rtk err <cmd>           # Filter errors only from any command
-rtk log <file>          # Deduplicated logs with counts
-rtk json <file>         # JSON structure without values
-rtk deps                # Dependency overview
-rtk env                 # Environment variables compact
-rtk summary <cmd>       # Smart summary of command output
-rtk diff                # Ultra-compact diffs
+ptk err <cmd>           # Filter errors only from any command
+ptk log <file>          # Deduplicated logs with counts
+ptk json <file>         # JSON structure without values
+ptk deps                # Dependency overview
+ptk env                 # Environment variables compact
+ptk summary <cmd>       # Smart summary of command output
+ptk diff                # Ultra-compact diffs
 ```
 
 ### Infrastructure (85% savings)
 ```bash
-rtk docker ps           # Compact container list
-rtk docker images       # Compact image list
-rtk docker logs <c>     # Deduplicated logs
-rtk kubectl get         # Compact resource list
-rtk kubectl logs        # Deduplicated pod logs
+ptk docker ps           # Compact container list
+ptk docker images       # Compact image list
+ptk docker logs <c>     # Deduplicated logs
+ptk kubectl get         # Compact resource list
+ptk kubectl logs        # Deduplicated pod logs
 ```
 
 ### Network (65-70% savings)
 ```bash
-rtk curl <url>          # Compact HTTP responses (70%)
-rtk wget <url>          # Compact download output (65%)
+ptk curl <url>          # Compact HTTP responses (70%)
+ptk wget <url>          # Compact download output (65%)
 ```
 
 ### Meta Commands
 ```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-rtk discover            # Analyze Claude Code sessions for missed RTK usage
-rtk proxy <cmd>         # Run command without filtering (for debugging)
-rtk init                # Add RTK instructions to CLAUDE.md
-rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
+ptk gain                # View token savings statistics
+ptk gain --history      # View command history with savings
+ptk discover            # Analyze Claude Code sessions for missed PTK usage
+ptk proxy <cmd>         # Run command without filtering (for debugging)
+ptk init                # Add PTK instructions to CLAUDE.md
+ptk init --global       # Add PTK to ~/.claude/CLAUDE.md
 ```
 
 ## Token Savings Overview
@@ -371,10 +393,10 @@ rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
 | Network | curl, wget | 65-70% |
 
 Overall average: **60-90% token reduction** on common development operations.
-<!-- /rtk-instructions -->
+<!-- /ptk-instructions -->
 "##;
 
-/// Main entry point for `rtk init`
+/// Main entry point for `ptk init`
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     global: bool,
@@ -411,15 +433,15 @@ pub fn run(
     } else {
         // Validation: Global-only features
         if install_opencode && !global {
-            anyhow::bail!("OpenCode plugin is global-only. Use: rtk init -g --opencode");
+            anyhow::bail!("OpenCode plugin is global-only. Use: ptk init -g --opencode");
         }
 
         if install_cursor && !global {
-            anyhow::bail!("Cursor hooks are global-only. Use: rtk init -g --agent cursor");
+            anyhow::bail!("Cursor hooks are global-only. Use: ptk init -g --agent cursor");
         }
 
         if install_windsurf && !global {
-            anyhow::bail!("Windsurf support is global-only. Use: rtk init -g --agent windsurf");
+            anyhow::bail!("Windsurf support is global-only. Use: ptk init -g --agent windsurf");
         }
 
         if install_windsurf {
@@ -458,12 +480,12 @@ pub fn run(
         // Best-effort: unconditionally re-run tracking-DB schema migrations during
         // install/upgrade (bypassing the `user_version` gate `Tracker::new()` uses
         // on its hot path). This both pre-warms the schema so the first PreToolUse
-        // hook invocation (or `rtk <cmd>`) after this doesn't pay the one-time
+        // hook invocation (or `ptk <cmd>`) after this doesn't pay the one-time
         // migration cost itself, and self-heals a table dropped/corrupted
-        // out-of-band (see `tracking::warn_if_missing_table`) — `rtk init` is
+        // out-of-band (see `tracking::warn_if_missing_table`) — `ptk init` is
         // already the natural "something's wrong, reinstall" move, so no separate
         // repair flag is needed. `CREATE TABLE IF NOT EXISTS`/`ALTER TABLE` are
-        // additive, so existing history is left untouched. Never fail `rtk init`
+        // additive, so existing history is left untouched. Never fail `ptk init`
         // over a tracking-DB hiccup — but still tell the user something's wrong,
         // consistent with every other best-effort warning in this function
         // (rust-patterns.md's anti-pattern rule: a silent `Err(_) => {}` leaves
@@ -499,7 +521,7 @@ fn write_if_changed(path: &Path, content: &str, name: &str, ctx: InitContext) ->
     write_if_changed_internal(path, content, name, ctx, false)
 }
 
-/// Variant used for protected RTK files. A file that cannot be decoded is
+/// Variant used for protected PTK files. A file that cannot be decoded is
 /// still replaceable after the caller's policy allows it (for example,
 /// `--auto-patch`), so a read error is treated like differing content instead
 /// of preventing recovery.
@@ -714,9 +736,9 @@ fn prompt_telemetry_consent() -> Result<()> {
 
     // Explicit opt-out must short-circuit before the TTY heuristic: some
     // non-interactive environments (devcontainer `postCreateCommand`, certain
-    // CI agents) hand rtk a pseudo-TTY, so `is_terminal()` returns true even
+    // CI agents) hand ptk a pseudo-TTY, so `is_terminal()` returns true even
     // though no human is available to answer — the prompt then hangs forever.
-    // Setting `RTK_TELEMETRY_DISABLED=1` is the documented workaround, so the
+    // Setting `PTK_TELEMETRY_DISABLED=1` is the documented workaround, so the
     // init prompt has to honour it too, not only `telemetry::maybe_ping`.
     if crate::core::telemetry_cmd::telemetry_disabled_by_env() {
         return Ok(());
@@ -728,13 +750,13 @@ fn prompt_telemetry_consent() -> Result<()> {
 
     eprintln!();
     eprintln!("--- Telemetry ---");
-    eprintln!("RTK collects anonymous usage metrics once per day to improve filters.");
+    eprintln!("PTK collects anonymous usage metrics once per day to improve filters.");
     eprintln!();
     eprintln!("  What:    command names (not arguments), token savings, OS, version");
     eprintln!("  Why:     prioritize filter development for the most-used commands");
-    eprintln!("  Who:     RTK AI Labs, contact@rtk-ai.app");
-    eprintln!("  Rights:  disable anytime with `rtk telemetry disable`,");
-    eprintln!("           request erasure with `rtk telemetry forget`");
+    eprintln!("  Who:     PTK AI Labs, contact@rtk-ai.app");
+    eprintln!("  Rights:  disable anytime with `ptk telemetry disable`,");
+    eprintln!("           request erasure with `ptk telemetry forget`");
     eprintln!("  Details: https://github.com/rtk-ai/rtk/blob/master/docs/TELEMETRY.md");
     eprintln!();
     eprint!("Enable anonymous telemetry? [y/N] ");
@@ -754,7 +776,7 @@ fn prompt_telemetry_consent() -> Result<()> {
     save_telemetry_consent(accepted)?;
 
     if accepted {
-        eprintln!("  Telemetry enabled. Disable anytime: rtk telemetry disable");
+        eprintln!("  Telemetry enabled. Disable anytime: ptk telemetry disable");
     } else {
         eprintln!("  Telemetry disabled.");
     }
@@ -814,7 +836,7 @@ fn remove_hook_from_json(root: &mut serde_json::Value) -> bool {
     pre_tool_use_array.len() < original_len
 }
 
-/// Remove RTK hook from settings.json file
+/// Remove ptk hook from settings.json file
 /// Backs up before modification, returns true if hook was found and removed
 fn remove_hook_from_settings(ctx: InitContext) -> Result<bool> {
     let InitContext {
@@ -846,7 +868,7 @@ fn remove_hook_from_settings(ctx: InitContext) -> Result<bool> {
     if removed {
         if dry_run {
             println!(
-                "[dry-run] would remove RTK hook entry from {}",
+                "[dry-run] would remove ptk hook entry from {}",
                 settings_path.display()
             );
             if verbose > 0 {
@@ -868,7 +890,7 @@ fn remove_hook_from_settings(ctx: InitContext) -> Result<bool> {
         atomic_write(&settings_path, &serialized)?;
 
         if verbose > 0 {
-            eprintln!("Removed RTK hook from settings.json");
+            eprintln!("Removed ptk hook from settings.json");
         }
     }
 
@@ -920,9 +942,9 @@ pub fn uninstall_with_patch_mode(
         let cursor_removed = remove_cursor_hooks(ctx).context("Failed to remove Cursor hooks")?;
         if !cursor_removed.is_empty() {
             let header = if dry_run {
-                "[dry-run] would uninstall RTK (Cursor):"
+                "[dry-run] would uninstall PTK (Cursor):"
             } else {
-                "RTK uninstalled (Cursor):"
+                "PTK uninstalled (Cursor):"
             };
             println!("{}", header);
             for item in &cursor_removed {
@@ -932,7 +954,7 @@ pub fn uninstall_with_patch_mode(
                 println!("\nRestart Cursor to apply changes.");
             }
         } else {
-            println!("RTK Cursor support was not installed (nothing to remove)");
+            println!("PTK Cursor support was not installed (nothing to remove)");
         }
         if dry_run {
             print_dry_run_footer();
@@ -952,7 +974,7 @@ pub fn uninstall_with_patch_mode(
 
     if !global {
         anyhow::bail!(
-            "Uninstall only works with --global flag. For local projects, manually remove RTK from CLAUDE.md"
+            "Uninstall only works with --global flag. For local projects, manually remove PTK from CLAUDE.md"
         );
     }
 
@@ -965,9 +987,9 @@ pub fn uninstall_with_patch_mode(
         removed.extend(gemini_removed);
         if !removed.is_empty() {
             let header = if dry_run {
-                "[dry-run] would uninstall RTK (Gemini):"
+                "[dry-run] would uninstall PTK (Gemini):"
             } else {
-                "RTK uninstalled (Gemini):"
+                "PTK uninstalled (Gemini):"
             };
             println!("{}", header);
             for item in &removed {
@@ -977,7 +999,7 @@ pub fn uninstall_with_patch_mode(
                 println!("\nRestart Gemini CLI to apply changes.");
             }
         } else {
-            println!("RTK Gemini support was not installed (nothing to remove)");
+            println!("PTK Gemini support was not installed (nothing to remove)");
         }
         if dry_run {
             print_dry_run_footer();
@@ -1011,19 +1033,19 @@ pub fn uninstall_with_patch_mode(
         removed.push("Integrity hash: removed".to_string());
     }
 
-    // 2. Remove RTK.md
-    let rtk_md_path = claude_dir.join(RTK_MD);
-    if rtk_md_path.exists() {
+    // 2. Remove PTK.md
+    let ptk_md_path = claude_dir.join(PTK_MD);
+    if ptk_md_path.exists() {
         if dry_run {
-            println!("[dry-run] would remove RTK.md: {}", rtk_md_path.display());
+            println!("[dry-run] would remove PTK.md: {}", ptk_md_path.display());
         } else {
-            fs::remove_file(&rtk_md_path)
-                .with_context(|| format!("Failed to remove RTK.md: {}", rtk_md_path.display()))?;
+            fs::remove_file(&ptk_md_path)
+                .with_context(|| format!("Failed to remove PTK.md: {}", ptk_md_path.display()))?;
         }
-        removed.push(format!("RTK.md: {}", rtk_md_path.display()));
+        removed.push(format!("PTK.md: {}", ptk_md_path.display()));
     }
 
-    // 3. Remove @RTK.md reference from CLAUDE.md
+    // 3. Remove @PTK.md reference from CLAUDE.md
     let claude_md_path = claude_dir.join(CLAUDE_MD);
     if claude_md_path.exists() {
         let content = fs::read_to_string(&claude_md_path)
@@ -1032,24 +1054,24 @@ pub fn uninstall_with_patch_mode(
         let mut claude_md_changed = false;
         let mut working_content = content.clone();
 
-        if working_content.contains(RTK_MD_REF) {
+        if working_content.contains(PTK_MD_REF) {
             let new_content = working_content
                 .lines()
-                .filter(|line| !line.trim().starts_with(RTK_MD_REF))
+                .filter(|line| !line.trim().starts_with(PTK_MD_REF))
                 .collect::<Vec<_>>()
                 .join("\n");
 
             working_content = clean_double_blanks(&new_content);
             claude_md_changed = true;
-            removed.push("CLAUDE.md: removed @RTK.md reference".to_string());
+            removed.push("CLAUDE.md: removed @PTK.md reference".to_string());
         }
 
-        if working_content.contains(RTK_BLOCK_START) {
-            let (cleaned, did_remove) = remove_rtk_block(&working_content);
+        if working_content.contains(PTK_BLOCK_START) {
+            let (cleaned, did_remove) = remove_ptk_block(&working_content);
             if did_remove {
                 working_content = cleaned;
                 claude_md_changed = true;
-                removed.push("CLAUDE.md: removed rtk-instructions block".to_string());
+                removed.push("CLAUDE.md: removed ptk-instructions block".to_string());
             }
         }
 
@@ -1090,7 +1112,7 @@ pub fn uninstall_with_patch_mode(
 
     // 4. Remove hook entry from settings.json
     if remove_hook_from_settings(ctx)? {
-        removed.push("settings.json: removed RTK hook entry".to_string());
+        removed.push("settings.json: removed ptk hook entry".to_string());
     }
 
     // 5. Remove OpenCode plugin
@@ -1105,16 +1127,16 @@ pub fn uninstall_with_patch_mode(
 
     // Report results
     if removed.is_empty() {
-        println!("RTK was not installed (nothing to remove)");
+        println!("PTK was not installed (nothing to remove)");
         println!("  Checked: {}", hook_path.display());
-        println!("  Checked: {}", claude_dir.join(RTK_MD).display());
+        println!("  Checked: {}", claude_dir.join(PTK_MD).display());
         println!("  Checked: {}", claude_md_path.display());
         println!("  Checked: {}", claude_dir.join(SETTINGS_JSON).display());
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK:"
+            "[dry-run] would uninstall PTK:"
         } else {
-            "RTK uninstalled:"
+            "PTK uninstalled:"
         };
         println!("{}", header);
         for item in removed {
@@ -1140,20 +1162,20 @@ fn uninstall_codex(global: bool, ctx: InitContext) -> Result<()> {
     } else {
         uninstall_codex_with_paths(
             Path::new(AGENTS_MD),
-            Path::new(RTK_MD),
+            Path::new(PTK_MD),
             &Path::new(CODEX_DIR).join(HOOKS_JSON),
-            &[RTK_MD_REF],
+            &[PTK_MD_REF],
             ctx,
         )?
     };
 
     if removed.is_empty() {
-        println!("RTK was not installed for Codex CLI (nothing to remove)");
+        println!("PTK was not installed for Codex CLI (nothing to remove)");
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK for Codex CLI:"
+            "[dry-run] would uninstall PTK for Codex CLI:"
         } else {
-            "RTK uninstalled for Codex CLI:"
+            "PTK uninstalled for Codex CLI:"
         };
         println!("{}", header);
         for item in removed {
@@ -1165,21 +1187,21 @@ fn uninstall_codex(global: bool, ctx: InitContext) -> Result<()> {
 }
 
 fn uninstall_codex_at(codex_dir: &Path, ctx: InitContext) -> Result<Vec<String>> {
-    let absolute_rtk_md_ref = codex_rtk_md_ref(codex_dir);
+    let absolute_ptk_md_ref = codex_ptk_md_ref(codex_dir);
     uninstall_codex_with_paths(
         &codex_dir.join(AGENTS_MD),
-        &codex_dir.join(RTK_MD),
+        &codex_dir.join(PTK_MD),
         &codex_dir.join(HOOKS_JSON),
-        &[RTK_MD_REF, absolute_rtk_md_ref.as_str()],
+        &[PTK_MD_REF, absolute_ptk_md_ref.as_str()],
         ctx,
     )
 }
 
 fn uninstall_codex_with_paths(
     agents_md_path: &Path,
-    rtk_md_path: &Path,
+    ptk_md_path: &Path,
     hooks_json_path: &Path,
-    rtk_md_refs: &[&str],
+    ptk_md_refs: &[&str],
     ctx: InitContext,
 ) -> Result<Vec<String>> {
     let InitContext {
@@ -1191,18 +1213,18 @@ fn uninstall_codex_with_paths(
         removed.push(format!("hooks.json: removed {} entry", CODEX_HOOK_COMMAND));
     }
 
-    if rtk_md_path.exists() {
+    if ptk_md_path.exists() {
         if dry_run {
-            println!("[dry-run] would remove RTK.md: {}", rtk_md_path.display());
+            println!("[dry-run] would remove PTK.md: {}", ptk_md_path.display());
         } else {
             // nosemgrep: filesystem-deletion
-            fs::remove_file(rtk_md_path)
-                .with_context(|| format!("Failed to remove RTK.md: {}", rtk_md_path.display()))?;
+            fs::remove_file(ptk_md_path)
+                .with_context(|| format!("Failed to remove PTK.md: {}", ptk_md_path.display()))?;
             if verbose > 0 {
-                eprintln!("Removed RTK.md: {}", rtk_md_path.display());
+                eprintln!("Removed PTK.md: {}", ptk_md_path.display());
             }
         }
-        removed.push(format!("RTK.md: {}", rtk_md_path.display()));
+        removed.push(format!("PTK.md: {}", ptk_md_path.display()));
     }
 
     if agents_md_path.exists() {
@@ -1212,12 +1234,12 @@ fn uninstall_codex_with_paths(
         let mut working_content = content.clone();
         let mut agents_changed = false;
 
-        if working_content.contains(RTK_BLOCK_START) {
-            let (cleaned, did_remove) = remove_rtk_block(&working_content);
+        if working_content.contains(PTK_BLOCK_START) {
+            let (cleaned, did_remove) = remove_ptk_block(&working_content);
             if did_remove {
                 working_content = cleaned;
                 agents_changed = true;
-                removed.push("AGENTS.md: removed rtk-instructions block".to_string());
+                removed.push("AGENTS.md: removed ptk-instructions block".to_string());
             }
         }
 
@@ -1228,14 +1250,14 @@ fn uninstall_codex_with_paths(
         }
     }
 
-    if remove_rtk_reference_from_agents(agents_md_path, rtk_md_refs, ctx)? {
-        removed.push("AGENTS.md: removed @RTK.md reference".to_string());
+    if remove_ptk_reference_from_agents(agents_md_path, ptk_md_refs, ctx)? {
+        removed.push("AGENTS.md: removed @PTK.md reference".to_string());
     }
 
     Ok(removed)
 }
 
-/// Orchestrator: patch settings.json with RTK hook (binary command variant)
+/// Orchestrator: patch settings.json with ptk hook (binary command variant)
 /// Handles reading, checking, prompting, merging, backing up, and atomic writing
 fn patch_settings_json_command(
     hook_command: &str,
@@ -1342,7 +1364,7 @@ fn patch_settings_json_command(
 }
 
 /// Clean up consecutive blank lines (collapse 3+ to 2)
-/// Used when removing @RTK.md line from CLAUDE.md
+/// Used when removing @PTK.md line from CLAUDE.md
 fn clean_double_blanks(content: &str) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let mut result = Vec::new();
@@ -1371,7 +1393,7 @@ fn clean_double_blanks(content: &str) -> String {
     result.join("\n")
 }
 
-/// Deep-merge RTK hook entry into settings.json
+/// Deep-merge ptk hook entry into settings.json
 /// Creates hooks.PreToolUse structure if missing, preserves existing hooks
 fn insert_hook_entry(root: &mut serde_json::Value, hook_command: &str) -> Result<()> {
     let root_obj = match root.as_object_mut() {
@@ -1404,8 +1426,8 @@ fn insert_hook_entry(root: &mut serde_json::Value, hook_command: &str) -> Result
     Ok(())
 }
 
-/// Check if RTK hook is already present in settings.json
-/// Matches on legacy rtk-rewrite.sh path OR new `rtk hook claude` command
+/// Check if ptk hook is already present in settings.json
+/// Matches on legacy ptk-rewrite.sh path OR new `ptk hook claude` command
 fn hook_already_present(root: &serde_json::Value, hook_command: &str) -> bool {
     let pre_tool_use_array = match root
         .get("hooks")
@@ -1426,7 +1448,7 @@ fn hook_already_present(root: &serde_json::Value, hook_command: &str) -> bool {
         })
 }
 
-/// Default mode: hook + slim RTK.md + @RTK.md reference
+/// Default mode: hook + slim PTK.md + @PTK.md reference
 fn run_default_mode(
     global: bool,
     patch_mode: PatchMode,
@@ -1441,7 +1463,7 @@ fn run_default_mode(
         run_claude_md_mode_with(
             false,
             install_opencode,
-            &rtk_block(awareness_content(ctx.awareness)),
+            &ptk_block(awareness_content(ctx.awareness)),
             ctx,
         )?;
         generate_project_filters_template(ctx)?;
@@ -1449,14 +1471,14 @@ fn run_default_mode(
     }
 
     let claude_dir = resolve_claude_dir()?;
-    let rtk_md_path = claude_dir.join(RTK_MD);
+    let ptk_md_path = claude_dir.join(PTK_MD);
     let claude_md_path = claude_dir.join(CLAUDE_MD);
 
     // 1. Migrate old hook script if present
     migrate_old_hook_script(ctx);
 
-    // 2. Write RTK.md
-    write_if_changed(&rtk_md_path, awareness_content(ctx.awareness), RTK_MD, ctx)?;
+    // 2. Write PTK.md
+    write_if_changed(&ptk_md_path, awareness_content(ctx.awareness), PTK_MD, ctx)?;
     if dry_run {
         println!("[dry-run] awareness level: {}", ctx.awareness);
     }
@@ -1469,7 +1491,7 @@ fn run_default_mode(
         None
     };
 
-    // 3. Patch CLAUDE.md (add @RTK.md, migrate if needed)
+    // 3. Patch CLAUDE.md (add @PTK.md, migrate if needed)
     let migrated = patch_claude_md(&claude_md_path, ctx)?;
 
     // 4. Print success message (skip in dry-run)
@@ -1477,19 +1499,19 @@ fn run_default_mode(
         println!("\nRTK hook registered (global).\n");
         println!("  Command:   {}", CLAUDE_HOOK_COMMAND);
         println!(
-            "  RTK.md:    {} (awareness: {})",
-            rtk_md_path.display(),
+            "  PTK.md:    {} (awareness: {})",
+            ptk_md_path.display(),
             ctx.awareness
         );
         if let Some(path) = &opencode_plugin_path {
             println!("  OpenCode:  {}", path.display());
         }
-        println!("  CLAUDE.md: @RTK.md reference added");
+        println!("  CLAUDE.md: @PTK.md reference added");
 
         if migrated {
-            println!("\n  [ok] Migrated: removed 137-line RTK block from CLAUDE.md");
+            println!("\n  [ok] Migrated: removed 137-line PTK block from CLAUDE.md");
             println!(
-                "              replaced with @RTK.md (awareness: {})",
+                "              replaced with @PTK.md (awareness: {})",
                 ctx.awareness
             );
         }
@@ -1522,7 +1544,7 @@ fn run_default_mode(
         }
     }
 
-    // 6. Generate user-global filters template (~/.config/rtk/filters.toml)
+    // 6. Generate user-global filters template (~/.config/ptk/filters.toml)
     generate_global_filters_template(ctx)?;
 
     if !dry_run {
@@ -1533,8 +1555,8 @@ fn run_default_mode(
 }
 
 /// Migrate old hook script to new binary command.
-/// Deletes `~/.claude/hooks/rtk-rewrite.sh` and `.rtk-hook.sha256` if present,
-/// and removes the stale settings.json entry so the new `rtk hook claude` entry
+/// Deletes `~/.claude/hooks/ptk-rewrite.sh` and `.ptk-hook.sha256` if present,
+/// and removes the stale settings.json entry so the new `ptk hook claude` entry
 /// can be registered.
 fn migrate_old_hook_script(ctx: InitContext) {
     let InitContext {
@@ -1572,7 +1594,7 @@ fn migrate_old_hook_script(ctx: InitContext) {
         let hash_file = home
             .join(CLAUDE_DIR)
             .join(HOOKS_SUBDIR)
-            .join(".rtk-hook.sha256");
+            .join(".ptk-hook.sha256");
         if hash_file.exists() {
             if dry_run {
                 println!(
@@ -1598,8 +1620,8 @@ fn migrate_old_hook_script(ctx: InitContext) {
     }
 }
 
-/// Remove only legacy `rtk-rewrite.sh` entries from settings.json.
-/// Preserves any existing `rtk hook claude` entries (new format).
+/// Remove only legacy `ptk-rewrite.sh` entries from settings.json.
+/// Preserves any existing `ptk hook claude` entries (new format).
 fn remove_legacy_settings_entries(ctx: InitContext) -> Result<()> {
     let InitContext {
         verbose, dry_run, ..
@@ -1627,7 +1649,7 @@ fn remove_legacy_settings_entries(ctx: InitContext) -> Result<()> {
 
     if dry_run {
         println!(
-            "[dry-run] would remove legacy rtk-rewrite.sh entry from {}",
+            "[dry-run] would remove legacy ptk-rewrite.sh entry from {}",
             settings_path.display()
         );
         return Ok(());
@@ -1643,14 +1665,14 @@ fn remove_legacy_settings_entries(ctx: InitContext) -> Result<()> {
     atomic_write(&settings_path, &serialized)?;
 
     if verbose > 0 {
-        eprintln!("  [ok] Removed legacy rtk-rewrite.sh entry from settings.json");
+        eprintln!("  [ok] Removed legacy ptk-rewrite.sh entry from settings.json");
     }
     Ok(())
 }
 
-/// Remove only legacy `rtk-rewrite.sh` hook entries from a parsed settings.json.
+/// Remove only legacy `ptk-rewrite.sh` hook entries from a parsed settings.json.
 /// Returns true if any entries were removed.
-/// Does NOT remove `rtk hook claude` entries — those are the new format.
+/// Does NOT remove `ptk hook claude` entries — those are the new format.
 fn remove_legacy_hook_entries_from_json(root: &mut serde_json::Value) -> bool {
     let pre_tool_use_array = match root
         .get_mut("hooks")
@@ -1680,31 +1702,31 @@ fn remove_legacy_hook_entries_from_json(root: &mut serde_json::Value) -> bool {
     pre_tool_use_array.len() < original_len
 }
 
-/// Generate .rtk/filters.toml template in the current directory if not present.
+/// Generate .ptk/filters.toml template in the current directory if not present.
 fn generate_project_filters_template(ctx: InitContext) -> Result<()> {
     let InitContext {
         verbose, dry_run, ..
     } = ctx;
-    let rtk_dir = std::path::Path::new(".rtk");
-    let path = rtk_dir.join("filters.toml");
+    let ptk_dir = std::path::Path::new(".ptk");
+    let path = ptk_dir.join("filters.toml");
 
     if path.exists() {
         if verbose > 0 {
-            eprintln!(".rtk/filters.toml already exists, skipping template");
+            eprintln!(".ptk/filters.toml already exists, skipping template");
         }
         return Ok(());
     }
 
     if dry_run {
         println!(
-            "[dry-run] would create .rtk/filters.toml template: {}",
+            "[dry-run] would create .ptk/filters.toml template: {}",
             path.display()
         );
         return Ok(());
     }
 
-    fs::create_dir_all(rtk_dir)
-        .with_context(|| format!("Failed to create directory: {}", rtk_dir.display()))?;
+    fs::create_dir_all(ptk_dir)
+        .with_context(|| format!("Failed to create directory: {}", ptk_dir.display()))?;
     fs::write(&path, FILTERS_TEMPLATE)
         .with_context(|| format!("Failed to write {}", path.display()))?;
 
@@ -1715,14 +1737,14 @@ fn generate_project_filters_template(ctx: InitContext) -> Result<()> {
     Ok(())
 }
 
-/// Generate ~/.config/rtk/filters.toml template if not present.
+/// Generate ~/.config/ptk/filters.toml template if not present.
 fn generate_global_filters_template(ctx: InitContext) -> Result<()> {
     let InitContext {
         verbose, dry_run, ..
     } = ctx;
     let config_dir = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from(".config"));
-    let rtk_dir = config_dir.join(crate::core::constants::RTK_DATA_DIR);
-    let path = rtk_dir.join("filters.toml");
+    let ptk_dir = config_dir.join(crate::core::constants::PTK_DATA_DIR);
+    let path = ptk_dir.join("filters.toml");
 
     if path.exists() {
         if verbose > 0 {
@@ -1739,8 +1761,8 @@ fn generate_global_filters_template(ctx: InitContext) -> Result<()> {
         return Ok(());
     }
 
-    fs::create_dir_all(&rtk_dir)
-        .with_context(|| format!("Failed to create directory: {}", rtk_dir.display()))?;
+    fs::create_dir_all(&ptk_dir)
+        .with_context(|| format!("Failed to create directory: {}", ptk_dir.display()))?;
     fs::write(&path, FILTERS_GLOBAL_TEMPLATE)
         .with_context(|| format!("Failed to write {}", path.display()))?;
 
@@ -1801,14 +1823,14 @@ pub fn finalize_filter_trust(global: bool, dry_run: bool, trust: FilterTrust) ->
     if enable {
         let hash = crate::hooks::integrity::compute_hash_bytes(&bytes);
         crate::hooks::trust::trust_filter_with_hash(path, &hash)?;
-        eprintln!("Enabled. Revoke with `rtk untrust`.");
+        eprintln!("Enabled. Revoke with `ptk untrust`.");
     } else {
-        eprintln!("\x1b[33m  Not enabled — run `rtk trust` to review and enable.\x1b[0m");
+        eprintln!("\x1b[33m  Not enabled — run `ptk trust` to review and enable.\x1b[0m");
     }
     Ok(())
 }
 
-/// Hook-only mode: just the hook, no RTK.md
+/// Hook-only mode: just the hook, no PTK.md
 fn run_hook_only_mode(
     global: bool,
     patch_mode: PatchMode,
@@ -1840,7 +1862,7 @@ fn run_hook_only_mode(
             println!("  OpenCode: {}", path.display());
         }
         println!(
-            "  Note: No RTK.md created. Claude won't know about meta commands (gain, discover, proxy)."
+            "  Note: No PTK.md created. Claude won't know about meta commands (gain, discover, proxy)."
         );
     }
 
@@ -1878,9 +1900,9 @@ fn run_hook_only_mode(
     Ok(())
 }
 
-/// Legacy mode (--claude-md): inject the full RTK_INSTRUCTIONS block into CLAUDE.md.
+/// Legacy mode (--claude-md): inject the full PTK_INSTRUCTIONS block into CLAUDE.md.
 fn run_claude_md_mode(global: bool, install_opencode: bool, ctx: InitContext) -> Result<()> {
-    run_claude_md_mode_with(global, install_opencode, RTK_INSTRUCTIONS, ctx)
+    run_claude_md_mode_with(global, install_opencode, PTK_INSTRUCTIONS, ctx)
 }
 
 fn run_claude_md_mode_with(
@@ -1906,16 +1928,16 @@ fn run_claude_md_mode_with(
     }
 
     if verbose > 0 {
-        eprintln!("Writing rtk instructions to: {}", path.display());
+        eprintln!("Writing ptk instructions to: {}", path.display());
     }
 
     let recovery_cmd = if global {
-        "rtk init -g --claude-md"
+        "ptk init -g --claude-md"
     } else {
-        "rtk init --claude-md"
+        "ptk init --claude-md"
     };
 
-    let action = write_rtk_block(&path, block, "rtk instructions", recovery_cmd, ctx)?;
+    let action = write_ptk_block(&path, block, "ptk instructions", recovery_cmd, ctx)?;
 
     if matches!(action, RtkBlockUpsert::Unchanged) {
         return Ok(());
@@ -1933,10 +1955,10 @@ fn run_claude_md_mode_with(
             }
         }
         if !dry_run {
-            println!("   Claude Code will now use rtk in all sessions");
+            println!("   Claude Code will now use ptk in all sessions");
         }
     } else if !dry_run {
-        println!("   Claude Code will use rtk in this project");
+        println!("   Claude Code will use ptk in this project");
     }
 
     Ok(())
@@ -1954,16 +1976,16 @@ fn run_cline_mode(ctx: InitContext) -> Result<()> {
     let rules_path = PathBuf::from(".clinerules");
 
     let existing = fs::read_to_string(&rules_path).unwrap_or_default();
-    if existing.contains("RTK") || existing.contains("rtk") {
+    if existing.contains("PTK") || existing.contains("ptk") {
         if !dry_run {
             println!("\nRTK already configured for Cline in this project.\n");
             println!("  Rules: .clinerules (already present)");
         }
     } else {
         let new_content = if existing.trim().is_empty() {
-            RTK_AWARENESS_FULL.to_string()
+            PTK_AWARENESS_FULL.to_string()
         } else {
-            format!("{}\n\n{}", existing.trim(), RTK_AWARENESS_FULL)
+            format!("{}\n\n{}", existing.trim(), PTK_AWARENESS_FULL)
         };
         if dry_run {
             println!(
@@ -1986,7 +2008,7 @@ fn run_cline_mode(ctx: InitContext) -> Result<()> {
     }
     print_rules_only_awareness_note("Cline", ctx);
     if !dry_run {
-        println!("  Cline will now use rtk commands for token savings.");
+        println!("  Cline will now use ptk commands for token savings.");
         println!("  Test with: git status\n");
     }
 
@@ -2002,16 +2024,16 @@ fn run_windsurf_mode(ctx: InitContext) -> Result<()> {
     let rules_path = PathBuf::from(".windsurfrules");
 
     let existing = fs::read_to_string(&rules_path).unwrap_or_default();
-    if existing.contains("RTK") || existing.contains("rtk") {
+    if existing.contains("PTK") || existing.contains("ptk") {
         if !dry_run {
             println!("\nRTK already configured for Windsurf in this project.\n");
             println!("  Rules: .windsurfrules (already present)");
         }
     } else {
         let new_content = if existing.trim().is_empty() {
-            RTK_AWARENESS_FULL.to_string()
+            PTK_AWARENESS_FULL.to_string()
         } else {
-            format!("{}\n\n{}", existing.trim(), RTK_AWARENESS_FULL)
+            format!("{}\n\n{}", existing.trim(), PTK_AWARENESS_FULL)
         };
         if dry_run {
             println!(
@@ -2034,7 +2056,7 @@ fn run_windsurf_mode(ctx: InitContext) -> Result<()> {
     }
     print_rules_only_awareness_note("Windsurf", ctx);
     if !dry_run {
-        println!("  Cascade will now use rtk commands for token savings.");
+        println!("  Cascade will now use ptk commands for token savings.");
         println!("  Restart Windsurf. Test with: git status\n");
     }
 
@@ -2053,19 +2075,19 @@ fn run_kilocode_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
     } = ctx;
     // Kilo Code reads .kilocode/rules/ from the project root (workspace-scoped)
     let target_dir = base_dir.join(".kilocode/rules");
-    let rules_path = target_dir.join("rtk-rules.md");
+    let rules_path = target_dir.join("ptk-rules.md");
 
     let existing = fs::read_to_string(&rules_path).unwrap_or_default();
-    if existing.contains("RTK") || existing.contains("rtk") {
+    if existing.contains("PTK") || existing.contains("ptk") {
         if !dry_run {
             println!("\nRTK already configured for Kilo Code in this project.\n");
-            println!("  Rules: .kilocode/rules/rtk-rules.md (already present)");
+            println!("  Rules: .kilocode/rules/ptk-rules.md (already present)");
         }
     } else {
         let new_content = if existing.trim().is_empty() {
-            RTK_AWARENESS_FULL.to_string()
+            PTK_AWARENESS_FULL.to_string()
         } else {
-            format!("{}\n\n{}", existing.trim(), RTK_AWARENESS_FULL)
+            format!("{}\n\n{}", existing.trim(), PTK_AWARENESS_FULL)
         };
         if dry_run {
             println!(
@@ -2079,21 +2101,21 @@ fn run_kilocode_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
             fs::create_dir_all(&target_dir)
                 .context("Failed to create .kilocode/rules directory")?;
             fs::write(&rules_path, &new_content)
-                .context("Failed to write .kilocode/rules/rtk-rules.md")?;
+                .context("Failed to write .kilocode/rules/ptk-rules.md")?;
 
             if verbose > 0 {
-                eprintln!("Wrote .kilocode/rules/rtk-rules.md");
+                eprintln!("Wrote .kilocode/rules/ptk-rules.md");
             }
 
             println!("\nRTK configured for Kilo Code.\n");
-            println!("  Rules: .kilocode/rules/rtk-rules.md (installed)");
+            println!("  Rules: .kilocode/rules/ptk-rules.md (installed)");
         }
     }
     print_rules_only_awareness_note("Kilo Code", ctx);
     if dry_run {
         print_dry_run_footer();
     } else {
-        println!("  Kilo Code will now use rtk commands for token savings.");
+        println!("  Kilo Code will now use ptk commands for token savings.");
         println!("  Test with: git status\n");
     }
 
@@ -2112,19 +2134,19 @@ fn run_antigravity_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
     } = ctx;
     // Antigravity reads .agents/rules/ from the project root (workspace-scoped)
     let target_dir = base_dir.join(".agents/rules");
-    let rules_path = target_dir.join("antigravity-rtk-rules.md");
+    let rules_path = target_dir.join("antigravity-ptk-rules.md");
 
     let existing = fs::read_to_string(&rules_path).unwrap_or_default();
-    if existing.contains("RTK") || existing.contains("rtk") {
+    if existing.contains("PTK") || existing.contains("ptk") {
         if !dry_run {
             println!("\nRTK already configured for Antigravity in this project.\n");
-            println!("  Rules: .agents/rules/antigravity-rtk-rules.md (already present)");
+            println!("  Rules: .agents/rules/antigravity-ptk-rules.md (already present)");
         }
     } else {
         let new_content = if existing.trim().is_empty() {
-            RTK_AWARENESS_FULL.to_string()
+            PTK_AWARENESS_FULL.to_string()
         } else {
-            format!("{}\n\n{}", existing.trim(), RTK_AWARENESS_FULL)
+            format!("{}\n\n{}", existing.trim(), PTK_AWARENESS_FULL)
         };
         if dry_run {
             println!(
@@ -2137,21 +2159,21 @@ fn run_antigravity_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
         } else {
             fs::create_dir_all(&target_dir).context("Failed to create .agents/rules directory")?;
             fs::write(&rules_path, &new_content)
-                .context("Failed to write .agents/rules/antigravity-rtk-rules.md")?;
+                .context("Failed to write .agents/rules/antigravity-ptk-rules.md")?;
 
             if verbose > 0 {
-                eprintln!("Wrote .agents/rules/antigravity-rtk-rules.md");
+                eprintln!("Wrote .agents/rules/antigravity-ptk-rules.md");
             }
 
             println!("\nRTK configured for Google Antigravity.\n");
-            println!("  Rules: .agents/rules/antigravity-rtk-rules.md (installed)");
+            println!("  Rules: .agents/rules/antigravity-ptk-rules.md (installed)");
         }
     }
     print_rules_only_awareness_note("Antigravity", ctx);
     if dry_run {
         print_dry_run_footer();
     } else {
-        println!("  Antigravity will now use rtk commands for token savings.");
+        println!("  Antigravity will now use ptk commands for token savings.");
         println!("  Test with: git status\n");
     }
 
@@ -2160,8 +2182,8 @@ fn run_antigravity_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
 
 // ─── Hermes support ────────────────────────────────────────────
 
-const HERMES_PLUGIN_INIT: &str = include_str!("../../hooks/hermes/rtk-rewrite/__init__.py");
-const HERMES_PLUGIN_YAML: &str = include_str!("../../hooks/hermes/rtk-rewrite/plugin.yaml");
+const HERMES_PLUGIN_INIT: &str = include_str!("../../hooks/hermes/ptk-rewrite/__init__.py");
+const HERMES_PLUGIN_YAML: &str = include_str!("../../hooks/hermes/ptk-rewrite/plugin.yaml");
 
 pub fn run_hermes_mode(ctx: InitContext) -> Result<()> {
     let hermes_home = resolve_hermes_home()?;
@@ -2212,7 +2234,7 @@ fn run_hermes_mode_at(hermes_home: &Path, ctx: InitContext) -> Result<()> {
         println!("\nRTK configured for Hermes.\n");
         println!("  Plugin: {}", plugin_dir.display());
         println!("  Config: {}", config_path.display());
-        println!("  Hermes will now rewrite terminal commands through rtk.");
+        println!("  Hermes will now rewrite terminal commands through ptk.");
         println!("  Restart Hermes. Test with: git status\n");
     }
 
@@ -2225,12 +2247,12 @@ pub fn uninstall_hermes(ctx: InitContext) -> Result<()> {
     let removed = uninstall_hermes_at(&hermes_home, ctx)?;
 
     if removed.is_empty() {
-        println!("RTK Hermes support was not installed (nothing to remove)");
+        println!("PTK Hermes support was not installed (nothing to remove)");
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK for Hermes CLI:"
+            "[dry-run] would uninstall PTK for Hermes CLI:"
         } else {
-            "RTK uninstalled for Hermes CLI:"
+            "PTK uninstalled for Hermes CLI:"
         };
         println!("{}", header);
         for item in removed {
@@ -2251,8 +2273,8 @@ pub fn uninstall_hermes(ctx: InitContext) -> Result<()> {
 // It loads project-level instructions from `AGENTS.md` in the project root
 // (docs: kimi.com/help/kimi-code/cli-customization). Its PreToolUse hooks are
 // gate-only (allow/deny + feedback string) and cannot rewrite a command, so
-// `git status` -> `rtk git status` is impossible via a hook. We therefore
-// inject an RTK instructions block into AGENTS.md — same mechanism as Codex.
+// `git status` -> `ptk git status` is impossible via a hook. We therefore
+// inject an PTK instructions block into AGENTS.md — same mechanism as Codex.
 
 pub fn run_kimi_mode(ctx: InitContext) -> Result<()> {
     run_kimi_mode_at(&std::env::current_dir()?, ctx)
@@ -2262,11 +2284,11 @@ fn run_kimi_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
     // Kimi reads AGENTS.md from the project root (workspace-scoped).
     let agents_md_path = base_dir.join(AGENTS_MD);
 
-    write_rtk_block(
+    write_ptk_block(
         &agents_md_path,
-        &rtk_block(RTK_AWARENESS_FULL),
-        "RTK instructions",
-        "rtk init --agent kimi",
+        &ptk_block(PTK_AWARENESS_FULL),
+        "PTK instructions",
+        "ptk init --agent kimi",
         ctx,
     )?;
 
@@ -2274,7 +2296,7 @@ fn run_kimi_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
     if !ctx.dry_run {
         println!("\nRTK configured for Kimi AI.\n");
         println!("  AGENTS.md: {}", agents_md_path.display());
-        println!("  Kimi AI will now use rtk commands for token savings.");
+        println!("  Kimi AI will now use ptk commands for token savings.");
         println!("  Test with: git status\n");
     }
 
@@ -2295,7 +2317,7 @@ fn uninstall_hermes_at(hermes_home: &Path, ctx: InitContext) -> Result<Vec<Strin
                 plugin_dir.display()
             );
         } else {
-            // nosemgrep: filesystem-deletion -- uninstall intentionally removes only RTK's Hermes plugin directory.
+            // nosemgrep: filesystem-deletion -- uninstall intentionally removes only PTK's Hermes plugin directory.
             fs::remove_dir_all(&plugin_dir).with_context(|| {
                 format!(
                     "Failed to remove Hermes plugin directory: {}",
@@ -2332,7 +2354,7 @@ fn uninstall_hermes_at(hermes_home: &Path, ctx: InitContext) -> Result<Vec<Strin
                     eprintln!("Updated Hermes config: {}", config_path.display());
                 }
             }
-            removed.push("Hermes config: removed RTK plugin entry".to_string());
+            removed.push("Hermes config: removed PTK plugin entry".to_string());
         }
     }
 
@@ -2696,27 +2718,27 @@ fn normalized_yaml_scalar(value: &str) -> Option<String> {
 }
 
 fn run_codex_mode(global: bool, ctx: InitContext) -> Result<()> {
-    let (agents_md_path, rtk_md_path, hooks_json_path) = if global {
+    let (agents_md_path, ptk_md_path, hooks_json_path) = if global {
         let codex_dir = resolve_codex_dir()?;
         (
             codex_dir.join(AGENTS_MD),
-            codex_dir.join(RTK_MD),
+            codex_dir.join(PTK_MD),
             codex_dir.join(HOOKS_JSON),
         )
     } else {
         (
             PathBuf::from(AGENTS_MD),
-            PathBuf::from(RTK_MD),
+            PathBuf::from(PTK_MD),
             PathBuf::from(CODEX_DIR).join(HOOKS_JSON),
         )
     };
 
-    run_codex_mode_with_paths(agents_md_path, rtk_md_path, hooks_json_path, global, ctx)
+    run_codex_mode_with_paths(agents_md_path, ptk_md_path, hooks_json_path, global, ctx)
 }
 
 fn run_codex_mode_with_paths(
     agents_md_path: PathBuf,
-    rtk_md_path: PathBuf,
+    ptk_md_path: PathBuf,
     hooks_json_path: PathBuf,
     global: bool,
     ctx: InitContext,
@@ -2734,26 +2756,26 @@ fn run_codex_mode_with_paths(
         })?;
     }
 
-    // ISSUE #892: In global mode, use absolute path so @RTK.md resolves
+    // ISSUE #892: In global mode, use absolute path so @PTK.md resolves
     // from any CWD (worktrees, nested projects). Codex resolves @ references
     // relative to CWD, not the AGENTS.md file location.
-    let rtk_md_ref = if global {
-        codex_rtk_md_ref(
-            rtk_md_path
+    let ptk_md_ref = if global {
+        codex_ptk_md_ref(
+            ptk_md_path
                 .parent()
-                .context("RTK.md path missing parent directory")?,
+                .context("PTK.md path missing parent directory")?,
         )
     } else {
-        RTK_MD_REF.to_string()
+        PTK_MD_REF.to_string()
     };
 
-    write_if_changed(&rtk_md_path, awareness_content(ctx.awareness), RTK_MD, ctx)?;
-    let added_ref = patch_agents_md(&agents_md_path, &rtk_md_ref, ctx)?;
+    write_if_changed(&ptk_md_path, awareness_content(ctx.awareness), PTK_MD, ctx)?;
+    let added_ref = patch_agents_md(&agents_md_path, &ptk_md_ref, ctx)?;
     let hook_added = patch_codex_hooks_json(&hooks_json_path, ctx)?;
 
     if !dry_run {
         println!("\nRTK configured for Codex CLI.\n");
-        println!("  RTK.md:    {}", rtk_md_path.display());
+        println!("  PTK.md:    {}", ptk_md_path.display());
         println!(
             "  Hook:      {} ({})",
             hooks_json_path.display(),
@@ -2764,9 +2786,9 @@ fn run_codex_mode_with_paths(
             }
         );
         if added_ref {
-            println!("  AGENTS.md: {} reference added", rtk_md_ref);
+            println!("  AGENTS.md: {} reference added", ptk_md_ref);
         } else {
-            println!("  AGENTS.md: {} reference already present", rtk_md_ref);
+            println!("  AGENTS.md: {} reference already present", ptk_md_ref);
         }
         if global {
             println!(
@@ -2796,7 +2818,7 @@ fn run_codex_mode_with_paths(
                 println!("  This grants access to the directory, including SQLite sidecar files.");
                 println!("  No Codex permission settings have been changed.");
             }
-            Err(error) => eprintln!("rtk: warning: could not prepare tracking guidance: {error:#}"),
+            Err(error) => eprintln!("ptk: warning: could not prepare tracking guidance: {error:#}"),
         }
     }
 
@@ -2804,14 +2826,14 @@ fn run_codex_mode_with_paths(
 }
 
 fn codex_tracking_config(db_path: &Path) -> Result<String> {
-    let absolute = std::path::absolute(db_path).context("Failed to resolve RTK database path")?;
+    let absolute = std::path::absolute(db_path).context("Failed to resolve PTK database path")?;
     let parent = absolute
         .parent()
-        .context("RTK database path has no parent")?;
+        .context("PTK database path has no parent")?;
     let directory = fs::canonicalize(parent).unwrap_or_else(|_| parent.to_path_buf());
     let directory = directory
         .to_str()
-        .context("RTK database directory is not valid UTF-8")?;
+        .context("PTK database directory is not valid UTF-8")?;
     let quoted = toml::Value::String(directory.to_string());
     Ok(format!(
         "sandbox_mode = \"workspace-write\"\n\n[sandbox_workspace_write]\nwritable_roots = [{quoted}]\n"
@@ -2917,7 +2939,7 @@ fn remove_codex_hook_from_file(path: &Path, ctx: InitContext) -> Result<bool> {
         serde_json::to_string_pretty(&root).context("Failed to serialize Codex hooks.json")?;
     if dry_run {
         println!(
-            "[dry-run] would remove RTK hook entry from {}",
+            "[dry-run] would remove ptk hook entry from {}",
             path.display()
         );
         if verbose > 0 {
@@ -2928,13 +2950,13 @@ fn remove_codex_hook_from_file(path: &Path, ctx: InitContext) -> Result<bool> {
 
     backup_and_atomic_write(path, &serialized)?;
     if verbose > 0 {
-        eprintln!("Removed Codex RTK hook: {}", path.display());
+        eprintln!("Removed Codex ptk hook: {}", path.display());
     }
 
     Ok(true)
 }
 
-// --- upsert_rtk_block: idempotent RTK block management ---
+// --- upsert_ptk_block: idempotent PTK block management ---
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum RtkBlockUpsert {
@@ -2948,13 +2970,14 @@ enum RtkBlockUpsert {
     Malformed,
 }
 
-/// Insert or replace the RTK instructions block in `content`.
+/// Insert or replace the PTK instructions block in `content`.
 ///
 /// Returns `(new_content, action)` describing what happened.
 /// The caller decides whether to write `new_content` based on `action`.
-fn upsert_rtk_block(content: &str, block: &str) -> (String, RtkBlockUpsert) {
-    let start_marker = RTK_BLOCK_START;
-    let end_marker = RTK_BLOCK_END;
+fn upsert_ptk_block(content: &str, block: &str) -> (String, RtkBlockUpsert) {
+    let content: &str = &normalize_legacy_block_markers(content);
+    let start_marker = PTK_BLOCK_START;
+    let end_marker = PTK_BLOCK_END;
 
     if let Some(start) = content.find(start_marker) {
         if let Some(relative_end) = content[start..].find(end_marker) {
@@ -2997,9 +3020,9 @@ fn upsert_rtk_block(content: &str, block: &str) -> (String, RtkBlockUpsert) {
     }
 }
 
-/// Idempotently write an RTK-owned marker block into `path`, preserving user content.
+/// Idempotently write an PTK-owned marker block into `path`, preserving user content.
 ///
-/// Reads the file (if any), passes it through [`upsert_rtk_block`], and writes the
+/// Reads the file (if any), passes it through [`upsert_ptk_block`], and writes the
 /// result back via [`atomic_write`]. Refuses to modify files containing an opening
 /// marker without a matching closing marker (bails with a diagnostic and the exact
 /// `recovery_cmd` to re-run after manual cleanup).
@@ -3007,9 +3030,9 @@ fn upsert_rtk_block(content: &str, block: &str) -> (String, RtkBlockUpsert) {
 /// Returns the [`RtkBlockUpsert`] action so callers can branch on whether anything
 /// was actually changed (e.g., to skip post-install steps on `Unchanged`).
 ///
-/// `label` is shown in user-facing messages (e.g., `"rtk instructions"`,
+/// `label` is shown in user-facing messages (e.g., `"ptk instructions"`,
 /// `"Copilot instructions"`).
-fn write_rtk_block(
+fn write_ptk_block(
     path: &Path,
     block: &str,
     label: &str,
@@ -3024,7 +3047,7 @@ fn write_rtk_block(
         String::new()
     };
 
-    let (new_content, action) = upsert_rtk_block(&existing, block);
+    let (new_content, action) = upsert_ptk_block(&existing, block);
 
     match action {
         RtkBlockUpsert::Added => {
@@ -3053,13 +3076,13 @@ fn write_rtk_block(
         RtkBlockUpsert::Malformed => {
             eprintln!(
                 "[warn] Found '{}' without closing marker in {}",
-                RTK_BLOCK_START,
+                PTK_BLOCK_START,
                 path.display()
             );
             if let Some((line_num, _)) = existing
                 .lines()
                 .enumerate()
-                .find(|(_, line)| line.contains(RTK_BLOCK_START))
+                .find(|(_, line)| line.contains(PTK_BLOCK_START))
             {
                 eprintln!("    Location: line {}", line_num + 1);
             }
@@ -3076,7 +3099,7 @@ fn write_rtk_block(
     Ok(action)
 }
 
-/// Patch CLAUDE.md: add @RTK.md, migrate if old block exists
+/// Patch CLAUDE.md: add @PTK.md, migrate if old block exists
 fn patch_claude_md(path: &Path, ctx: InitContext) -> Result<bool> {
     let InitContext {
         verbose, dry_run, ..
@@ -3090,26 +3113,26 @@ fn patch_claude_md(path: &Path, ctx: InitContext) -> Result<bool> {
     let mut migrated = false;
 
     // Check for old block and migrate
-    if content.contains(RTK_BLOCK_START) {
-        let (new_content, did_migrate) = remove_rtk_block(&content);
+    if content.contains(PTK_BLOCK_START) {
+        let (new_content, did_migrate) = remove_ptk_block(&content);
         if did_migrate {
             content = new_content;
             migrated = true;
             if verbose > 0 {
-                eprintln!("Migrated: removed old RTK block from CLAUDE.md");
+                eprintln!("Migrated: removed old PTK block from CLAUDE.md");
             }
         }
     }
 
-    // Check if @RTK.md already present
-    if content.contains(RTK_MD_REF) {
+    // Check if @PTK.md already present
+    if content.contains(PTK_MD_REF) {
         if verbose > 0 {
-            eprintln!("@RTK.md reference already present in CLAUDE.md");
+            eprintln!("@PTK.md reference already present in CLAUDE.md");
         }
         if migrated {
             if dry_run {
                 println!(
-                    "[dry-run] would migrate old RTK block in CLAUDE.md: {}",
+                    "[dry-run] would migrate old PTK block in CLAUDE.md: {}",
                     path.display()
                 );
             } else {
@@ -3119,16 +3142,16 @@ fn patch_claude_md(path: &Path, ctx: InitContext) -> Result<bool> {
         return Ok(migrated);
     }
 
-    // Add @RTK.md
+    // Add @PTK.md
     let new_content = if content.is_empty() {
-        "@RTK.md\n".to_string()
+        "@PTK.md\n".to_string()
     } else {
-        format!("{}\n\n@RTK.md\n", content.trim())
+        format!("{}\n\n@PTK.md\n", content.trim())
     };
 
     if dry_run {
         println!(
-            "[dry-run] would add @RTK.md reference to CLAUDE.md: {}",
+            "[dry-run] would add @PTK.md reference to CLAUDE.md: {}",
             path.display()
         );
         if verbose > 0 {
@@ -3138,15 +3161,15 @@ fn patch_claude_md(path: &Path, ctx: InitContext) -> Result<bool> {
         fs::write(path, new_content)?;
 
         if verbose > 0 {
-            eprintln!("Added @RTK.md reference to CLAUDE.md");
+            eprintln!("Added @PTK.md reference to CLAUDE.md");
         }
     }
 
     Ok(migrated)
 }
 
-/// Patch AGENTS.md: add @RTK.md (or absolute path), migrate old inline block if present
-fn patch_agents_md(path: &Path, rtk_md_ref: &str, ctx: InitContext) -> Result<bool> {
+/// Patch AGENTS.md: add @PTK.md (or absolute path), migrate old inline block if present
+fn patch_agents_md(path: &Path, ptk_md_ref: &str, ctx: InitContext) -> Result<bool> {
     let InitContext {
         verbose, dry_run, ..
     } = ctx;
@@ -3158,38 +3181,38 @@ fn patch_agents_md(path: &Path, rtk_md_ref: &str, ctx: InitContext) -> Result<bo
     };
 
     let mut migrated = false;
-    if content.contains(RTK_BLOCK_START) {
-        let (new_content, did_migrate) = remove_rtk_block(&content);
+    if content.contains(PTK_BLOCK_START) {
+        let (new_content, did_migrate) = remove_ptk_block(&content);
         if did_migrate {
             content = new_content;
             migrated = true;
             if verbose > 0 {
-                eprintln!("Migrated: removed old RTK block from AGENTS.md");
+                eprintln!("Migrated: removed old PTK block from AGENTS.md");
             }
         }
     }
 
-    // ISSUE #892: Check for both relative and absolute @RTK.md references
-    if content.contains(RTK_MD_REF) || content.contains(rtk_md_ref) {
+    // ISSUE #892: Check for both relative and absolute @PTK.md references
+    if content.contains(PTK_MD_REF) || content.contains(ptk_md_ref) {
         if verbose > 0 {
-            eprintln!("{} reference already present in AGENTS.md", rtk_md_ref);
+            eprintln!("{} reference already present in AGENTS.md", ptk_md_ref);
         }
-        // ISSUE #892: Migrate old relative @RTK.md to absolute path if needed
-        if rtk_md_ref != RTK_MD_REF && content.contains(RTK_MD_REF) && !content.contains(rtk_md_ref)
+        // ISSUE #892: Migrate old relative @PTK.md to absolute path if needed
+        if ptk_md_ref != PTK_MD_REF && content.contains(PTK_MD_REF) && !content.contains(ptk_md_ref)
         {
-            content = content.replace(RTK_MD_REF, rtk_md_ref);
+            content = content.replace(PTK_MD_REF, ptk_md_ref);
             if dry_run {
                 println!(
                     "[dry-run] would migrate {} to {} in {}",
-                    RTK_MD_REF,
-                    rtk_md_ref,
+                    PTK_MD_REF,
+                    ptk_md_ref,
                     path.display()
                 );
             } else {
                 atomic_write(path, &content)
                     .with_context(|| format!("Failed to write AGENTS.md: {}", path.display()))?;
                 if verbose > 0 {
-                    eprintln!("Migrated {} to {}", RTK_MD_REF, rtk_md_ref);
+                    eprintln!("Migrated {} to {}", PTK_MD_REF, ptk_md_ref);
                 }
             }
             return Ok(true);
@@ -3209,15 +3232,15 @@ fn patch_agents_md(path: &Path, rtk_md_ref: &str, ctx: InitContext) -> Result<bo
     }
 
     let new_content = if content.is_empty() {
-        format!("{}\n", rtk_md_ref)
+        format!("{}\n", ptk_md_ref)
     } else {
-        format!("{}\n\n{}\n", content.trim(), rtk_md_ref)
+        format!("{}\n\n{}\n", content.trim(), ptk_md_ref)
     };
 
     if dry_run {
         println!(
             "[dry-run] would add {} reference to AGENTS.md: {}",
-            rtk_md_ref,
+            ptk_md_ref,
             path.display()
         );
         if verbose > 0 {
@@ -3227,21 +3250,21 @@ fn patch_agents_md(path: &Path, rtk_md_ref: &str, ctx: InitContext) -> Result<bo
         atomic_write(path, &new_content)
             .with_context(|| format!("Failed to write AGENTS.md: {}", path.display()))?;
         if verbose > 0 {
-            eprintln!("Added {} reference to AGENTS.md", rtk_md_ref);
+            eprintln!("Added {} reference to AGENTS.md", ptk_md_ref);
         }
     }
 
     Ok(true)
 }
 
-fn has_rtk_reference(content: &str, refs: &[&str]) -> bool {
+fn has_ptk_reference(content: &str, refs: &[&str]) -> bool {
     content
         .lines()
         .map(str::trim)
         .any(|line| refs.contains(&line))
 }
 
-fn remove_rtk_reference_from_agents(path: &Path, refs: &[&str], ctx: InitContext) -> Result<bool> {
+fn remove_ptk_reference_from_agents(path: &Path, refs: &[&str], ctx: InitContext) -> Result<bool> {
     let InitContext {
         verbose, dry_run, ..
     } = ctx;
@@ -3251,7 +3274,7 @@ fn remove_rtk_reference_from_agents(path: &Path, refs: &[&str], ctx: InitContext
 
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read AGENTS.md: {}", path.display()))?;
-    if !has_rtk_reference(&content, refs) {
+    if !has_ptk_reference(&content, refs) {
         return Ok(false);
     }
 
@@ -3267,7 +3290,7 @@ fn remove_rtk_reference_from_agents(path: &Path, refs: &[&str], ctx: InitContext
 
     if dry_run {
         println!(
-            "[dry-run] would remove RTK.md reference from AGENTS.md: {}",
+            "[dry-run] would remove PTK.md reference from AGENTS.md: {}",
             path.display()
         );
         if verbose > 0 {
@@ -3281,7 +3304,7 @@ fn remove_rtk_reference_from_agents(path: &Path, refs: &[&str], ctx: InitContext
 
     if verbose > 0 {
         eprintln!(
-            "Removed RTK.md reference from AGENTS.md: {}",
+            "Removed PTK.md reference from AGENTS.md: {}",
             path.display()
         );
     }
@@ -3289,10 +3312,11 @@ fn remove_rtk_reference_from_agents(path: &Path, refs: &[&str], ctx: InitContext
     Ok(true)
 }
 
-/// Remove old RTK block from CLAUDE.md (migration helper)
-fn remove_rtk_block(content: &str) -> (String, bool) {
-    if let (Some(start), Some(end)) = (content.find(RTK_BLOCK_START), content.find(RTK_BLOCK_END)) {
-        let end_pos = end + RTK_BLOCK_END.len();
+/// Remove old PTK block from CLAUDE.md (migration helper)
+fn remove_ptk_block(content: &str) -> (String, bool) {
+    let content: &str = &normalize_legacy_block_markers(content);
+    if let (Some(start), Some(end)) = (content.find(PTK_BLOCK_START), content.find(PTK_BLOCK_END)) {
+        let end_pos = end + PTK_BLOCK_END.len();
         let before = content[..start].trim_end();
         let after = content[end_pos..].trim_start();
 
@@ -3303,23 +3327,23 @@ fn remove_rtk_block(content: &str) -> (String, bool) {
         };
 
         (result, true) // migrated
-    } else if content.contains(RTK_BLOCK_START) {
+    } else if content.contains(PTK_BLOCK_START) {
         eprintln!(
             "[warn] Warning: Found '{}' without closing marker.",
-            RTK_BLOCK_START
+            PTK_BLOCK_START
         );
         eprintln!("    This can happen if CLAUDE.md was manually edited.");
 
         if let Some((line_num, _)) = content
             .lines()
             .enumerate()
-            .find(|(_, line)| line.contains(RTK_BLOCK_START))
+            .find(|(_, line)| line.contains(PTK_BLOCK_START))
         {
             eprintln!("    Location: line {}", line_num + 1);
         }
 
         eprintln!("    Action: Manually remove the incomplete block, then re-run:");
-        eprintln!("            rtk init -g");
+        eprintln!("            ptk init -g");
         (content.to_string(), false)
     } else {
         (content.to_string(), false)
@@ -3546,7 +3570,7 @@ fn run_droid_mode_at(droid_dir: &Path, global: bool, ctx: InitContext) -> Result
 
     let patched = patch_droid_hook_file(&target, ctx)?;
 
-    // Migrate stale copies (e.g. an earlier RTK install into settings.json
+    // Migrate stale copies (e.g. an earlier PTK install into settings.json
     // that hooks.json now shadows) so exactly one live entry remains.
     // Best-effort: a corrupt secondary file must not block the install.
     for candidate in droid_hook_file_candidates(droid_dir) {
@@ -3555,11 +3579,11 @@ fn run_droid_mode_at(droid_dir: &Path, global: bool, ctx: InitContext) -> Result
         }
         match remove_droid_hook_from_file(&candidate, ctx) {
             Ok(true) => println!(
-                "  Removed stale RTK entry from {}",
+                "  Removed stale PTK entry from {}",
                 candidate.path.display()
             ),
             Ok(false) => {}
-            Err(e) => eprintln!("rtk: warning: {e:#}"),
+            Err(e) => eprintln!("ptk: warning: {e:#}"),
         }
     }
 
@@ -3571,9 +3595,9 @@ fn run_droid_mode_at(droid_dir: &Path, global: bool, ctx: InitContext) -> Result
         println!("  Command:    {}", DROID_HOOK_COMMAND);
         println!("  Hooks file: {}", target.path.display());
         if patched {
-            println!("  RTK PreToolUse entry added");
+            println!("  PTK PreToolUse entry added");
         } else {
-            println!("  RTK PreToolUse entry already present");
+            println!("  PTK PreToolUse entry already present");
         }
         println!("  Restart Droid. Test with: git status\n");
     }
@@ -3581,7 +3605,7 @@ fn run_droid_mode_at(droid_dir: &Path, global: bool, ctx: InitContext) -> Result
     Ok(())
 }
 
-/// Insert RTK PreToolUse entry into a Droid hook file.
+/// Insert PTK PreToolUse entry into a Droid hook file.
 /// Returns true if the file was modified.
 fn patch_droid_hook_file(file: &DroidHookFile, ctx: InitContext) -> Result<bool> {
     let InitContext {
@@ -3592,7 +3616,7 @@ fn patch_droid_hook_file(file: &DroidHookFile, ctx: InitContext) -> Result<bool>
 
     if droid_hook_already_present(&root, file.layout) {
         if verbose > 0 {
-            eprintln!("{}: RTK hook already present", path.display());
+            eprintln!("{}: ptk hook already present", path.display());
         }
         return Ok(false);
     }
@@ -3618,7 +3642,7 @@ fn patch_droid_hook_file(file: &DroidHookFile, ctx: InitContext) -> Result<bool>
     Ok(true)
 }
 
-/// Check if the RTK PreToolUse Execute hook is already in a Droid hook file.
+/// Check if the PTK PreToolUse Execute hook is already in a Droid hook file.
 fn droid_hook_already_present(root: &serde_json::Value, layout: DroidLayout) -> bool {
     let pre = match droid_events(root, layout)
         .get(PRE_TOOL_USE_KEY)
@@ -3642,7 +3666,7 @@ fn droid_hook_already_present(root: &serde_json::Value, layout: DroidLayout) -> 
     })
 }
 
-/// Insert the RTK Execute matcher into a Droid hook file.
+/// Insert the PTK Execute matcher into a Droid hook file.
 fn insert_droid_hook_entry(root: &mut serde_json::Value, layout: DroidLayout) -> Result<()> {
     let root_obj = match root.as_object_mut() {
         Some(obj) => obj,
@@ -3694,7 +3718,7 @@ fn insert_droid_hook_entry(root: &mut serde_json::Value, layout: DroidLayout) ->
     Ok(())
 }
 
-/// Uninstall Factory Droid integration: strip RTK hook entry from settings.json.
+/// Uninstall Factory Droid integration: strip ptk hook entry from settings.json.
 pub fn uninstall_droid(global: bool, ctx: InitContext) -> Result<()> {
     let InitContext { dry_run, .. } = ctx;
     let droid_dir = if global {
@@ -3707,12 +3731,12 @@ pub fn uninstall_droid(global: bool, ctx: InitContext) -> Result<()> {
     let removed = uninstall_droid_at(&droid_dir, ctx)?;
 
     if removed.is_empty() {
-        println!("RTK Droid support was not installed (nothing to remove)");
+        println!("PTK Droid support was not installed (nothing to remove)");
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK for Factory Droid:"
+            "[dry-run] would uninstall PTK for Factory Droid:"
         } else {
-            "RTK uninstalled for Factory Droid:"
+            "PTK uninstalled for Factory Droid:"
         };
         println!("{}", header);
         for item in removed {
@@ -3741,7 +3765,7 @@ fn uninstall_droid_at(droid_dir: &Path, ctx: InitContext) -> Result<Vec<String>>
 
     if !errors.is_empty() {
         return Err(anyhow::anyhow!(
-            "Failed to uninstall RTK from one or more Droid hook files:\n  - {}",
+            "Failed to uninstall PTK from one or more Droid hook files:\n  - {}",
             errors.join("\n  - ")
         ));
     }
@@ -3749,8 +3773,8 @@ fn uninstall_droid_at(droid_dir: &Path, ctx: InitContext) -> Result<Vec<String>>
     Ok(removed)
 }
 
-/// Strip the RTK entry from one Droid hook file. Returns true if the file
-/// held an RTK entry (and was rewritten, unless dry-run).
+/// Strip the PTK entry from one Droid hook file. Returns true if the file
+/// held an PTK entry (and was rewritten, unless dry-run).
 fn remove_droid_hook_from_file(file: &DroidHookFile, ctx: InitContext) -> Result<bool> {
     let InitContext {
         verbose, dry_run, ..
@@ -3768,7 +3792,7 @@ fn remove_droid_hook_from_file(file: &DroidHookFile, ctx: InitContext) -> Result
 
     if dry_run {
         println!(
-            "[dry-run] would remove RTK entry from Droid hook file: {}",
+            "[dry-run] would remove PTK entry from Droid hook file: {}",
             path.display()
         );
     } else {
@@ -3777,7 +3801,7 @@ fn remove_droid_hook_from_file(file: &DroidHookFile, ctx: InitContext) -> Result
         backup_and_atomic_write(path, &serialized)?;
 
         if verbose > 0 {
-            eprintln!("Removed RTK hook from {}", path.display());
+            eprintln!("Removed ptk hook from {}", path.display());
         }
     }
     Ok(true)
@@ -3849,8 +3873,8 @@ fn remove_droid_hook_from_json(root: &mut serde_json::Value, layout: DroidLayout
     modified
 }
 
-fn codex_rtk_md_ref(codex_dir: &Path) -> String {
-    format!("@{}", codex_dir.join(RTK_MD).display())
+fn codex_ptk_md_ref(codex_dir: &Path) -> String {
+    format!("@{}", codex_dir.join(PTK_MD).display())
 }
 
 fn resolve_opencode_dir() -> Result<PathBuf> {
@@ -3875,8 +3899,8 @@ fn pi_plugin_path(pi_dir: &Path) -> PathBuf {
 }
 
 /// Return the Pi extension install path for the given scope.
-/// global=true  → `$PI_CODING_AGENT_DIR/extensions/rtk.ts`
-/// global=false → `./.pi/extensions/rtk.ts`
+/// global=true  → `$PI_CODING_AGENT_DIR/extensions/ptk.ts`
+/// global=false → `./.pi/extensions/ptk.ts`
 fn pi_plugin_path_for_scope(global: bool) -> Result<PathBuf> {
     if global {
         Ok(pi_plugin_path(&resolve_pi_dir()?))
@@ -3967,7 +3991,7 @@ fn is_current_pi_plugin(content: &str) -> bool {
         == normalize_pi_plugin_line_endings(PI_PLUGIN).trim_end()
 }
 
-fn looks_like_rtk_pi_plugin(content: &str) -> bool {
+fn looks_like_ptk_pi_plugin(content: &str) -> bool {
     content.contains(PI_PLUGIN_REWRITE_MARKER)
 }
 
@@ -4055,7 +4079,7 @@ fn read_managed_agents(path: &Path) -> Result<ManagedAgentState> {
         }
         Err(error) => {
             eprintln!(
-                "[warn] RTK extension ownership state at {} could not be read; treating ownership as unknown: {}",
+                "[warn] PTK extension ownership state at {} could not be read; treating ownership as unknown: {}",
                 state_path.display(),
                 error
             );
@@ -4081,7 +4105,7 @@ fn read_managed_agents(path: &Path) -> Result<ManagedAgentState> {
 
     if has_invalid_entry {
         eprintln!(
-            "[warn] RTK extension ownership state at {} contains unknown entries; treating ownership as unknown",
+            "[warn] PTK extension ownership state at {} contains unknown entries; treating ownership as unknown",
             state_path.display()
         );
         return Ok(ManagedAgentState::Unknown);
@@ -4089,7 +4113,7 @@ fn read_managed_agents(path: &Path) -> Result<ManagedAgentState> {
 
     if agents.is_empty() {
         eprintln!(
-            "[warn] RTK extension ownership state at {} is empty; treating ownership as unknown",
+            "[warn] PTK extension ownership state at {} is empty; treating ownership as unknown",
             state_path.display()
         );
         return Ok(ManagedAgentState::Unknown);
@@ -4119,7 +4143,7 @@ fn record_managed_agent(
         match read_managed_agents(path)? {
             ManagedAgentState::Absent => {
                 eprintln!(
-                    "[warn] RTK extension ownership state at {} could not be established because this pre-existing extension has no ownership record; preserving the absent state and proceeding without recording {}",
+                    "[warn] PTK extension ownership state at {} could not be established because this pre-existing extension has no ownership record; preserving the absent state and proceeding without recording {}",
                     state_path.display(),
                     agent.state_name()
                 );
@@ -4131,7 +4155,7 @@ fn record_managed_agent(
                 // record. The extension was installed successfully, but the
                 // existing state must remain intact for the fallback path.
                 eprintln!(
-                    "[warn] RTK extension ownership state at {} could not be updated because ownership is unknown; preserving it and proceeding without recording {}",
+                    "[warn] PTK extension ownership state at {} could not be updated because ownership is unknown; preserving it and proceeding without recording {}",
                     state_path.display(),
                     agent.state_name()
                 );
@@ -4151,7 +4175,7 @@ fn record_managed_agent(
             .collect::<Vec<_>>()
             .join("\n")
     );
-    write_if_changed_allow_read_error(&state_path, &content, "RTK extension ownership state", ctx)?;
+    write_if_changed_allow_read_error(&state_path, &content, "PTK extension ownership state", ctx)?;
     Ok(())
 }
 
@@ -4162,14 +4186,14 @@ fn remove_managed_agent_state(state_path: &Path, ctx: InitContext) -> Result<()>
 
     if ctx.dry_run {
         println!(
-            "[dry-run] would remove RTK extension ownership state: {}",
+            "[dry-run] would remove PTK extension ownership state: {}",
             state_path.display()
         );
     } else {
-        // nosemgrep: filesystem-deletion -- state belongs exclusively to the RTK-managed extension.
+        // nosemgrep: filesystem-deletion -- state belongs exclusively to the PTK-managed extension.
         fs::remove_file(state_path).with_context(|| {
             format!(
-                "Failed to remove RTK extension ownership state: {}",
+                "Failed to remove PTK extension ownership state: {}",
                 state_path.display()
             )
         })?;
@@ -4180,9 +4204,9 @@ fn remove_managed_agent_state(state_path: &Path, ctx: InitContext) -> Result<()>
 /// Determine whether a Pi-compatible extension path is shared by both agents,
 /// distinguishing definitive sidecar ownership from unavailable information.
 ///
-/// The ownership sidecar records which agents RTK installed for a relocated
+/// The ownership sidecar records which agents PTK installed for a relocated
 /// shared path. A missing sidecar is treated as uncertain because the
-/// extension may predate RTK's ownership tracking.
+/// extension may predate PTK's ownership tracking.
 fn extension_share_status(
     global: bool,
     path: &Path,
@@ -4224,7 +4248,7 @@ fn warn_if_extension_shared_on_install(
             agent.name()
         ),
         ExtensionShareStatus::Unknown => eprintln!(
-            "[warn] Pi and OMP resolve to the same {} extension path at {}, but RTK could not confirm both agents' ownership; installing {} without a definitive ownership record.",
+            "[warn] Pi and OMP resolve to the same {} extension path at {}, but PTK could not confirm both agents' ownership; installing {} without a definitive ownership record.",
             scope,
             path.display(),
             agent.name()
@@ -4246,7 +4270,7 @@ fn confirm_shared_extension_uninstall(
         ExtensionShareStatus::NotShared => return Ok(true),
         ExtensionShareStatus::Unknown => {
             eprintln!(
-                "[warn] Pi and OMP resolve to the same {} extension path at {}, but RTK could not confirm both agents' ownership; proceeding with {} uninstall without shared-path protection.",
+                "[warn] Pi and OMP resolve to the same {} extension path at {}, but PTK could not confirm both agents' ownership; proceeding with {} uninstall without shared-path protection.",
                 scope,
                 path.display(),
                 agent.name()
@@ -4342,7 +4366,7 @@ fn uninstall_pi_with_patch_mode(
         if dry_run {
             print_dry_run_footer();
         } else {
-            println!("RTK Pi extension was not installed (nothing to remove)");
+            println!("PTK Pi extension was not installed (nothing to remove)");
         }
         return Ok(());
     }
@@ -4353,7 +4377,7 @@ fn uninstall_pi_with_patch_mode(
     };
 
     if !is_known_stock_pi_plugin(&content) {
-        if looks_like_rtk_pi_plugin(&content) {
+        if looks_like_ptk_pi_plugin(&content) {
             if dry_run {
                 println!(
                     "[dry-run] would refuse to remove Pi extension: {}",
@@ -4363,12 +4387,12 @@ fn uninstall_pi_with_patch_mode(
                 return Ok(());
             }
             anyhow::bail!(
-                "Pi extension at {} contains RTK content that does not match the stock extension. Remove the file manually.",
+                "Pi extension at {} contains PTK content that does not match the stock extension. Remove the file manually.",
                 plugin_path.display()
             );
         }
         println!(
-            "Pi extension at {} is not RTK content; leaving it alone.",
+            "Pi extension at {} is not PTK content; leaving it alone.",
             plugin_path.display()
         );
         if dry_run {
@@ -4402,14 +4426,14 @@ fn uninstall_pi_with_patch_mode(
         remove_managed_agent_state(&ownership_state_path, ctx)?;
         print_dry_run_footer();
     } else {
-        // nosemgrep: filesystem-deletion -- Pi uninstall removes only a known RTK stock extension.
+        // nosemgrep: filesystem-deletion -- Pi uninstall removes only a known PTK stock extension.
         fs::remove_file(&plugin_path)
             .with_context(|| format!("Failed to remove Pi extension: {}", plugin_path.display()))?;
         remove_managed_agent_state(&ownership_state_path, ctx)?;
         if verbose > 0 {
             eprintln!("Removed Pi extension: {}", plugin_path.display());
         }
-        println!("RTK uninstalled (Pi):");
+        println!("PTK uninstalled (Pi):");
         println!("  - Pi extension: {}", plugin_path.display());
         println!("\nRestart pi to apply changes.");
     }
@@ -4418,8 +4442,8 @@ fn uninstall_pi_with_patch_mode(
 
 /// Install the Pi extension (hook-only; no AGENTS.md injection).
 ///
-/// global=true  → `$PI_CODING_AGENT_DIR/extensions/rtk.ts`
-/// global=false → `.pi/extensions/rtk.ts`
+/// global=true  → `$PI_CODING_AGENT_DIR/extensions/ptk.ts`
+/// global=false → `.pi/extensions/ptk.ts`
 #[allow(dead_code)] // Kept as the default-policy API for in-crate callers and tests.
 pub fn run_pi_mode(global: bool, ctx: InitContext) -> Result<()> {
     run_pi_mode_with_patch_mode(global, PatchMode::Ask, ctx)
@@ -4486,14 +4510,14 @@ fn print_pi_result(plugin_path: &Path, installed: bool) {
     } else {
         "already up to date"
     };
-    println!("RTK Pi extension {}:", status);
+    println!("PTK Pi extension {}:", status);
     println!("  Extension: {}", plugin_path.display());
     println!();
     println!("Pi will load the extension automatically on next start.");
     println!("Verify: pi -e {} --no-session", plugin_path.display());
 }
 
-/// Return OpenCode plugin path: ~/.config/opencode/plugins/rtk.ts
+/// Return OpenCode plugin path: ~/.config/opencode/plugins/ptk.ts
 fn opencode_plugin_path(opencode_dir: &Path) -> PathBuf {
     opencode_dir.join(PLUGIN_SUBDIR).join(OPENCODE_PLUGIN_FILE)
 }
@@ -4550,11 +4574,11 @@ fn remove_opencode_plugin(ctx: InitContext) -> Result<Vec<PathBuf>> {
 
 // OMP ships a `legacy-pi-compat` layer that remaps the Pi coding-agent
 // extension API, so it loads the exact same extension file as Pi
-// (`hooks/pi/rtk.ts`, embedded as `PI_PLUGIN`). Only the install paths
+// (`hooks/pi/ptk.ts`, embedded as `PI_PLUGIN`). Only the install paths
 // differ:
 //
-//   global=true  -> `$HOME/.omp/agent/extensions/rtk.ts`
-//   global=false -> `.omp/extensions/rtk.ts`
+//   global=true  -> `$HOME/.omp/agent/extensions/ptk.ts`
+//   global=false -> `.omp/extensions/ptk.ts`
 
 /// Return the OMP extension install path for the given scope.
 fn omp_extension_path_for_scope(global: bool) -> Result<PathBuf> {
@@ -4570,7 +4594,7 @@ fn omp_extension_path_for_scope(global: bool) -> Result<PathBuf> {
 }
 
 /// Resolve OMP's global agent directory. OMP itself uses
-/// `PI_CODING_AGENT_DIR` for this relocation, so RTK follows the same
+/// `PI_CODING_AGENT_DIR` for this relocation, so PTK follows the same
 /// override instead of introducing a second path configuration.
 fn resolve_omp_dir() -> Result<PathBuf> {
     if let Ok(dir) = std::env::var(PI_CODING_AGENT_DIR_ENV)
@@ -4584,8 +4608,8 @@ fn resolve_omp_dir() -> Result<PathBuf> {
 /// Install the shared Pi extension file for OMP (hook-only; no AGENTS.md
 /// injection). OMP loads the file through its `legacy-pi-compat` layer.
 ///
-/// global=true  -> `$HOME/.omp/agent/extensions/rtk.ts`
-/// global=false -> `.omp/extensions/rtk.ts`
+/// global=true  -> `$HOME/.omp/agent/extensions/ptk.ts`
+/// global=false -> `.omp/extensions/ptk.ts`
 #[allow(dead_code)] // Kept as the default-policy API for in-crate callers and tests.
 pub fn run_omp_mode(global: bool, ctx: InitContext) -> Result<()> {
     run_omp_mode_with_patch_mode(global, PatchMode::Ask, ctx)
@@ -4652,7 +4676,7 @@ fn print_omp_result(extension_path: &Path, installed: bool) {
     } else {
         "already up to date"
     };
-    println!("RTK OMP extension {}:", status);
+    println!("PTK OMP extension {}:", status);
     println!("  Extension: {}", extension_path.display());
     println!();
     println!("OMP will load the extension automatically on next start.");
@@ -4661,7 +4685,7 @@ fn print_omp_result(extension_path: &Path, installed: bool) {
 /// Uninstall the OMP extension for the given scope.
 ///
 /// The installed file is the shared stock Pi extension. Current and known
-/// historical stock content is removed; RTK content that no longer matches a
+/// historical stock content is removed; PTK content that no longer matches a
 /// known stock revision is left in place with a manual-removal notice.
 /// Unrelated content is never touched.
 #[allow(dead_code)] // Kept as the default-policy API for in-crate callers and tests.
@@ -4685,7 +4709,7 @@ pub fn uninstall_omp_with_patch_mode(
         if dry_run {
             print_dry_run_footer();
         } else {
-            println!("RTK OMP extension was not installed (nothing to remove)");
+            println!("PTK OMP extension was not installed (nothing to remove)");
         }
         return Ok(());
     }
@@ -4718,18 +4742,18 @@ pub fn uninstall_omp_with_patch_mode(
             remove_managed_agent_state(&ownership_state_path, ctx)?;
             print_dry_run_footer();
         } else {
-            // nosemgrep: filesystem-deletion -- OMP uninstall removes only the RTK-managed extension file.
+            // nosemgrep: filesystem-deletion -- OMP uninstall removes only the PTK-managed extension file.
             fs::remove_file(&path)
                 .with_context(|| format!("Failed to remove OMP extension: {}", path.display()))?;
             remove_managed_agent_state(&ownership_state_path, ctx)?;
             if verbose > 0 {
                 eprintln!("Removed OMP extension: {}", path.display());
             }
-            println!("RTK uninstalled (OMP):");
+            println!("PTK uninstalled (OMP):");
             println!("  - Extension: {}", path.display());
             println!("\nRestart OMP to apply changes.");
         }
-    } else if looks_like_rtk_pi_plugin(&content) {
+    } else if looks_like_ptk_pi_plugin(&content) {
         if dry_run {
             println!(
                 "[dry-run] would refuse to remove OMP extension: {}",
@@ -4739,12 +4763,12 @@ pub fn uninstall_omp_with_patch_mode(
             return Ok(());
         }
         anyhow::bail!(
-            "OMP extension at {} contains RTK content that does not match the stock extension. Remove the file manually.",
+            "OMP extension at {} contains PTK content that does not match the stock extension. Remove the file manually.",
             path.display()
         );
     } else {
         println!(
-            "OMP extension at {} is not RTK content; leaving it alone.",
+            "OMP extension at {} is not PTK content; leaving it alone.",
             path.display()
         );
         if dry_run {
@@ -4805,9 +4829,9 @@ fn install_cursor_hooks(ctx: InitContext) -> Result<()> {
         println!("  hooks.json: {}", hooks_json_path.display());
 
         if patched {
-            println!("  hooks.json: RTK preToolUse entry added");
+            println!("  hooks.json: PTK preToolUse entry added");
         } else {
-            println!("  hooks.json: RTK preToolUse entry already present");
+            println!("  hooks.json: PTK preToolUse entry already present");
         }
 
         println!("  Cursor reloads hooks.json automatically. Test with: git status\n");
@@ -4816,7 +4840,7 @@ fn install_cursor_hooks(ctx: InitContext) -> Result<()> {
     Ok(())
 }
 
-/// Patch ~/.cursor/hooks.json to add RTK preToolUse hook.
+/// Patch ~/.cursor/hooks.json to add PTK preToolUse hook.
 /// Returns true if the file was modified.
 fn patch_cursor_hooks_json(path: &Path, ctx: InitContext) -> Result<bool> {
     let InitContext {
@@ -4827,7 +4851,7 @@ fn patch_cursor_hooks_json(path: &Path, ctx: InitContext) -> Result<bool> {
     // Check idempotency
     if cursor_hook_already_present(&root) {
         if verbose > 0 {
-            eprintln!("Cursor hooks.json: RTK hook already present");
+            eprintln!("Cursor hooks.json: ptk hook already present");
         }
         return Ok(false);
     }
@@ -4857,8 +4881,8 @@ fn patch_cursor_hooks_json(path: &Path, ctx: InitContext) -> Result<bool> {
     Ok(true)
 }
 
-/// Check if RTK preToolUse hook is already present in Cursor hooks.json
-/// Matches on legacy rtk-rewrite.sh path OR new `rtk hook cursor` command
+/// Check if PTK preToolUse hook is already present in Cursor hooks.json
+/// Matches on legacy ptk-rewrite.sh path OR new `ptk hook cursor` command
 fn cursor_hook_already_present(root: &serde_json::Value) -> bool {
     let hooks = match root
         .get("hooks")
@@ -4877,7 +4901,7 @@ fn cursor_hook_already_present(root: &serde_json::Value) -> bool {
     })
 }
 
-/// Insert RTK preToolUse entry into Cursor hooks.json
+/// Insert PTK preToolUse entry into Cursor hooks.json
 fn insert_cursor_hook_entry(root: &mut serde_json::Value) -> Result<()> {
     let root_obj = match root.as_object_mut() {
         Some(obj) => obj,
@@ -4908,8 +4932,8 @@ fn insert_cursor_hook_entry(root: &mut serde_json::Value) -> Result<()> {
     Ok(())
 }
 
-/// Remove only legacy `rtk-rewrite.sh` entries from Cursor hooks.json.
-/// Preserves any existing `rtk hook cursor` entries (new format).
+/// Remove only legacy `ptk-rewrite.sh` entries from Cursor hooks.json.
+/// Preserves any existing `ptk hook cursor` entries (new format).
 fn remove_legacy_cursor_hooks_json_entries(path: &Path, ctx: InitContext) -> Result<()> {
     let InitContext {
         verbose, dry_run, ..
@@ -4924,7 +4948,7 @@ fn remove_legacy_cursor_hooks_json_entries(path: &Path, ctx: InitContext) -> Res
 
     if dry_run {
         println!(
-            "[dry-run] would remove legacy rtk-rewrite.sh entry from Cursor hooks.json: {}",
+            "[dry-run] would remove legacy ptk-rewrite.sh entry from Cursor hooks.json: {}",
             path.display()
         );
         return Ok(());
@@ -4935,14 +4959,14 @@ fn remove_legacy_cursor_hooks_json_entries(path: &Path, ctx: InitContext) -> Res
     backup_and_atomic_write(path, &serialized)?;
 
     if verbose > 0 {
-        eprintln!("  [ok] Removed legacy rtk-rewrite.sh entry from Cursor hooks.json");
+        eprintln!("  [ok] Removed legacy ptk-rewrite.sh entry from Cursor hooks.json");
     }
     Ok(())
 }
 
-/// Remove only legacy `rtk-rewrite.sh` entries from parsed Cursor hooks.json.
+/// Remove only legacy `ptk-rewrite.sh` entries from parsed Cursor hooks.json.
 /// Returns true if any entries were removed.
-/// Does NOT remove `rtk hook cursor` entries — those are the new format.
+/// Does NOT remove `ptk hook cursor` entries — those are the new format.
 fn remove_legacy_cursor_hook_entries_from_json(root: &mut serde_json::Value) -> bool {
     let pre_tool_use = match root
         .get_mut("hooks")
@@ -4964,7 +4988,7 @@ fn remove_legacy_cursor_hook_entries_from_json(root: &mut serde_json::Value) -> 
     pre_tool_use.len() < original_len
 }
 
-/// Remove Cursor RTK artifacts: hook script + hooks.json entry
+/// Remove Cursor PTK artifacts: hook script + hooks.json entry
 fn remove_cursor_hooks(ctx: InitContext) -> Result<Vec<String>> {
     let cursor_dir = resolve_cursor_dir()?;
     remove_cursor_hooks_at(&cursor_dir, ctx)
@@ -4993,13 +5017,13 @@ fn remove_cursor_hooks_at(cursor_dir: &Path, ctx: InitContext) -> Result<Vec<Str
         removed.push(format!("Cursor hook: {}", hook_path.display()));
     }
 
-    // 2. Remove RTK entry from hooks.json
+    // 2. Remove PTK entry from hooks.json
     let hooks_json_path = cursor_dir.join(HOOKS_JSON);
     let root = match read_json_file(&hooks_json_path) {
         Ok(root) => root,
         Err(error) if error.downcast_ref::<serde_json::Error>().is_some() => {
             eprintln!(
-                "rtk: warning: leaving malformed Cursor hooks.json unchanged during uninstall: {error:#}"
+                "ptk: warning: leaving malformed Cursor hooks.json unchanged during uninstall: {error:#}"
             );
             None
         }
@@ -5010,7 +5034,7 @@ fn remove_cursor_hooks_at(cursor_dir: &Path, ctx: InitContext) -> Result<Vec<Str
     {
         if dry_run {
             println!(
-                "[dry-run] would remove RTK entry from Cursor hooks.json: {}",
+                "[dry-run] would remove PTK entry from Cursor hooks.json: {}",
                 hooks_json_path.display()
             );
         } else {
@@ -5019,16 +5043,16 @@ fn remove_cursor_hooks_at(cursor_dir: &Path, ctx: InitContext) -> Result<Vec<Str
             backup_and_atomic_write(&hooks_json_path, &serialized)?;
 
             if verbose > 0 {
-                eprintln!("Removed RTK hook from Cursor hooks.json");
+                eprintln!("Removed ptk hook from Cursor hooks.json");
             }
         }
-        removed.push("Cursor hooks.json: removed RTK entry".to_string());
+        removed.push("Cursor hooks.json: removed PTK entry".to_string());
     }
 
     Ok(removed)
 }
 
-/// Remove RTK preToolUse entry from Cursor hooks.json
+/// Remove PTK preToolUse entry from Cursor hooks.json
 /// Returns true if entry was found and removed
 /// Matches both legacy script path and new binary command
 fn remove_cursor_hook_from_json(root: &mut serde_json::Value) -> bool {
@@ -5052,7 +5076,7 @@ fn remove_cursor_hook_from_json(root: &mut serde_json::Value) -> bool {
     pre_tool_use.len() < original_len
 }
 
-/// Show current rtk configuration
+/// Show current ptk configuration
 pub fn show_config(codex: bool, omp: bool) -> Result<()> {
     if omp {
         return show_omp_config();
@@ -5069,18 +5093,18 @@ fn show_omp_config() -> Result<()> {
     let global_extension = omp_extension_path_for_scope(true)?;
     let project_extension = omp_extension_path_for_scope(false)?;
 
-    println!("rtk Configuration (Oh My Pi):\n");
+    println!("ptk Configuration (Oh My Pi):\n");
     print_omp_extension_status("Global extension", &global_extension)?;
     print_omp_extension_status("Project extension", &project_extension)?;
 
     println!("\nUsage:");
-    println!("  rtk init --agent omp                 # Configure ./.omp/extensions/rtk.ts");
+    println!("  ptk init --agent omp                 # Configure ./.omp/extensions/ptk.ts");
     println!(
-        "  rtk init -g --agent omp              # Configure {}",
+        "  ptk init -g --agent omp              # Configure {}",
         global_extension.display()
     );
-    println!("  rtk init --agent omp --uninstall     # Remove project OMP RTK extension");
-    println!("  rtk init -g --agent omp --uninstall  # Remove global OMP RTK extension");
+    println!("  ptk init --agent omp --uninstall     # Remove project OMP PTK extension");
+    println!("  ptk init -g --agent omp --uninstall  # Remove global OMP PTK extension");
 
     Ok(())
 }
@@ -5098,19 +5122,19 @@ fn print_omp_extension_status(label: &str, path: &Path) -> Result<()> {
             println!("  {}: {} (up to date)", label, path.display());
         } else if is_known_stock_pi_plugin(&content) {
             println!(
-                "  {}: {} (stock version - will be replaced on next rtk init)",
+                "  {}: {} (stock version - will be replaced on next ptk init)",
                 label,
                 path.display()
             );
-        } else if looks_like_rtk_pi_plugin(&content) {
+        } else if looks_like_ptk_pi_plugin(&content) {
             println!(
-                "  {}: {} (modified RTK content - rtk init will ask before overwriting; use --auto-patch to replace)",
+                "  {}: {} (modified PTK content - ptk init will ask before overwriting; use --auto-patch to replace)",
                 label,
                 path.display()
             );
         } else {
             println!(
-                "  {}: {} (unrelated content - rtk init will ask before overwriting; use --auto-patch to replace)",
+                "  {}: {} (unrelated content - ptk init will ask before overwriting; use --auto-patch to replace)",
                 label,
                 path.display()
             );
@@ -5124,11 +5148,11 @@ fn print_omp_extension_status(label: &str, path: &Path) -> Result<()> {
 fn show_claude_config() -> Result<()> {
     let claude_dir = resolve_claude_dir()?;
     let hook_path = claude_dir.join(HOOKS_SUBDIR).join(REWRITE_HOOK_FILE);
-    let rtk_md_path = claude_dir.join(RTK_MD);
+    let ptk_md_path = claude_dir.join(PTK_MD);
     let global_claude_md = claude_dir.join(CLAUDE_MD);
     let local_claude_md = PathBuf::from(CLAUDE_MD);
 
-    println!("rtk Configuration:\n");
+    println!("ptk Configuration:\n");
 
     // Check hook: prefer binary command detection, fall back to script file
     let settings_path = claude_dir.join(SETTINGS_JSON);
@@ -5155,8 +5179,8 @@ fn show_claude_config() -> Result<()> {
 
             let hook_content = fs::read_to_string(&hook_path)?;
             let has_guards =
-                hook_content.contains("command -v rtk") && hook_content.contains("command -v jq");
-            let is_thin_delegator = hook_content.contains("rtk rewrite");
+                hook_content.contains("command -v ptk") && hook_content.contains("command -v jq");
+            let is_thin_delegator = hook_content.contains("ptk rewrite");
             let hook_version = super::hook_check::parse_hook_version(&hook_content);
 
             if !is_executable {
@@ -5166,12 +5190,12 @@ fn show_claude_config() -> Result<()> {
                 );
             } else if !is_thin_delegator {
                 println!(
-                    "[warn] Hook: {} (outdated — run `rtk init -g` to upgrade to native binary)",
+                    "[warn] Hook: {} (outdated — run `ptk init -g` to upgrade to native binary)",
                     hook_path.display()
                 );
             } else if is_executable && has_guards {
                 println!(
-                    "[warn] Hook: {} (legacy script v{} — run `rtk init -g` to upgrade)",
+                    "[warn] Hook: {} (legacy script v{} — run `ptk init -g` to upgrade)",
                     hook_path.display(),
                     hook_version
                 );
@@ -5186,7 +5210,7 @@ fn show_claude_config() -> Result<()> {
         #[cfg(not(unix))]
         {
             println!(
-                "[warn] Hook: {} (legacy script — run `rtk init -g` to upgrade)",
+                "[warn] Hook: {} (legacy script — run `ptk init -g` to upgrade)",
                 hook_path.display()
             );
         }
@@ -5194,11 +5218,11 @@ fn show_claude_config() -> Result<()> {
         println!("[--] Hook: not found");
     }
 
-    // Check RTK.md
-    if rtk_md_path.exists() {
-        println!("[ok] RTK.md: {} (slim mode)", rtk_md_path.display());
+    // Check PTK.md
+    if ptk_md_path.exists() {
+        println!("[ok] PTK.md: {} (slim mode)", ptk_md_path.display());
     } else {
-        println!("[--] RTK.md: not found");
+        println!("[--] PTK.md: not found");
     }
 
     // Check hook integrity (only relevant for legacy script hooks)
@@ -5208,10 +5232,10 @@ fn show_claude_config() -> Result<()> {
                 println!("[ok] Integrity: hook hash verified");
             }
             Ok(integrity::IntegrityStatus::Tampered { .. }) => {
-                println!("[FAIL] Integrity: hook modified outside rtk init (run: rtk verify)");
+                println!("[FAIL] Integrity: hook modified outside ptk init (run: ptk verify)");
             }
             Ok(integrity::IntegrityStatus::NoBaseline) => {
-                println!("[warn] Integrity: no baseline hash (run: rtk init -g to establish)");
+                println!("[warn] Integrity: no baseline hash (run: ptk init -g to establish)");
             }
             Ok(integrity::IntegrityStatus::NotInstalled)
             | Ok(integrity::IntegrityStatus::OrphanedHash) => {
@@ -5226,14 +5250,14 @@ fn show_claude_config() -> Result<()> {
     // Check global CLAUDE.md
     if global_claude_md.exists() {
         let content = fs::read_to_string(&global_claude_md)?;
-        if content.contains(RTK_MD_REF) {
-            println!("[ok] Global (~/.claude/CLAUDE.md): @RTK.md reference");
-        } else if content.contains(RTK_BLOCK_START) {
+        if content.contains(PTK_MD_REF) {
+            println!("[ok] Global (~/.claude/CLAUDE.md): @PTK.md reference");
+        } else if content.contains(PTK_BLOCK_START) {
             println!(
-                "[warn] Global (~/.claude/CLAUDE.md): old RTK block (run: rtk init -g to migrate)"
+                "[warn] Global (~/.claude/CLAUDE.md): old PTK block (run: ptk init -g to migrate)"
             );
         } else {
-            println!("[--] Global (~/.claude/CLAUDE.md): exists but rtk not configured");
+            println!("[--] Global (~/.claude/CLAUDE.md): exists but ptk not configured");
         }
     } else {
         println!("[--] Global (~/.claude/CLAUDE.md): not found");
@@ -5242,10 +5266,10 @@ fn show_claude_config() -> Result<()> {
     // Check local CLAUDE.md
     if local_claude_md.exists() {
         let content = fs::read_to_string(&local_claude_md)?;
-        if content.contains("rtk") {
-            println!("[ok] Local (./CLAUDE.md): rtk enabled");
+        if content.contains("ptk") {
+            println!("[ok] Local (./CLAUDE.md): ptk enabled");
         } else {
-            println!("[--] Local (./CLAUDE.md): exists but rtk not configured");
+            println!("[--] Local (./CLAUDE.md): exists but ptk not configured");
         }
     } else {
         println!("[--] Local (./CLAUDE.md): not found");
@@ -5258,10 +5282,10 @@ fn show_claude_config() -> Result<()> {
         if !content.trim().is_empty() {
             if let Ok(root) = from_json_str::<serde_json::Value>(content) {
                 if hook_already_present(&root, CLAUDE_HOOK_COMMAND) {
-                    println!("[ok] settings.json: RTK hook configured");
+                    println!("[ok] settings.json: ptk hook configured");
                 } else {
-                    println!("[warn] settings.json: exists but RTK hook not configured");
-                    println!("    Run: rtk init -g --auto-patch");
+                    println!("[warn] settings.json: exists but ptk hook not configured");
+                    println!("    Run: ptk init -g --auto-patch");
                 }
             } else {
                 println!("[warn] settings.json: exists but invalid JSON");
@@ -5320,7 +5344,7 @@ fn show_claude_config() -> Result<()> {
                         );
                     } else {
                         println!(
-                            "[warn] Cursor hook: {} (legacy script — run `rtk init -g --agent cursor` to upgrade)",
+                            "[warn] Cursor hook: {} (legacy script — run `ptk init -g --agent cursor` to upgrade)",
                             cursor_hook.display()
                         );
                     }
@@ -5329,7 +5353,7 @@ fn show_claude_config() -> Result<()> {
                 #[cfg(not(unix))]
                 {
                     println!(
-                        "[warn] Cursor hook: {} (legacy script — run `rtk init -g --agent cursor` to upgrade)",
+                        "[warn] Cursor hook: {} (legacy script — run `ptk init -g --agent cursor` to upgrade)",
                         cursor_hook.display()
                     );
                 }
@@ -5341,17 +5365,17 @@ fn show_claude_config() -> Result<()> {
     }
 
     println!("\nUsage:");
-    println!("  rtk init              # Full injection into local CLAUDE.md");
-    println!("  rtk init -g           # Hook + RTK.md + @RTK.md + settings.json (recommended)");
-    println!("  rtk init -g --auto-patch    # Same as above but no prompt");
-    println!("  rtk init -g --no-patch      # Skip settings.json (manual setup)");
-    println!("  rtk init -g --uninstall     # Remove all RTK artifacts");
-    println!("  rtk init -g --claude-md     # Legacy: full injection into ~/.claude/CLAUDE.md");
-    println!("  rtk init -g --hook-only     # Hook only, no RTK.md");
-    println!("  rtk init --codex            # Configure local AGENTS.md + RTK.md + hooks.json");
-    println!("  rtk init -g --codex         # Configure global AGENTS.md + RTK.md + hooks.json");
-    println!("  rtk init -g --opencode      # OpenCode plugin only");
-    println!("  rtk init -g --agent cursor  # Install Cursor Agent hooks");
+    println!("  ptk init              # Full injection into local CLAUDE.md");
+    println!("  ptk init -g           # Hook + PTK.md + @PTK.md + settings.json (recommended)");
+    println!("  ptk init -g --auto-patch    # Same as above but no prompt");
+    println!("  ptk init -g --no-patch      # Skip settings.json (manual setup)");
+    println!("  ptk init -g --uninstall     # Remove all PTK artifacts");
+    println!("  ptk init -g --claude-md     # Legacy: full injection into ~/.claude/CLAUDE.md");
+    println!("  ptk init -g --hook-only     # Hook only, no PTK.md");
+    println!("  ptk init --codex            # Configure local AGENTS.md + PTK.md + hooks.json");
+    println!("  ptk init -g --codex         # Configure global AGENTS.md + PTK.md + hooks.json");
+    println!("  ptk init -g --opencode      # OpenCode plugin only");
+    println!("  ptk init -g --agent cursor  # Install Cursor Agent hooks");
 
     Ok(())
 }
@@ -5359,19 +5383,19 @@ fn show_claude_config() -> Result<()> {
 fn show_codex_config() -> Result<()> {
     let codex_dir = resolve_codex_dir()?;
     let global_agents_md = codex_dir.join(AGENTS_MD);
-    let global_rtk_md = codex_dir.join(RTK_MD);
+    let global_ptk_md = codex_dir.join(PTK_MD);
     let global_hooks_json = codex_dir.join(HOOKS_JSON);
-    let global_rtk_md_ref = codex_rtk_md_ref(&codex_dir);
+    let global_ptk_md_ref = codex_ptk_md_ref(&codex_dir);
     let local_agents_md = PathBuf::from(AGENTS_MD);
-    let local_rtk_md = PathBuf::from(RTK_MD);
+    let local_ptk_md = PathBuf::from(PTK_MD);
     let local_hooks_json = PathBuf::from(CODEX_DIR).join(HOOKS_JSON);
 
-    println!("rtk Configuration (Codex CLI):\n");
+    println!("ptk Configuration (Codex CLI):\n");
 
-    if global_rtk_md.exists() {
-        println!("[ok] Global RTK.md: {}", global_rtk_md.display());
+    if global_ptk_md.exists() {
+        println!("[ok] Global PTK.md: {}", global_ptk_md.display());
     } else {
-        println!("[--] Global RTK.md: not found");
+        println!("[--] Global PTK.md: not found");
     }
 
     if global_hooks_json.exists() {
@@ -5385,7 +5409,7 @@ fn show_codex_config() -> Result<()> {
             Ok(root) if codex_hook_already_present(&root) => {
                 println!("[ok] Global hook: {}", global_hooks_json.display());
             }
-            Ok(_) => println!("[--] Global hooks.json exists but RTK hook is not configured"),
+            Ok(_) => println!("[--] Global hooks.json exists but ptk hook is not configured"),
             Err(_) => println!("[!!] Global hooks.json is invalid JSON"),
         }
     } else {
@@ -5399,21 +5423,21 @@ fn show_codex_config() -> Result<()> {
                 global_agents_md.display()
             )
         })?;
-        if has_rtk_reference(&content, &[RTK_MD_REF, global_rtk_md_ref.as_str()]) {
-            println!("[ok] Global AGENTS.md: RTK.md reference");
-        } else if content.contains(RTK_BLOCK_START) {
-            println!("[!!] Global AGENTS.md: old inline RTK block");
+        if has_ptk_reference(&content, &[PTK_MD_REF, global_ptk_md_ref.as_str()]) {
+            println!("[ok] Global AGENTS.md: PTK.md reference");
+        } else if content.contains(PTK_BLOCK_START) {
+            println!("[!!] Global AGENTS.md: old inline PTK block");
         } else {
-            println!("[--] Global AGENTS.md: exists but rtk not configured");
+            println!("[--] Global AGENTS.md: exists but ptk not configured");
         }
     } else {
         println!("[--] Global AGENTS.md: not found");
     }
 
-    if local_rtk_md.exists() {
-        println!("[ok] Local RTK.md: {}", local_rtk_md.display());
+    if local_ptk_md.exists() {
+        println!("[ok] Local PTK.md: {}", local_ptk_md.display());
     } else {
-        println!("[--] Local RTK.md: not found");
+        println!("[--] Local PTK.md: not found");
     }
 
     if local_hooks_json.exists() {
@@ -5427,7 +5451,7 @@ fn show_codex_config() -> Result<()> {
             Ok(root) if codex_hook_already_present(&root) => {
                 println!("[ok] Local hook: {}", local_hooks_json.display());
             }
-            Ok(_) => println!("[--] Local hooks.json exists but RTK hook is not configured"),
+            Ok(_) => println!("[--] Local hooks.json exists but ptk hook is not configured"),
             Err(_) => println!("[!!] Local hooks.json is invalid JSON"),
         }
     } else {
@@ -5441,22 +5465,22 @@ fn show_codex_config() -> Result<()> {
                 local_agents_md.display()
             )
         })?;
-        if has_rtk_reference(&content, &[RTK_MD_REF]) {
-            println!("[ok] Local AGENTS.md: @RTK.md reference");
-        } else if content.contains(RTK_BLOCK_START) {
-            println!("[!!] Local AGENTS.md: old inline RTK block");
+        if has_ptk_reference(&content, &[PTK_MD_REF]) {
+            println!("[ok] Local AGENTS.md: @PTK.md reference");
+        } else if content.contains(PTK_BLOCK_START) {
+            println!("[!!] Local AGENTS.md: old inline PTK block");
         } else {
-            println!("[--] Local AGENTS.md: exists but rtk not configured");
+            println!("[--] Local AGENTS.md: exists but ptk not configured");
         }
     } else {
         println!("[--] Local AGENTS.md: not found");
     }
 
     println!("\nUsage:");
-    println!("  rtk init --codex              # Configure local AGENTS.md + RTK.md + hooks.json");
-    println!("  rtk init -g --codex           # Configure global AGENTS.md + RTK.md + hooks.json");
-    println!("  rtk init --codex --uninstall     # Remove local Codex RTK artifacts");
-    println!("  rtk init -g --codex --uninstall  # Remove global Codex RTK artifacts");
+    println!("  ptk init --codex              # Configure local AGENTS.md + PTK.md + hooks.json");
+    println!("  ptk init -g --codex           # Configure global AGENTS.md + PTK.md + hooks.json");
+    println!("  ptk init --codex --uninstall     # Remove local Codex PTK artifacts");
+    println!("  ptk init -g --codex --uninstall  # Remove global Codex PTK artifacts");
 
     Ok(())
 }
@@ -5475,16 +5499,16 @@ fn run_opencode_only_mode(ctx: InitContext) -> Result<()> {
 
 // ─── Gemini CLI support ───────────────────────────────────────────
 
-/// Gemini hook wrapper script — delegates to `rtk hook gemini`
+/// Gemini hook wrapper script — delegates to `ptk hook gemini`
 const GEMINI_HOOK_SCRIPT: &str = r#"#!/bin/bash
-exec rtk hook gemini
+exec ptk hook gemini
 "#;
 
 fn resolve_gemini_dir() -> Result<PathBuf> {
     resolve_home_subdir(GEMINI_DIR)
 }
 
-/// Entry point for `rtk init --gemini`
+/// Entry point for `ptk init --gemini`
 pub fn run_gemini(
     global: bool,
     hook_only: bool,
@@ -5493,7 +5517,7 @@ pub fn run_gemini(
 ) -> Result<()> {
     let InitContext { dry_run, .. } = ctx;
     if !global {
-        anyhow::bail!("Gemini support is global-only. Use: rtk init -g --gemini");
+        anyhow::bail!("Gemini support is global-only. Use: ptk init -g --gemini");
     }
 
     let gemini_dir = resolve_gemini_dir()?;
@@ -5529,7 +5553,7 @@ pub fn run_gemini(
         })?;
     }
 
-    // 2. Install GEMINI.md (RTK awareness for Gemini)
+    // 2. Install GEMINI.md (PTK awareness for Gemini)
     if !hook_only {
         let gemini_md_path = gemini_dir.join(GEMINI_MD);
         write_if_changed(
@@ -5566,7 +5590,7 @@ pub fn run_gemini(
 /// `patch_gemini_settings`.
 fn print_gemini_manual_setup(settings_path: &Path) {
     println!(
-        "\nManual setup needed: add RTK hook to {}\n\
+        "\nManual setup needed: add ptk hook to {}\n\
          See: https://github.com/rtk-ai/rtk#gemini-cli",
         settings_path.display()
     );
@@ -5602,7 +5626,7 @@ fn patch_gemini_settings(
             match from_json_str(content) {
                 Ok(v) => v,
                 Err(e) => {
-                    // A parse failure must not abort the whole `rtk init` run
+                    // A parse failure must not abort the whole `ptk init` run
                     // (run_gemini has already written the hook script,
                     // GEMINI.md, and the integrity baseline by this point).
                     // Treat it like PatchMode::Skip: warn, tell the user how
@@ -5627,11 +5651,11 @@ fn patch_gemini_settings(
         && arr.iter().any(|h| {
             h.pointer("/hooks/0/command")
                 .and_then(|v| v.as_str())
-                .is_some_and(|c| c.contains("rtk"))
+                .is_some_and(|c| c.contains("ptk"))
         })
     {
         if verbose > 0 {
-            eprintln!("Gemini settings.json already has RTK hook");
+            eprintln!("Gemini settings.json already has ptk hook");
         }
         return Ok(false);
     }
@@ -5649,7 +5673,7 @@ fn patch_gemini_settings(
                 settings_path.display()
             );
         } else {
-            print!("Patch {} with RTK hook? [y/N] ", settings_path.display());
+            print!("Patch {} with ptk hook? [y/N] ", settings_path.display());
             std::io::Write::flush(&mut std::io::stdout())?;
             let mut answer = String::new();
             std::io::stdin().read_line(&mut answer)?;
@@ -5765,19 +5789,19 @@ fn uninstall_gemini(ctx: InitContext) -> Result<Vec<String>> {
                 arr.retain(|h| {
                     !h.pointer("/hooks/0/command")
                         .and_then(|v| v.as_str())
-                        .is_some_and(|c| c.contains("rtk"))
+                        .is_some_and(|c| c.contains("ptk"))
                 });
                 if arr.len() < before {
                     if dry_run {
                         println!(
-                            "[dry-run] would remove RTK hook from Gemini settings.json: {}",
+                            "[dry-run] would remove ptk hook from Gemini settings.json: {}",
                             settings_path.display()
                         );
                     } else {
                         let new_content = serde_json::to_string_pretty(&settings)?;
                         fs::write(&settings_path, new_content)?;
                     }
-                    removed.push("Gemini settings.json: removed RTK hook entry".to_string());
+                    removed.push("Gemini settings.json: removed ptk hook entry".to_string());
                 }
             }
         }
@@ -5796,12 +5820,12 @@ fn resolve_vibe_dir() -> Result<PathBuf> {
     resolve_home_subdir(VIBE_DIR)
 }
 
-/// Entry point for `rtk init -g --agent vibe`.
+/// Entry point for `ptk init -g --agent vibe`.
 ///
 /// Installs a `pre_tool` hook into `~/.vibe/hooks.toml` (Vibe CLI's hook
 /// registry, see https://docs.mistral.ai/vibe/code/cli/hooks) that routes
-/// bash tool calls through the native `rtk hook vibe` binary. When not
-/// `hook_only`, also drops an `~/.vibe/prompts/rtk.md` system prompt file
+/// bash tool calls through the native `ptk hook vibe` binary. When not
+/// `hook_only`, also drops an `~/.vibe/prompts/ptk.md` system prompt file
 /// as a belt-and-suspenders fallback if the hook is disabled.
 pub fn run_vibe_mode(
     global: bool,
@@ -5810,7 +5834,7 @@ pub fn run_vibe_mode(
     ctx: InitContext,
 ) -> Result<()> {
     if !global {
-        anyhow::bail!("Vibe support is global-only. Use: rtk init -g --agent vibe");
+        anyhow::bail!("Vibe support is global-only. Use: ptk init -g --agent vibe");
     }
     let vibe_dir = resolve_vibe_dir()?;
     run_vibe_mode_at(&vibe_dir, hook_only, patch_mode, ctx)
@@ -5885,7 +5909,7 @@ impl VibeHookPatchOutcome {
     }
 }
 
-/// Append the RTK `[[hooks]]` entry to `~/.vibe/hooks.toml` if not already present.
+/// Append the PTK `[[hooks]]` entry to `~/.vibe/hooks.toml` if not already present.
 ///
 /// Uses append-based patching (string level) rather than parse-serialize round-trip
 /// to preserve any user comments and formatting in the file.
@@ -5907,14 +5931,14 @@ fn patch_vibe_hooks_toml(
 
     if vibe_hooks_toml_has_rtk(&existing) {
         if verbose > 0 {
-            eprintln!("Vibe hooks.toml already has RTK hook");
+            eprintln!("Vibe hooks.toml already has ptk hook");
         }
         return Ok(VibeHookPatchOutcome::AlreadyPresent);
     }
 
     if patch_mode == PatchMode::Skip {
         println!(
-            "\nManual setup needed: add RTK hook to {}\n\
+            "\nManual setup needed: add ptk hook to {}\n\
              See: https://www.rtk-ai.app/guide/getting-started/supported-agents#mistral-vibe",
             hooks_path.display()
         );
@@ -5928,7 +5952,7 @@ fn patch_vibe_hooks_toml(
                 hooks_path.display()
             );
         } else {
-            print!("Patch {} with RTK hook? [y/N] ", hooks_path.display());
+            print!("Patch {} with ptk hook? [y/N] ", hooks_path.display());
             std::io::stdout().flush().ok();
             let mut answer = String::new();
             std::io::stdin().read_line(&mut answer).ok();
@@ -5979,7 +6003,7 @@ match = "{match_glob}"
 command = "{command}"
 timeout = 10.0
 strict = false
-description = "Rewrite bash commands through the rtk proxy to save tokens."
+description = "Rewrite bash commands through the ptk proxy to save tokens."
 "#,
         name = VIBE_HOOK_NAME,
         match_glob = VIBE_BASH_MATCH,
@@ -5987,12 +6011,12 @@ description = "Rewrite bash commands through the rtk proxy to save tokens."
     )
 }
 
-/// Detect an existing RTK entry by looking for the hook `name` field. Scanning
+/// Detect an existing PTK entry by looking for the hook `name` field. Scanning
 /// the raw string is enough because `name` is required by Vibe and must be
 /// unique, so a substring match is both necessary and sufficient.
 ///
-/// Tradeoff: matches the exact spacing `name = "rtk-rewrite"`. A reformatted
-/// file (`name="rtk-rewrite"` or extra whitespace) would defeat idempotency
+/// Tradeoff: matches the exact spacing `name = "ptk-rewrite"`. A reformatted
+/// file (`name="ptk-rewrite"` or extra whitespace) would defeat idempotency
 /// and cause a duplicate append on re-install. Acceptable because our own
 /// installer only ever writes the canonical spacing, and the alternative
 /// (parse-serialize round-trip via toml_edit) would clobber user comments
@@ -6002,25 +6026,25 @@ fn vibe_hooks_toml_has_rtk(content: &str) -> bool {
     content.contains(&needle)
 }
 
-/// Public entry point for `rtk init -g --agent vibe --uninstall`.
+/// Public entry point for `ptk init -g --agent vibe --uninstall`.
 pub fn uninstall_vibe(ctx: InitContext) -> Result<()> {
     let InitContext { dry_run, .. } = ctx;
     let vibe_dir = match resolve_vibe_dir() {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("RTK Vibe uninstall skipped: could not resolve ~/.vibe/ ({e})");
+            eprintln!("PTK Vibe uninstall skipped: could not resolve ~/.vibe/ ({e})");
             return Ok(());
         }
     };
     let removed = uninstall_vibe_at(&vibe_dir, ctx)?;
 
     if removed.is_empty() {
-        println!("RTK Vibe support was not installed (nothing to remove)");
+        println!("PTK Vibe support was not installed (nothing to remove)");
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK for Mistral Vibe CLI:"
+            "[dry-run] would uninstall PTK for Mistral Vibe CLI:"
         } else {
-            "RTK uninstalled for Mistral Vibe CLI:"
+            "PTK uninstalled for Mistral Vibe CLI:"
         };
         println!("{}", header);
         for item in removed {
@@ -6037,8 +6061,8 @@ pub fn uninstall_vibe(ctx: InitContext) -> Result<()> {
     Ok(())
 }
 
-/// Remove the RTK hook entry (and, when non-empty, the surrounding blank
-/// lines) from `~/.vibe/hooks.toml` and the sibling `~/.vibe/prompts/rtk.md`
+/// Remove the ptk hook entry (and, when non-empty, the surrounding blank
+/// lines) from `~/.vibe/hooks.toml` and the sibling `~/.vibe/prompts/ptk.md`
 /// prompt file. Leaves any other user-declared hooks intact.
 fn uninstall_vibe_at(vibe_dir: &Path, ctx: InitContext) -> Result<Vec<String>> {
     let InitContext {
@@ -6050,11 +6074,11 @@ fn uninstall_vibe_at(vibe_dir: &Path, ctx: InitContext) -> Result<Vec<String>> {
     if prompt_path.exists() {
         if dry_run {
             println!(
-                "[dry-run] would remove Vibe RTK prompt: {}",
+                "[dry-run] would remove Vibe PTK prompt: {}",
                 prompt_path.display()
             );
         } else {
-            // nosemgrep: filesystem-deletion -- uninstall path removes only RTK's own prompt file
+            // nosemgrep: filesystem-deletion -- uninstall path removes only PTK's own prompt file
             fs::remove_file(&prompt_path)
                 .with_context(|| format!("Failed to remove {}", prompt_path.display()))?;
         }
@@ -6065,14 +6089,14 @@ fn uninstall_vibe_at(vibe_dir: &Path, ctx: InitContext) -> Result<Vec<String>> {
     if hooks_path.exists() {
         let content = fs::read_to_string(&hooks_path)
             .with_context(|| format!("Failed to read {}", hooks_path.display()))?;
-        if let Some(new_content) = strip_vibe_rtk_entry(&content) {
+        if let Some(new_content) = strip_vibe_ptk_entry(&content) {
             if dry_run {
                 println!(
-                    "[dry-run] would remove RTK hook from Vibe hooks.toml: {}",
+                    "[dry-run] would remove ptk hook from Vibe hooks.toml: {}",
                     hooks_path.display()
                 );
             } else if new_content.trim().is_empty() {
-                // nosemgrep: filesystem-deletion -- uninstall removes hooks.toml only when it becomes empty after stripping the RTK entry
+                // nosemgrep: filesystem-deletion -- uninstall removes hooks.toml only when it becomes empty after stripping the PTK entry
                 fs::remove_file(&hooks_path)
                     .with_context(|| format!("Failed to remove {}", hooks_path.display()))?;
             } else {
@@ -6080,7 +6104,7 @@ fn uninstall_vibe_at(vibe_dir: &Path, ctx: InitContext) -> Result<Vec<String>> {
                     .with_context(|| format!("Failed to write {}", hooks_path.display()))?;
             }
             removed.push(format!(
-                "Vibe hooks.toml: removed RTK entry ({})",
+                "Vibe hooks.toml: removed PTK entry ({})",
                 hooks_path.display()
             ));
         }
@@ -6093,11 +6117,11 @@ fn uninstall_vibe_at(vibe_dir: &Path, ctx: InitContext) -> Result<Vec<String>> {
     Ok(removed)
 }
 
-/// Extract and drop the `[[hooks]]` block whose `name = "rtk-rewrite"` field
+/// Extract and drop the `[[hooks]]` block whose `name = "ptk-rewrite"` field
 /// is set. Returns `None` when the entry is absent, `Some(new_content)` after
 /// removal (with surrounding blank lines collapsed). The scan walks `[[hooks]]`
 /// section boundaries — anything else in the file is preserved verbatim.
-fn strip_vibe_rtk_entry(content: &str) -> Option<String> {
+fn strip_vibe_ptk_entry(content: &str) -> Option<String> {
     let needle = format!(r#"name = "{VIBE_HOOK_NAME}""#);
     if !content.contains(&needle) {
         return None;
@@ -6155,7 +6179,7 @@ pub(crate) const COPILOT_HOOK_JSON: &str = r#"{
     "PreToolUse": [
       {
         "type": "command",
-        "command": "rtk hook copilot",
+        "command": "ptk hook copilot",
         "cwd": ".",
         "timeout": 5
       }
@@ -6164,36 +6188,36 @@ pub(crate) const COPILOT_HOOK_JSON: &str = r#"{
 }
 "#;
 
-const COPILOT_INSTRUCTIONS: &str = r#"<!-- rtk-instructions v2 -->
-# RTK — Token-Optimized CLI
+const COPILOT_INSTRUCTIONS: &str = r#"<!-- ptk-instructions v2 -->
+# PTK — Token-Optimized CLI
 
-**rtk** is a CLI proxy that filters and compresses command outputs, saving 60-90% tokens.
+**ptk** is a CLI proxy that filters and compresses command outputs, saving 60-90% tokens.
 
 ## Rule
 
-Always prefix shell commands with `rtk`:
+Always prefix shell commands with `ptk`:
 
 ```bash
 # Instead of:              Use:
-git status                 rtk git status
-git log -10                rtk git log -10
-cargo test                 rtk cargo test
-docker ps                  rtk docker ps
-kubectl get pods           rtk kubectl get pods
+git status                 ptk git status
+git log -10                ptk git log -10
+cargo test                 ptk cargo test
+docker ps                  ptk docker ps
+kubectl get pods           ptk kubectl get pods
 ```
 
 ## Meta commands (use directly)
 
 ```bash
-rtk gain              # Token savings dashboard
-rtk gain --history    # Per-command savings history
-rtk discover          # Find missed rtk opportunities
-rtk proxy <cmd>       # Run raw (no filtering) but track usage
+ptk gain              # Token savings dashboard
+ptk gain --history    # Per-command savings history
+ptk discover          # Find missed ptk opportunities
+ptk proxy <cmd>       # Run raw (no filtering) but track usage
 ```
-<!-- /rtk-instructions -->
+<!-- /ptk-instructions -->
 "#;
 
-/// Entry point for `rtk init --copilot`.
+/// Entry point for `ptk init --copilot`.
 ///
 /// Installs in the current working directory's `.github/` subdirectory.
 pub fn run_copilot(ctx: InitContext) -> Result<()> {
@@ -6214,15 +6238,15 @@ fn run_copilot_at(base: &Path, ctx: InitContext) -> Result<()> {
             .with_context(|| format!("Failed to create {} directory", hooks_dir.display()))?;
     }
 
-    // 1. Upsert RTK marker block in copilot-instructions.md (preserves user content).
+    // 1. Upsert PTK marker block in copilot-instructions.md (preserves user content).
     //    Done BEFORE writing the hook config so a malformed file aborts the install
     //    without leaving a stale hook on disk.
     let instructions_path = github_dir.join(COPILOT_INSTRUCTIONS_FILE);
-    write_rtk_block(
+    write_ptk_block(
         &instructions_path,
         COPILOT_INSTRUCTIONS,
         "Copilot instructions",
-        "rtk init --copilot",
+        "ptk init --copilot",
         ctx,
     )?;
 
@@ -6244,18 +6268,18 @@ fn run_copilot_at(base: &Path, ctx: InitContext) -> Result<()> {
     Ok(())
 }
 
-/// Entry point for `rtk init --uninstall --copilot` (project-scoped, like install).
+/// Entry point for `ptk init --uninstall --copilot` (project-scoped, like install).
 pub fn uninstall_copilot(ctx: InitContext) -> Result<()> {
     let InitContext { dry_run, .. } = ctx;
     let removed = uninstall_copilot_at(Path::new("."), ctx)?;
 
     if removed.is_empty() {
-        println!("RTK Copilot support was not installed (nothing to remove)");
+        println!("PTK Copilot support was not installed (nothing to remove)");
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK (GitHub Copilot):"
+            "[dry-run] would uninstall PTK (GitHub Copilot):"
         } else {
-            "RTK uninstalled (GitHub Copilot):"
+            "PTK uninstalled (GitHub Copilot):"
         };
         println!("{}", header);
         for item in &removed {
@@ -6286,7 +6310,7 @@ fn uninstall_copilot_at(base: &Path, ctx: InitContext) -> Result<Vec<String>> {
                 hook_path.display()
             );
         } else {
-            // nosemgrep: filesystem-deletion -- Copilot uninstall removes only the RTK-managed hook config.
+            // nosemgrep: filesystem-deletion -- Copilot uninstall removes only the PTK-managed hook config.
             fs::remove_file(&hook_path)
                 .with_context(|| format!("Failed to remove hook: {}", hook_path.display()))?;
         }
@@ -6297,12 +6321,12 @@ fn uninstall_copilot_at(base: &Path, ctx: InitContext) -> Result<Vec<String>> {
     if instructions_path.exists() {
         let content = fs::read_to_string(&instructions_path)
             .with_context(|| format!("Failed to read {}", instructions_path.display()))?;
-        if content.contains(RTK_BLOCK_START) {
-            let (cleaned, did_remove) = remove_rtk_block(&content);
+        if content.contains(PTK_BLOCK_START) {
+            let (cleaned, did_remove) = remove_ptk_block(&content);
             if did_remove {
                 if dry_run {
                     println!(
-                        "[dry-run] would remove rtk-instructions block from {}",
+                        "[dry-run] would remove ptk-instructions block from {}",
                         instructions_path.display()
                     );
                 } else {
@@ -6311,7 +6335,7 @@ fn uninstall_copilot_at(base: &Path, ctx: InitContext) -> Result<Vec<String>> {
                     })?;
                 }
                 removed.push(format!(
-                    "{}: removed rtk-instructions block",
+                    "{}: removed ptk-instructions block",
                     COPILOT_INSTRUCTIONS_FILE
                 ));
             }
@@ -6344,11 +6368,11 @@ fn run_copilot_global_at(copilot_dir: &Path, ctx: InitContext) -> Result<()> {
     }
 
     let instructions_path = copilot_dir.join(COPILOT_INSTRUCTIONS_FILE);
-    write_rtk_block(
+    write_ptk_block(
         &instructions_path,
         COPILOT_INSTRUCTIONS,
         "Copilot user-level instructions",
-        "rtk init --global --copilot",
+        "ptk init --global --copilot",
         ctx,
     )?;
 
@@ -6379,12 +6403,12 @@ pub fn uninstall_copilot_global(ctx: InitContext) -> Result<()> {
     let removed = uninstall_copilot_global_at(&copilot_dir, ctx)?;
 
     if removed.is_empty() {
-        println!("RTK global Copilot support was not installed (nothing to remove)");
+        println!("PTK global Copilot support was not installed (nothing to remove)");
     } else {
         let header = if dry_run {
-            "[dry-run] would uninstall RTK (global GitHub Copilot):"
+            "[dry-run] would uninstall PTK (global GitHub Copilot):"
         } else {
-            "RTK uninstalled (global GitHub Copilot):"
+            "PTK uninstalled (global GitHub Copilot):"
         };
         println!("{}", header);
         for item in &removed {
@@ -6413,7 +6437,7 @@ fn uninstall_copilot_global_at(copilot_dir: &Path, ctx: InitContext) -> Result<V
                 hook_path.display()
             );
         } else {
-            // nosemgrep: filesystem-deletion -- Copilot global uninstall removes only the RTK-managed hook config.
+            // nosemgrep: filesystem-deletion -- Copilot global uninstall removes only the PTK-managed hook config.
             fs::remove_file(&hook_path)
                 .with_context(|| format!("Failed to remove hook: {}", hook_path.display()))?;
         }
@@ -6424,12 +6448,12 @@ fn uninstall_copilot_global_at(copilot_dir: &Path, ctx: InitContext) -> Result<V
     if instructions_path.exists() {
         let content = fs::read_to_string(&instructions_path)
             .with_context(|| format!("Failed to read {}", instructions_path.display()))?;
-        if content.contains(RTK_BLOCK_START) {
-            let (cleaned, did_remove) = remove_rtk_block(&content);
+        if content.contains(PTK_BLOCK_START) {
+            let (cleaned, did_remove) = remove_ptk_block(&content);
             if did_remove {
                 if dry_run {
                     println!(
-                        "[dry-run] would remove rtk-instructions block from {}",
+                        "[dry-run] would remove ptk-instructions block from {}",
                         instructions_path.display()
                     );
                 } else {
@@ -6438,7 +6462,7 @@ fn uninstall_copilot_global_at(copilot_dir: &Path, ctx: InitContext) -> Result<V
                     })?;
                 }
                 removed.push(format!(
-                    "{}: removed rtk-instructions block",
+                    "{}: removed ptk-instructions block",
                     COPILOT_INSTRUCTIONS_FILE
                 ));
             }
@@ -6457,26 +6481,26 @@ mod tests {
     #[test]
     fn test_init_mentions_all_top_level_commands() {
         for cmd in [
-            "rtk cargo",
-            "rtk gh",
-            "rtk vitest",
-            "rtk tsc",
-            "rtk lint",
-            "rtk prettier",
-            "rtk next",
-            "rtk playwright",
-            "rtk prisma",
-            "rtk pnpm",
-            "rtk npm",
-            "rtk uv",
-            "rtk curl",
-            "rtk git",
-            "rtk docker",
-            "rtk kubectl",
+            "ptk cargo",
+            "ptk gh",
+            "ptk vitest",
+            "ptk tsc",
+            "ptk lint",
+            "ptk prettier",
+            "ptk next",
+            "ptk playwright",
+            "ptk prisma",
+            "ptk pnpm",
+            "ptk npm",
+            "ptk uv",
+            "ptk curl",
+            "ptk git",
+            "ptk docker",
+            "ptk kubectl",
         ] {
             assert!(
-                RTK_INSTRUCTIONS.contains(cmd),
-                "Missing {cmd} in RTK_INSTRUCTIONS"
+                PTK_INSTRUCTIONS.contains(cmd),
+                "Missing {cmd} in PTK_INSTRUCTIONS"
             );
         }
     }
@@ -6484,25 +6508,25 @@ mod tests {
     #[test]
     fn test_init_has_version_marker() {
         assert!(
-            RTK_INSTRUCTIONS.contains(RTK_BLOCK_START),
-            "RTK_INSTRUCTIONS must start with RTK_BLOCK_START marker"
+            PTK_INSTRUCTIONS.contains(PTK_BLOCK_START),
+            "PTK_INSTRUCTIONS must start with PTK_BLOCK_START marker"
         );
         assert!(
-            RTK_INSTRUCTIONS.contains(RTK_BLOCK_END),
-            "RTK_INSTRUCTIONS must end with RTK_BLOCK_END marker"
+            PTK_INSTRUCTIONS.contains(PTK_BLOCK_END),
+            "PTK_INSTRUCTIONS must end with PTK_BLOCK_END marker"
         );
     }
 
     #[test]
     fn test_migration_removes_old_block() {
         let input = format!(
-            "# My Config\n\n{} v2 -->\nOLD RTK STUFF\n{}\n\nMore content",
-            RTK_BLOCK_START, RTK_BLOCK_END
+            "# My Config\n\n{} v2 -->\nOLD PTK STUFF\n{}\n\nMore content",
+            PTK_BLOCK_START, PTK_BLOCK_END
         );
 
-        let (result, migrated) = remove_rtk_block(&input);
+        let (result, migrated) = remove_ptk_block(&input);
         assert!(migrated);
-        assert!(!result.contains("OLD RTK STUFF"));
+        assert!(!result.contains("OLD PTK STUFF"));
         assert!(result.contains("# My Config"));
         assert!(result.contains("More content"));
     }
@@ -6545,8 +6569,8 @@ mod tests {
 
     #[test]
     fn test_migration_warns_on_missing_end_marker() {
-        let input = format!("{} v2 -->\nOLD STUFF\nNo end marker", RTK_BLOCK_START);
-        let (result, migrated) = remove_rtk_block(&input);
+        let input = format!("{} v2 -->\nOLD STUFF\nNo end marker", PTK_BLOCK_START);
+        let (result, migrated) = remove_ptk_block(&input);
         assert!(!migrated);
         assert_eq!(result, input);
     }
@@ -6555,88 +6579,88 @@ mod tests {
     fn test_awareness_content_maps_each_level_to_its_file() {
         assert_eq!(
             awareness_content(AwarenessLevel::Default),
-            RTK_AWARENESS_DEFAULT
+            PTK_AWARENESS_DEFAULT
         );
-        assert_eq!(awareness_content(AwarenessLevel::High), RTK_AWARENESS_HIGH);
-        assert_eq!(awareness_content(AwarenessLevel::Full), RTK_AWARENESS_FULL);
+        assert_eq!(awareness_content(AwarenessLevel::High), PTK_AWARENESS_HIGH);
+        assert_eq!(awareness_content(AwarenessLevel::Full), PTK_AWARENESS_FULL);
     }
 
     #[test]
     fn test_awareness_levels_nest() {
-        let contract = RTK_AWARENESS_DEFAULT.trim_end();
+        let contract = PTK_AWARENESS_DEFAULT.trim_end();
         assert!(
-            RTK_AWARENESS_HIGH.starts_with(contract),
+            PTK_AWARENESS_HIGH.starts_with(contract),
             "high must start with the default output contract verbatim"
         );
         assert!(
-            RTK_AWARENESS_FULL.contains(contract),
+            PTK_AWARENESS_FULL.contains(contract),
             "full must contain the default output contract verbatim"
         );
     }
 
     #[test]
     fn test_awareness_activation_rule_only_in_full() {
-        const ACTIVATION: &str = "Prefix every shell command with `rtk`";
-        assert!(!RTK_AWARENESS_DEFAULT.contains(ACTIVATION));
-        assert!(!RTK_AWARENESS_HIGH.contains(ACTIVATION));
-        assert!(RTK_AWARENESS_FULL.contains(ACTIVATION));
+        const ACTIVATION: &str = "Prefix every shell command with `ptk`";
+        assert!(!PTK_AWARENESS_DEFAULT.contains(ACTIVATION));
+        assert!(!PTK_AWARENESS_HIGH.contains(ACTIVATION));
+        assert!(PTK_AWARENESS_FULL.contains(ACTIVATION));
     }
 
     #[test]
     fn test_awareness_meta_commands_present_above_default() {
         for (name, content) in [
-            ("default", RTK_AWARENESS_DEFAULT),
-            ("high", RTK_AWARENESS_HIGH),
-            ("full", RTK_AWARENESS_FULL),
+            ("default", PTK_AWARENESS_DEFAULT),
+            ("high", PTK_AWARENESS_HIGH),
+            ("full", PTK_AWARENESS_FULL),
         ] {
             assert!(
-                content.contains("rtk proxy <cmd>"),
-                "{name} must mention rtk proxy"
+                content.contains("ptk proxy <cmd>"),
+                "{name} must mention ptk proxy"
             );
         }
-        for (name, content) in [("high", RTK_AWARENESS_HIGH), ("full", RTK_AWARENESS_FULL)] {
+        for (name, content) in [("high", PTK_AWARENESS_HIGH), ("full", PTK_AWARENESS_FULL)] {
             assert!(
-                content.contains("RTK_DISABLED=1"),
-                "{name} must mention RTK_DISABLED"
+                content.contains("PTK_DISABLED=1"),
+                "{name} must mention PTK_DISABLED"
             );
-            assert!(content.contains("rtk gain"), "{name} must mention rtk gain");
+            assert!(content.contains("ptk gain"), "{name} must mention ptk gain");
         }
-        assert!(!RTK_AWARENESS_DEFAULT.contains("rtk gain"));
+        assert!(!PTK_AWARENESS_DEFAULT.contains("ptk gain"));
     }
 
     #[test]
     fn test_awareness_files_stay_within_line_budget() {
-        assert!(RTK_AWARENESS_DEFAULT.lines().count() <= 10);
-        assert!(RTK_AWARENESS_HIGH.lines().count() <= 21);
-        assert!(RTK_AWARENESS_FULL.lines().count() <= 25);
+        assert!(PTK_AWARENESS_DEFAULT.lines().count() <= 10);
+        assert!(PTK_AWARENESS_HIGH.lines().count() <= 21);
+        assert!(PTK_AWARENESS_FULL.lines().count() <= 25);
     }
 
     #[test]
-    fn test_rtk_block_wraps_body_in_markers() {
-        let block = rtk_block(RTK_AWARENESS_FULL);
-        assert!(block.starts_with(&format!("{RTK_BLOCK_START} v2 -->\n")));
-        assert!(block.ends_with(&format!("{RTK_BLOCK_END}\n")));
-        assert!(block.contains(RTK_AWARENESS_FULL));
+    fn test_ptk_block_wraps_body_in_markers() {
+        let block = ptk_block(PTK_AWARENESS_FULL);
+        assert!(block.starts_with(&format!("{PTK_BLOCK_START} v2 -->\n")));
+        assert!(block.ends_with(&format!("{PTK_BLOCK_END}\n")));
+        assert!(block.contains(PTK_AWARENESS_FULL));
     }
 
     #[test]
     fn test_write_if_changed_switches_awareness_level() {
         let temp = TempDir::new().unwrap();
-        let rtk_md_path = temp.path().join("RTK.md");
+        let ptk_md_path = temp.path().join("PTK.md");
 
         let default_ctx = InitContext::default();
         assert!(
             write_if_changed(
-                &rtk_md_path,
+                &ptk_md_path,
                 awareness_content(default_ctx.awareness),
-                RTK_MD,
+                PTK_MD,
                 default_ctx
             )
             .unwrap()
         );
         assert_eq!(
-            fs::read_to_string(&rtk_md_path).unwrap(),
-            RTK_AWARENESS_DEFAULT
+            fs::read_to_string(&ptk_md_path).unwrap(),
+            PTK_AWARENESS_DEFAULT
         );
 
         let high_ctx = InitContext {
@@ -6645,23 +6669,23 @@ mod tests {
         };
         assert!(
             write_if_changed(
-                &rtk_md_path,
+                &ptk_md_path,
                 awareness_content(high_ctx.awareness),
-                RTK_MD,
+                PTK_MD,
                 high_ctx
             )
             .unwrap()
         );
         assert_eq!(
-            fs::read_to_string(&rtk_md_path).unwrap(),
-            RTK_AWARENESS_HIGH
+            fs::read_to_string(&ptk_md_path).unwrap(),
+            PTK_AWARENESS_HIGH
         );
 
         assert!(
             !write_if_changed(
-                &rtk_md_path,
+                &ptk_md_path,
                 awareness_content(high_ctx.awareness),
-                RTK_MD,
+                PTK_MD,
                 high_ctx
             )
             .unwrap()
@@ -6675,66 +6699,66 @@ mod tests {
             AwarenessLevel::High,
             AwarenessLevel::Full,
         ] {
-            let block = rtk_block(awareness_content(level));
-            assert!(block.starts_with(RTK_BLOCK_START));
+            let block = ptk_block(awareness_content(level));
+            assert!(block.starts_with(PTK_BLOCK_START));
             assert!(block.contains(awareness_content(level).trim_end()));
         }
         // Plain local init must not ship the legacy Golden Rule; --claude-md keeps it.
-        assert!(!rtk_block(awareness_content(AwarenessLevel::Default)).contains("Golden Rule"));
-        assert!(!rtk_block(awareness_content(AwarenessLevel::High)).contains("Golden Rule"));
-        assert!(RTK_INSTRUCTIONS.contains("Golden Rule"));
+        assert!(!ptk_block(awareness_content(AwarenessLevel::Default)).contains("Golden Rule"));
+        assert!(!ptk_block(awareness_content(AwarenessLevel::High)).contains("Golden Rule"));
+        assert!(PTK_INSTRUCTIONS.contains("Golden Rule"));
     }
 
     #[test]
     fn test_claude_md_mode_creates_full_injection() {
-        // Just verify RTK_INSTRUCTIONS constant has the right content
-        assert!(RTK_INSTRUCTIONS.contains(RTK_BLOCK_START));
-        assert!(RTK_INSTRUCTIONS.contains("rtk cargo test"));
-        assert!(RTK_INSTRUCTIONS.contains(RTK_BLOCK_END));
-        assert!(RTK_INSTRUCTIONS.len() > 4000);
+        // Just verify PTK_INSTRUCTIONS constant has the right content
+        assert!(PTK_INSTRUCTIONS.contains(PTK_BLOCK_START));
+        assert!(PTK_INSTRUCTIONS.contains("ptk cargo test"));
+        assert!(PTK_INSTRUCTIONS.contains(PTK_BLOCK_END));
+        assert!(PTK_INSTRUCTIONS.len() > 4000);
     }
 
-    // --- upsert_rtk_block tests ---
+    // --- upsert_ptk_block tests ---
 
     #[test]
-    fn test_upsert_rtk_block_appends_when_missing() {
+    fn test_upsert_ptk_block_appends_when_missing() {
         let input = "# Team instructions";
-        let (content, action) = upsert_rtk_block(input, RTK_INSTRUCTIONS);
+        let (content, action) = upsert_ptk_block(input, PTK_INSTRUCTIONS);
         assert_eq!(action, RtkBlockUpsert::Added);
         assert!(content.contains("# Team instructions"));
-        assert!(content.contains(RTK_BLOCK_START));
+        assert!(content.contains(PTK_BLOCK_START));
     }
 
     #[test]
-    fn test_upsert_rtk_block_updates_stale_block() {
+    fn test_upsert_ptk_block_updates_stale_block() {
         let input = format!(
-            "# Team instructions\n\n{} v1 -->\nOLD RTK CONTENT\n{}\n\nMore notes\n",
-            RTK_BLOCK_START, RTK_BLOCK_END
+            "# Team instructions\n\n{} v1 -->\nOLD PTK CONTENT\n{}\n\nMore notes\n",
+            PTK_BLOCK_START, PTK_BLOCK_END
         );
 
-        let (content, action) = upsert_rtk_block(&input, RTK_INSTRUCTIONS);
+        let (content, action) = upsert_ptk_block(&input, PTK_INSTRUCTIONS);
         assert_eq!(action, RtkBlockUpsert::Updated);
-        assert!(!content.contains("OLD RTK CONTENT"));
-        assert!(content.contains("rtk cargo test")); // from current RTK_INSTRUCTIONS
+        assert!(!content.contains("OLD PTK CONTENT"));
+        assert!(content.contains("ptk cargo test")); // from current PTK_INSTRUCTIONS
         assert!(content.contains("# Team instructions"));
         assert!(content.contains("More notes"));
     }
 
     #[test]
-    fn test_upsert_rtk_block_noop_when_already_current() {
+    fn test_upsert_ptk_block_noop_when_already_current() {
         let input = format!(
             "# Team instructions\n\n{}\n\nMore notes\n",
-            RTK_INSTRUCTIONS
+            PTK_INSTRUCTIONS
         );
-        let (content, action) = upsert_rtk_block(&input, RTK_INSTRUCTIONS);
+        let (content, action) = upsert_ptk_block(&input, PTK_INSTRUCTIONS);
         assert_eq!(action, RtkBlockUpsert::Unchanged);
         assert_eq!(content, input);
     }
 
     #[test]
-    fn test_upsert_rtk_block_detects_malformed_block() {
-        let input = format!("{} v2 -->\npartial", RTK_BLOCK_START);
-        let (content, action) = upsert_rtk_block(&input, RTK_INSTRUCTIONS);
+    fn test_upsert_ptk_block_detects_malformed_block() {
+        let input = format!("{} v2 -->\npartial", PTK_BLOCK_START);
+        let (content, action) = upsert_ptk_block(&input, PTK_INSTRUCTIONS);
         assert_eq!(action, RtkBlockUpsert::Malformed);
         assert_eq!(content, input);
     }
@@ -6744,10 +6768,10 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let claude_md = temp.path().join("CLAUDE.md");
 
-        fs::write(&claude_md, "# My stuff\n\n@RTK.md\n").unwrap();
+        fs::write(&claude_md, "# My stuff\n\n@PTK.md\n").unwrap();
 
         let content = fs::read_to_string(&claude_md).unwrap();
-        let count = content.matches("@RTK.md").count();
+        let count = content.matches("@PTK.md").count();
         assert_eq!(count, 1);
     }
 
@@ -6757,14 +6781,14 @@ mod tests {
         let agents_md = temp.path().join("AGENTS.md");
 
         fs::write(&agents_md, "# Team rules\n").unwrap();
-        let first_added = patch_agents_md(&agents_md, RTK_MD_REF, InitContext::default()).unwrap();
-        let second_added = patch_agents_md(&agents_md, RTK_MD_REF, InitContext::default()).unwrap();
+        let first_added = patch_agents_md(&agents_md, PTK_MD_REF, InitContext::default()).unwrap();
+        let second_added = patch_agents_md(&agents_md, PTK_MD_REF, InitContext::default()).unwrap();
 
         assert!(first_added);
         assert!(!second_added);
 
         let content = fs::read_to_string(&agents_md).unwrap();
-        assert_eq!(content.matches("@RTK.md").count(), 1);
+        assert_eq!(content.matches("@PTK.md").count(), 1);
     }
 
     #[test]
@@ -6816,10 +6840,10 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run_kilocode_mode_at(temp.path(), InitContext::default()).unwrap();
 
-        let rules_path = temp.path().join(".kilocode/rules/rtk-rules.md");
+        let rules_path = temp.path().join(".kilocode/rules/ptk-rules.md");
         assert!(rules_path.exists(), "Rules file should be created");
         let content = fs::read_to_string(&rules_path).unwrap();
-        assert_eq!(content, RTK_AWARENESS_FULL);
+        assert_eq!(content, PTK_AWARENESS_FULL);
     }
 
     #[test]
@@ -6837,28 +6861,28 @@ mod tests {
 
             run_kilocode_mode_at(temp.path(), ctx).unwrap();
             assert_eq!(
-                fs::read_to_string(temp.path().join(".kilocode/rules/rtk-rules.md")).unwrap(),
-                RTK_AWARENESS_FULL,
+                fs::read_to_string(temp.path().join(".kilocode/rules/ptk-rules.md")).unwrap(),
+                PTK_AWARENESS_FULL,
                 "kilocode with level {level}"
             );
 
             run_antigravity_mode_at(temp.path(), ctx).unwrap();
             assert_eq!(
-                fs::read_to_string(temp.path().join(".agents/rules/antigravity-rtk-rules.md"))
+                fs::read_to_string(temp.path().join(".agents/rules/antigravity-ptk-rules.md"))
                     .unwrap(),
-                RTK_AWARENESS_FULL,
+                PTK_AWARENESS_FULL,
                 "antigravity with level {level}"
             );
 
             run_kimi_mode_at(temp.path(), ctx).unwrap();
             let agents_md = fs::read_to_string(temp.path().join(AGENTS_MD)).unwrap();
             assert!(
-                agents_md.contains(RTK_AWARENESS_FULL),
+                agents_md.contains(PTK_AWARENESS_FULL),
                 "kimi with level {level}"
             );
 
             let codex_agents = temp.path().join("codex").join(AGENTS_MD);
-            let codex_rtk = temp.path().join("codex").join(RTK_MD);
+            let codex_rtk = temp.path().join("codex").join(PTK_MD);
             fs::create_dir_all(temp.path().join("codex")).unwrap();
             run_codex_mode_with_paths(
                 codex_agents,
@@ -6881,7 +6905,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run_kilocode_mode_at(temp.path(), InitContext::default()).unwrap();
 
-        let path = temp.path().join(".kilocode/rules/rtk-rules.md");
+        let path = temp.path().join(".kilocode/rules/ptk-rules.md");
         let first = fs::read_to_string(&path).unwrap();
 
         // Second run should not overwrite
@@ -6895,10 +6919,10 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run_antigravity_mode_at(temp.path(), InitContext::default()).unwrap();
 
-        let rules_path = temp.path().join(".agents/rules/antigravity-rtk-rules.md");
+        let rules_path = temp.path().join(".agents/rules/antigravity-ptk-rules.md");
         assert!(rules_path.exists(), "Rules file should be created");
         let content = fs::read_to_string(&rules_path).unwrap();
-        assert!(content.contains("RTK"), "Rules file should contain RTK");
+        assert!(content.contains("PTK"), "Rules file should contain PTK");
     }
 
     #[test]
@@ -6906,7 +6930,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run_antigravity_mode_at(temp.path(), InitContext::default()).unwrap();
 
-        let path = temp.path().join(".agents/rules/antigravity-rtk-rules.md");
+        let path = temp.path().join(".agents/rules/antigravity-ptk-rules.md");
         let first = fs::read_to_string(&path).unwrap();
 
         // Second run should not overwrite
@@ -6929,8 +6953,8 @@ mod tests {
         );
         let content = fs::read_to_string(&agents_md).unwrap();
         assert!(
-            content.contains(RTK_BLOCK_START),
-            "AGENTS.md should contain the RTK instructions block"
+            content.contains(PTK_BLOCK_START),
+            "AGENTS.md should contain the PTK instructions block"
         );
     }
 
@@ -6953,11 +6977,11 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let agents_md = temp.path().join("AGENTS.md");
 
-        let added = patch_agents_md(&agents_md, RTK_MD_REF, InitContext::default()).unwrap();
+        let added = patch_agents_md(&agents_md, PTK_MD_REF, InitContext::default()).unwrap();
 
         assert!(added);
         let content = fs::read_to_string(&agents_md).unwrap();
-        assert_eq!(content, "@RTK.md\n");
+        assert_eq!(content, "@PTK.md\n");
     }
 
     #[test]
@@ -6968,17 +6992,17 @@ mod tests {
             &agents_md,
             format!(
                 "# Team rules\n\n{} v2 -->\nold\n{}\n",
-                RTK_BLOCK_START, RTK_BLOCK_END
+                PTK_BLOCK_START, PTK_BLOCK_END
             ),
         )
         .unwrap();
 
-        let added = patch_agents_md(&agents_md, RTK_MD_REF, InitContext::default()).unwrap();
+        let added = patch_agents_md(&agents_md, PTK_MD_REF, InitContext::default()).unwrap();
 
         assert!(added);
         let content = fs::read_to_string(&agents_md).unwrap();
         assert!(!content.contains("old"));
-        assert_eq!(content.matches("@RTK.md").count(), 1);
+        assert_eq!(content.matches("@PTK.md").count(), 1);
     }
 
     #[test]
@@ -6986,7 +7010,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run_hermes_mode_at(temp.path(), InitContext::default()).unwrap();
 
-        let plugin_dir = temp.path().join("plugins/rtk-rewrite");
+        let plugin_dir = temp.path().join("plugins/ptk-rewrite");
         let init_path = plugin_dir.join("__init__.py");
         let manifest_path = plugin_dir.join("plugin.yaml");
         let config_path = temp.path().join("config.yaml");
@@ -6995,17 +7019,17 @@ mod tests {
         assert!(manifest_path.exists(), "Plugin manifest should be created");
         assert_eq!(
             fs::read_to_string(&init_path).unwrap(),
-            include_str!("../../hooks/hermes/rtk-rewrite/__init__.py")
+            include_str!("../../hooks/hermes/ptk-rewrite/__init__.py")
         );
         assert_eq!(
             fs::read_to_string(&manifest_path).unwrap(),
-            include_str!("../../hooks/hermes/rtk-rewrite/plugin.yaml")
+            include_str!("../../hooks/hermes/ptk-rewrite/plugin.yaml")
         );
 
         let config = fs::read_to_string(&config_path).unwrap();
         assert!(config.contains("plugins:\n"));
         assert!(config.contains("  enabled:\n"));
-        assert_eq!(config.matches("rtk-rewrite").count(), 1);
+        assert_eq!(config.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7028,7 +7052,7 @@ mod tests {
         assert!(first.contains("    - existing-plugin\n"));
         assert!(first.contains("  search_path: ./plugins\n"));
         assert!(first.contains("other: true\n"));
-        assert_eq!(first.matches("rtk-rewrite").count(), 1);
+        assert_eq!(first.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7046,13 +7070,13 @@ mod tests {
         run_hermes_mode_at(temp.path(), InitContext::default()).unwrap();
         let second = fs::read_to_string(&config_path).unwrap();
 
-        let expected = "theme: dark\nplugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - rtk-rewrite\n search_path: ./plugins\nother: true\n";
+        let expected = "theme: dark\nplugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - ptk-rewrite\n search_path: ./plugins\nother: true\n";
         assert_eq!(first, expected);
         assert_eq!(
             second, expected,
             "Hermes PyYAML config patch should be idempotent"
         );
-        assert_eq!(first.matches("rtk-rewrite").count(), 1);
+        assert_eq!(first.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7077,10 +7101,10 @@ mod tests {
         run_hermes_mode_at(hermes_home, InitContext::default()).unwrap();
         let second = fs::read_to_string(&config_path).unwrap();
 
-        let installed = "theme: dark\nplugins:\n disabled:\n - google_meet\n - spotify\n search_path: ./plugins\n enabled:\n - rtk-rewrite\nother: true\n";
+        let installed = "theme: dark\nplugins:\n disabled:\n - google_meet\n - spotify\n search_path: ./plugins\n enabled:\n - ptk-rewrite\nother: true\n";
         assert_eq!(first, installed);
         assert_eq!(second, installed);
-        assert_eq!(first.matches("rtk-rewrite").count(), 1);
+        assert_eq!(first.matches("ptk-rewrite").count(), 1);
         assert!(plugin_dir.exists());
         assert_eq!(fs::read_to_string(&other_plugin_file).unwrap(), "keep");
 
@@ -7100,7 +7124,7 @@ mod tests {
         );
         assert!(!uninstalled.contains("\n - \n"));
         assert!(!uninstalled.contains("\n -\n"));
-        assert_eq!(uninstalled.matches("rtk-rewrite").count(), 0);
+        assert_eq!(uninstalled.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
@@ -7114,12 +7138,12 @@ mod tests {
         let config_path = hermes_home.join("config.yaml");
 
         fs::create_dir_all(nested_plugin_file.parent().unwrap()).unwrap();
-        fs::write(&nested_plugin_file, "rtk").unwrap();
+        fs::write(&nested_plugin_file, "ptk").unwrap();
         fs::create_dir_all(&other_plugin_dir).unwrap();
         fs::write(&other_plugin_file, "keep").unwrap();
         fs::write(
             &config_path,
-            "theme: dark\nplugins:\n  enabled:\n    - existing-plugin\n    - rtk-rewrite\n  search_path: ./plugins\nother: true\n",
+            "theme: dark\nplugins:\n  enabled:\n    - existing-plugin\n    - ptk-rewrite\n  search_path: ./plugins\nother: true\n",
         )
         .unwrap();
 
@@ -7137,7 +7161,7 @@ mod tests {
         assert!(config.contains("    - existing-plugin\n"));
         assert!(config.contains("  search_path: ./plugins\n"));
         assert!(config.contains("other: true\n"));
-        assert_eq!(config.matches("rtk-rewrite").count(), 0);
+        assert_eq!(config.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
@@ -7151,12 +7175,12 @@ mod tests {
         let config_path = hermes_home.join("config.yaml");
 
         fs::create_dir_all(nested_plugin_file.parent().unwrap()).unwrap();
-        fs::write(&nested_plugin_file, "rtk").unwrap();
+        fs::write(&nested_plugin_file, "ptk").unwrap();
         fs::create_dir_all(&other_plugin_dir).unwrap();
         fs::write(&other_plugin_file, "keep").unwrap();
         fs::write(
             &config_path,
-            "theme: dark\nplugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - rtk-rewrite\n search_path: ./plugins\nother: true\n",
+            "theme: dark\nplugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - ptk-rewrite\n search_path: ./plugins\nother: true\n",
         )
         .unwrap();
 
@@ -7176,7 +7200,7 @@ mod tests {
         );
         assert!(!config.contains("\n - \n"));
         assert!(!config.contains("\n -\n"));
-        assert_eq!(config.matches("rtk-rewrite").count(), 0);
+        assert_eq!(config.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
@@ -7201,18 +7225,18 @@ mod tests {
         assert!(patched.contains("theme: dark\n"));
         assert!(patched.contains("plugins:\n"));
         assert!(patched.contains("  search_path: ./plugins\n"));
-        assert!(patched.contains("  enabled:\n    - rtk-rewrite\n"));
+        assert!(patched.contains("  enabled:\n    - ptk-rewrite\n"));
         assert!(patched.contains("other: true\n"));
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
-    fn test_hermes_config_patch_removes_duplicate_rtk_rewrite() {
-        let existing = "plugins:\n  enabled:\n    - rtk-rewrite\n    - other\n    - rtk-rewrite\n";
+    fn test_hermes_config_patch_removes_duplicate_ptk_rewrite() {
+        let existing = "plugins:\n  enabled:\n    - ptk-rewrite\n    - other\n    - ptk-rewrite\n";
         let patched = patch_hermes_config(existing);
 
         assert!(patched.contains("    - other\n"));
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7224,9 +7248,9 @@ mod tests {
 
         assert_eq!(
             patched,
-            "plugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - rtk-rewrite\n"
+            "plugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - ptk-rewrite\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7235,8 +7259,8 @@ mod tests {
 
         let patched = patch_hermes_config(existing);
 
-        assert_eq!(patched, "plugins:\n  enabled:\n  - foo\n  - rtk-rewrite\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched, "plugins:\n  enabled:\n  - foo\n  - ptk-rewrite\n");
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7248,9 +7272,9 @@ mod tests {
 
         assert_eq!(
             patched,
-            "plugins:\n disabled:\n - google_meet\n - spotify\n search_path: ./plugins\n enabled:\n - rtk-rewrite\n"
+            "plugins:\n disabled:\n - google_meet\n - spotify\n search_path: ./plugins\n enabled:\n - ptk-rewrite\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7262,10 +7286,10 @@ mod tests {
 
         assert_eq!(
             patched_once,
-            "plugins:\n enabled:\n - disk-cleanup\n - rtk-rewrite\n disabled:\n - spotify\n"
+            "plugins:\n enabled:\n - disk-cleanup\n - ptk-rewrite\n disabled:\n - spotify\n"
         );
         assert_eq!(patched_twice, patched_once);
-        assert_eq!(patched_once.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched_once.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7276,9 +7300,9 @@ mod tests {
 
         assert_eq!(
             patched,
-            "plugins:\n enabled:\n - disk-cleanup\n - rtk-rewrite\n"
+            "plugins:\n enabled:\n - disk-cleanup\n - ptk-rewrite\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7289,9 +7313,9 @@ mod tests {
 
         assert_eq!(
             patched,
-            "plugins:\n  enabled:\n    - existing-plugin\n    - rtk-rewrite\n"
+            "plugins:\n  enabled:\n    - existing-plugin\n    - ptk-rewrite\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7302,9 +7326,9 @@ mod tests {
 
         assert_eq!(
             patched,
-            "plugins:\n  search_path: ./plugins\n  enabled:\n    - rtk-rewrite\n"
+            "plugins:\n  search_path: ./plugins\n  enabled:\n    - ptk-rewrite\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -7313,34 +7337,34 @@ mod tests {
 
         let patched = patch_hermes_config(existing);
 
-        assert_eq!(patched, "plugins:\n  enabled:\n    - rtk-rewrite\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched, "plugins:\n  enabled:\n    - ptk-rewrite\n");
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
     fn test_hermes_config_patch_inline_enabled_is_idempotent() {
-        let existing = "theme: dark\nplugins:\n  enabled: [existing-plugin, rtk-rewrite] # keep\n  search_path: ./plugins\nother: true\n";
+        let existing = "theme: dark\nplugins:\n  enabled: [existing-plugin, ptk-rewrite] # keep\n  search_path: ./plugins\nother: true\n";
 
         let patched = patch_hermes_config(existing);
 
         assert_eq!(patched, existing);
         assert_eq!(patch_hermes_config(&patched), patched);
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
     fn test_hermes_config_patch_inline_enabled_without_final_newline_is_idempotent() {
-        let existing = "plugins:\n  enabled: [existing-plugin, rtk-rewrite]";
+        let existing = "plugins:\n  enabled: [existing-plugin, ptk-rewrite]";
 
         let patched = patch_hermes_config(existing);
 
         assert_eq!(patched, existing);
         assert_eq!(patch_hermes_config(&patched), patched);
-        assert_eq!(patched.matches("rtk-rewrite").count(), 1);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
-    fn test_hermes_config_unpatch_inline_enabled_without_rtk_preserves_missing_final_newline() {
+    fn test_hermes_config_unpatch_inline_enabled_without_ptk_preserves_missing_final_newline() {
         let existing = "plugins:\n  enabled: [existing-plugin]";
 
         let patched = unpatch_hermes_config(existing);
@@ -7350,7 +7374,7 @@ mod tests {
 
     #[test]
     fn test_hermes_config_unpatch_inline_enabled_preserves_unrelated_entries() {
-        let existing = "theme: dark\nplugins:\n  enabled: [alpha, rtk-rewrite, beta] # keep comment\n  search_path: ./plugins\nother: true\n";
+        let existing = "theme: dark\nplugins:\n  enabled: [alpha, ptk-rewrite, beta] # keep comment\n  search_path: ./plugins\nother: true\n";
 
         let patched = unpatch_hermes_config(existing);
 
@@ -7358,42 +7382,42 @@ mod tests {
             patched,
             "theme: dark\nplugins:\n  enabled: [alpha, beta] # keep comment\n  search_path: ./plugins\nother: true\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
     fn test_hermes_config_unpatch_inline_enabled_final_line_without_newline() {
-        let existing = "plugins:\n  enabled: [existing-plugin, rtk-rewrite]";
+        let existing = "plugins:\n  enabled: [existing-plugin, ptk-rewrite]";
 
         let patched = unpatch_hermes_config(existing);
 
         assert_eq!(patched, "plugins:\n  enabled: [existing-plugin]");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
-    fn test_hermes_config_unpatch_removes_duplicate_inline_rtk_rewrite() {
-        let existing = "plugins:\n  enabled: [alpha, rtk-rewrite, beta, rtk-rewrite]\n";
+    fn test_hermes_config_unpatch_removes_duplicate_inline_ptk_rewrite() {
+        let existing = "plugins:\n  enabled: [alpha, ptk-rewrite, beta, ptk-rewrite]\n";
 
         let patched = unpatch_hermes_config(existing);
 
         assert_eq!(patched, "plugins:\n  enabled: [alpha, beta]\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
-    fn test_hermes_config_unpatch_removes_duplicate_block_rtk_rewrite() {
-        let existing = "plugins:\n  enabled:\n    - rtk-rewrite\n    - other\n    - rtk-rewrite\n";
+    fn test_hermes_config_unpatch_removes_duplicate_block_ptk_rewrite() {
+        let existing = "plugins:\n  enabled:\n    - ptk-rewrite\n    - other\n    - ptk-rewrite\n";
 
         let patched = unpatch_hermes_config(existing);
 
         assert_eq!(patched, "plugins:\n  enabled:\n    - other\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
     fn test_hermes_config_unpatch_pyyaml_indentationless_enabled_list() {
-        let existing = "plugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - rtk-rewrite\n search_path: ./plugins\n";
+        let existing = "plugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n - ptk-rewrite\n search_path: ./plugins\n";
 
         let patched = unpatch_hermes_config(existing);
 
@@ -7401,31 +7425,31 @@ mod tests {
             patched,
             "plugins:\n disabled:\n - google_meet\n - spotify\n enabled:\n - disk-cleanup\n search_path: ./plugins\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
-    fn test_hermes_config_unpatch_pyyaml_indentationless_only_rtk_collapses_to_empty() {
-        let existing = "plugins:\n enabled:\n - rtk-rewrite\n search_path: ./plugins\n";
+    fn test_hermes_config_unpatch_pyyaml_indentationless_only_ptk_collapses_to_empty() {
+        let existing = "plugins:\n enabled:\n - ptk-rewrite\n search_path: ./plugins\n";
 
         let patched = unpatch_hermes_config(existing);
 
         assert_eq!(patched, "plugins:\n enabled: []\n search_path: ./plugins\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
     fn test_hermes_config_unpatch_block_enabled_final_line_without_newline() {
-        let existing = "plugins:\n  enabled:\n    - existing-plugin\n    - rtk-rewrite";
+        let existing = "plugins:\n  enabled:\n    - existing-plugin\n    - ptk-rewrite";
 
         let patched = unpatch_hermes_config(existing);
 
         assert_eq!(patched, "plugins:\n  enabled:\n    - existing-plugin\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
-    fn test_hermes_config_unpatch_block_enabled_without_rtk_preserves_missing_final_newline() {
+    fn test_hermes_config_unpatch_block_enabled_without_ptk_preserves_missing_final_newline() {
         let existing = "plugins:\n  enabled:\n    - existing-plugin";
 
         let patched = unpatch_hermes_config(existing);
@@ -7435,7 +7459,7 @@ mod tests {
 
     #[test]
     fn test_hermes_config_unpatch_preserves_quoted_exact_values() {
-        let existing = "plugins:\n  enabled:\n    - 'alpha'\n    - \"rtk-rewrite\"\n    - 'beta'\n  search_path: ./plugins\n";
+        let existing = "plugins:\n  enabled:\n    - 'alpha'\n    - \"ptk-rewrite\"\n    - 'beta'\n  search_path: ./plugins\n";
 
         let patched = unpatch_hermes_config(existing);
 
@@ -7443,7 +7467,7 @@ mod tests {
             patched,
             "plugins:\n  enabled:\n    - 'alpha'\n    - 'beta'\n  search_path: ./plugins\n"
         );
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
@@ -7457,35 +7481,35 @@ mod tests {
 
     #[test]
     fn test_hermes_config_unpatch_collapses_empty_enabled_list() {
-        let existing = "plugins:\n  enabled:\n    - rtk-rewrite\n";
+        let existing = "plugins:\n  enabled:\n    - ptk-rewrite\n";
 
         let patched = unpatch_hermes_config(existing);
 
         assert_eq!(patched, "plugins:\n  enabled: []\n");
-        assert_eq!(patched.matches("rtk-rewrite").count(), 0);
+        assert_eq!(patched.matches("ptk-rewrite").count(), 0);
     }
 
     #[test]
     fn test_run_codex_mode_global_writes_absolute_reference_to_codex_dir() {
         let temp = TempDir::new().unwrap();
         let agents_md = temp.path().join("AGENTS.md");
-        let rtk_md = temp.path().join("RTK.md");
+        let ptk_md = temp.path().join("PTK.md");
         let hooks_json = temp.path().join(HOOKS_JSON);
 
         run_codex_mode_with_paths(
             agents_md.clone(),
-            rtk_md.clone(),
+            ptk_md.clone(),
             hooks_json.clone(),
             true,
             InitContext::default(),
         )
         .unwrap();
 
-        assert!(rtk_md.exists());
-        assert_eq!(fs::read_to_string(&rtk_md).unwrap(), RTK_AWARENESS_DEFAULT);
+        assert!(ptk_md.exists());
+        assert_eq!(fs::read_to_string(&ptk_md).unwrap(), PTK_AWARENESS_DEFAULT);
         assert_eq!(
             fs::read_to_string(&agents_md).unwrap(),
-            format!("{}\n", codex_rtk_md_ref(temp.path()))
+            format!("{}\n", codex_ptk_md_ref(temp.path()))
         );
         let hooks: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hooks_json).unwrap()).unwrap();
@@ -7579,13 +7603,13 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_claude_dir_prefers_rtk_override() {
+    fn test_resolve_claude_dir_prefers_ptk_override() {
         let result = resolve_claude_dir_from(
-            Some(PathBuf::from("/custom/rtk-claude")),
+            Some(PathBuf::from("/custom/ptk-claude")),
             Some(PathBuf::from("/home/user")),
         )
         .unwrap();
-        assert_eq!(result, PathBuf::from("/custom/rtk-claude"));
+        assert_eq!(result, PathBuf::from("/custom/ptk-claude"));
     }
 
     #[test]
@@ -7863,7 +7887,7 @@ mod tests {
     #[test]
     fn test_droid_target_prefers_hooks_json_with_pre_tool_use() {
         // hooks.json defines PreToolUse: it shadows settings.json's
-        // PreToolUse entirely, so RTK must ride the hooks.json array.
+        // PreToolUse entirely, so PTK must ride the hooks.json array.
         let temp = TempDir::new().unwrap();
         let droid_dir = temp.path().join(".factory");
         fs::create_dir_all(&droid_dir).unwrap();
@@ -7904,7 +7928,7 @@ mod tests {
     fn test_droid_target_uses_legacy_hooks_json_when_root_absent() {
         // Droid still reads .factory/hooks/hooks.json when the root file is
         // absent; creating a root hooks.json would shadow the whole legacy
-        // file, so RTK patches the legacy one.
+        // file, so PTK patches the legacy one.
         let temp = TempDir::new().unwrap();
         let droid_dir = temp.path().join(".factory");
         let legacy_dir = droid_dir.join("hooks");
@@ -7949,8 +7973,8 @@ mod tests {
 
     #[test]
     fn test_droid_install_migrates_stale_settings_entry() {
-        // Simulate an old RTK install in settings.json now shadowed by a
-        // user-created hooks.json: install must move RTK into hooks.json and
+        // Simulate an old PTK install in settings.json now shadowed by a
+        // user-created hooks.json: install must move PTK into hooks.json and
         // strip the dead settings.json copy.
         let temp = TempDir::new().unwrap();
         let droid_dir = temp.path().join(".factory");
@@ -7981,7 +8005,7 @@ mod tests {
                 .unwrap();
         assert!(
             droid_hook_already_present(&hooks, DroidLayout::Root),
-            "RTK entry must now live in hooks.json"
+            "PTK entry must now live in hooks.json"
         );
         let settings: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(droid_dir.join("settings.json")).unwrap())
@@ -7998,20 +8022,20 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let codex_dir = temp.path();
         let agents_md = codex_dir.join("AGENTS.md");
-        let rtk_md = codex_dir.join("RTK.md");
+        let ptk_md = codex_dir.join("PTK.md");
 
-        fs::write(&agents_md, "# Team rules\n\n@RTK.md\n").unwrap();
-        fs::write(&rtk_md, "codex config").unwrap();
+        fs::write(&agents_md, "# Team rules\n\n@PTK.md\n").unwrap();
+        fs::write(&ptk_md, "codex config").unwrap();
 
         let removed_first = uninstall_codex_at(codex_dir, InitContext::default()).unwrap();
         let removed_second = uninstall_codex_at(codex_dir, InitContext::default()).unwrap();
 
         assert_eq!(removed_first.len(), 2);
         assert!(removed_second.is_empty());
-        assert!(!rtk_md.exists());
+        assert!(!ptk_md.exists());
 
         let content = fs::read_to_string(&agents_md).unwrap();
-        assert!(!content.contains("@RTK.md"));
+        assert!(!content.contains("@PTK.md"));
         assert!(content.contains("# Team rules"));
     }
 
@@ -8029,7 +8053,7 @@ mod tests {
         std::env::set_current_dir(original_cwd).unwrap();
         uninstall_result.unwrap();
 
-        assert!(!temp.path().join(RTK_MD).exists());
+        assert!(!temp.path().join(PTK_MD).exists());
         assert!(!codex_hook_already_present(
             &serde_json::from_str(
                 &fs::read_to_string(temp.path().join(CODEX_DIR).join(HOOKS_JSON)).unwrap()
@@ -8038,7 +8062,7 @@ mod tests {
         ));
         let agents = fs::read_to_string(temp.path().join(AGENTS_MD)).unwrap();
         assert_eq!(agents.trim_end(), "# Team rules");
-        assert!(!agents.contains(RTK_MD_REF));
+        assert!(!agents.contains(PTK_MD_REF));
     }
 
     #[test]
@@ -8046,11 +8070,11 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let codex_dir = temp.path();
         let agents_md = codex_dir.join("AGENTS.md");
-        let rtk_md = codex_dir.join("RTK.md");
-        let absolute_ref = codex_rtk_md_ref(codex_dir);
+        let ptk_md = codex_dir.join("PTK.md");
+        let absolute_ref = codex_ptk_md_ref(codex_dir);
 
         fs::write(&agents_md, format!("# Team rules\n\n{}\n", absolute_ref)).unwrap();
-        fs::write(&rtk_md, "codex config").unwrap();
+        fs::write(&ptk_md, "codex config").unwrap();
 
         let removed = uninstall_codex_at(codex_dir, InitContext::default()).unwrap();
 
@@ -8123,7 +8147,7 @@ mod tests {
     #[test]
     fn test_write_if_changed_dry_run_does_not_create_file() {
         let temp = TempDir::new().unwrap();
-        let target = temp.path().join("rtk-test.md");
+        let target = temp.path().join("ptk-test.md");
 
         let changed = write_if_changed(
             &target,
@@ -8150,7 +8174,7 @@ mod tests {
     #[test]
     fn test_write_if_changed_dry_run_does_not_modify_existing_file() {
         let temp = TempDir::new().unwrap();
-        let target = temp.path().join("rtk-test.md");
+        let target = temp.path().join("ptk-test.md");
         fs::write(&target, "original").unwrap();
 
         let changed = write_if_changed(
@@ -8176,12 +8200,12 @@ mod tests {
     fn test_run_codex_mode_dry_run_writes_nothing() {
         let temp = TempDir::new().unwrap();
         let agents_md = temp.path().join("AGENTS.md");
-        let rtk_md = temp.path().join("RTK.md");
+        let ptk_md = temp.path().join("PTK.md");
         let hooks_json = temp.path().join(HOOKS_JSON);
 
         run_codex_mode_with_paths(
             agents_md.clone(),
-            rtk_md.clone(),
+            ptk_md.clone(),
             hooks_json.clone(),
             true,
             InitContext {
@@ -8192,9 +8216,9 @@ mod tests {
         .unwrap();
 
         assert!(
-            !rtk_md.exists(),
-            "dry-run must not create RTK.md: {}",
-            rtk_md.display()
+            !ptk_md.exists(),
+            "dry-run must not create PTK.md: {}",
+            ptk_md.display()
         );
         assert!(
             !agents_md.exists(),
@@ -8209,29 +8233,29 @@ mod tests {
     }
 
     #[test]
-    fn test_uninstall_codex_at_removes_rtk_instructions_block() {
+    fn test_uninstall_codex_at_removes_ptk_instructions_block() {
         let temp = TempDir::new().unwrap();
         let codex_dir = temp.path();
         let agents_md = codex_dir.join("AGENTS.md");
-        let rtk_md = codex_dir.join("RTK.md");
+        let ptk_md = codex_dir.join("PTK.md");
 
         fs::write(
             &agents_md,
             format!(
-                "# Team rules\n\n{} v2 -->\nOLD RTK STUFF\n{}\n\nMore content",
-                RTK_BLOCK_START, RTK_BLOCK_END
+                "# Team rules\n\n{} v2 -->\nOLD PTK STUFF\n{}\n\nMore content",
+                PTK_BLOCK_START, PTK_BLOCK_END
             ),
         )
         .unwrap();
-        fs::write(&rtk_md, "codex config").unwrap();
+        fs::write(&ptk_md, "codex config").unwrap();
 
         let removed = uninstall_codex_at(codex_dir, InitContext::default()).unwrap();
 
         let content = fs::read_to_string(&agents_md).unwrap();
-        assert!(!content.contains("OLD RTK STUFF"));
+        assert!(!content.contains("OLD PTK STUFF"));
         assert!(content.contains("# Team rules"));
         assert!(content.contains("More content"));
-        assert!(removed.iter().any(|r| r.contains("rtk-instructions block")));
+        assert!(removed.iter().any(|r| r.contains("ptk-instructions block")));
     }
 
     #[test]
@@ -8240,10 +8264,10 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let claude_md = temp.path().join("CLAUDE.md");
 
-        fs::write(&claude_md, RTK_INSTRUCTIONS).unwrap();
+        fs::write(&claude_md, PTK_INSTRUCTIONS).unwrap();
         let content = fs::read_to_string(&claude_md).unwrap();
 
-        assert!(content.contains(RTK_BLOCK_START));
+        assert!(content.contains(PTK_BLOCK_START));
     }
 
     // Tests for hook_already_present()
@@ -8255,13 +8279,13 @@ mod tests {
                     "matcher": "Bash",
                     "hooks": [{
                         "type": "command",
-                        "command": "/Users/test/.claude/hooks/rtk-rewrite.sh"
+                        "command": "/Users/test/.claude/hooks/ptk-rewrite.sh"
                     }]
                 }]
             }
         });
 
-        let hook_command = "/Users/test/.claude/hooks/rtk-rewrite.sh";
+        let hook_command = "/Users/test/.claude/hooks/ptk-rewrite.sh";
         assert!(hook_already_present(&json_content, hook_command));
     }
 
@@ -8273,21 +8297,21 @@ mod tests {
                     "matcher": "Bash",
                     "hooks": [{
                         "type": "command",
-                        "command": "/home/user/.claude/hooks/rtk-rewrite.sh"
+                        "command": "/home/user/.claude/hooks/ptk-rewrite.sh"
                     }]
                 }]
             }
         });
 
-        let hook_command = "~/.claude/hooks/rtk-rewrite.sh";
-        // Should match on rtk-rewrite.sh substring
+        let hook_command = "~/.claude/hooks/ptk-rewrite.sh";
+        // Should match on ptk-rewrite.sh substring
         assert!(hook_already_present(&json_content, hook_command));
     }
 
     #[test]
     fn test_hook_not_present_empty() {
         let json_content = serde_json::json!({});
-        let hook_command = "/Users/test/.claude/hooks/rtk-rewrite.sh";
+        let hook_command = "/Users/test/.claude/hooks/ptk-rewrite.sh";
         assert!(!hook_already_present(&json_content, hook_command));
     }
 
@@ -8316,7 +8340,7 @@ mod tests {
                     "matcher": "Bash",
                     "hooks": [{
                         "type": "command",
-                        "command": "/opt/homebrew/bin/rtk hook claude",
+                        "command": "/opt/homebrew/bin/ptk hook claude",
                         "timeout": 5
                     }]
                 }]
@@ -8340,7 +8364,7 @@ mod tests {
             }
         });
 
-        let hook_command = "/Users/test/.claude/hooks/rtk-rewrite.sh";
+        let hook_command = "/Users/test/.claude/hooks/ptk-rewrite.sh";
         assert!(!hook_already_present(&json_content, hook_command));
     }
 
@@ -8348,7 +8372,7 @@ mod tests {
     #[test]
     fn test_insert_hook_entry_empty_root() {
         let mut json_content = serde_json::json!({});
-        let hook_command = "/Users/test/.claude/hooks/rtk-rewrite.sh";
+        let hook_command = "/Users/test/.claude/hooks/ptk-rewrite.sh";
 
         insert_hook_entry(&mut json_content, hook_command).unwrap();
 
@@ -8383,7 +8407,7 @@ mod tests {
             }
         });
 
-        let hook_command = "/Users/test/.claude/hooks/rtk-rewrite.sh";
+        let hook_command = "/Users/test/.claude/hooks/ptk-rewrite.sh";
         insert_hook_entry(&mut json_content, hook_command).unwrap();
 
         let pre_tool_use = json_content["hooks"]["PreToolUse"].as_array().unwrap();
@@ -8393,7 +8417,7 @@ mod tests {
         let first_command = pre_tool_use[0]["hooks"][0]["command"].as_str().unwrap();
         assert_eq!(first_command, "/some/other/hook.sh");
 
-        // Check second hook is RTK
+        // Check second hook is PTK
         let second_command = pre_tool_use[1]["hooks"][0]["command"].as_str().unwrap();
         assert_eq!(second_command, hook_command);
     }
@@ -8406,7 +8430,7 @@ mod tests {
             "model": "claude-sonnet-4"
         });
 
-        let hook_command = "/Users/test/.claude/hooks/rtk-rewrite.sh";
+        let hook_command = "/Users/test/.claude/hooks/ptk-rewrite.sh";
         insert_hook_entry(&mut json_content, hook_command).unwrap();
 
         // Should preserve all other keys
@@ -8578,7 +8602,7 @@ mod tests {
                         "matcher": "Bash",
                         "hooks": [{
                             "type": "command",
-                            "command": "/Users/test/.claude/hooks/rtk-rewrite.sh"
+                            "command": "/Users/test/.claude/hooks/ptk-rewrite.sh"
                         }]
                     }
                 ]
@@ -8647,7 +8671,7 @@ mod tests {
                         "matcher": "Bash",
                         "hooks": [{
                             "type": "command",
-                            "command": "/opt/homebrew/bin/rtk hook claude"
+                            "command": "/opt/homebrew/bin/ptk hook claude"
                         }]
                     }
                 ]
@@ -8691,7 +8715,7 @@ mod tests {
             "version": 1,
             "hooks": {
                 "preToolUse": [{
-                    "command": "./hooks/rtk-rewrite.sh",
+                    "command": "./hooks/ptk-rewrite.sh",
                     "matcher": "Shell"
                 }]
             }
@@ -8833,7 +8857,7 @@ mod tests {
             "hooks": {
                 "preToolUse": [
                     { "command": "./hooks/other.sh", "matcher": "Shell" },
-                    { "command": "./hooks/rtk-rewrite.sh", "matcher": "Shell" }
+                    { "command": "./hooks/ptk-rewrite.sh", "matcher": "Shell" }
                 ]
             }
         });
@@ -8891,7 +8915,7 @@ mod tests {
                     "matcher": "Bash",
                     "hooks": [{
                         "type": "command",
-                        "command": "/home/user/.claude/hooks/rtk-rewrite.sh"
+                        "command": "/home/user/.claude/hooks/ptk-rewrite.sh"
                     }]
                 }]
             }
@@ -8911,7 +8935,7 @@ mod tests {
                         "matcher": "Bash",
                         "hooks": [{
                             "type": "command",
-                            "command": "/home/user/.claude/hooks/rtk-rewrite.sh"
+                            "command": "/home/user/.claude/hooks/ptk-rewrite.sh"
                         }]
                     },
                     {
@@ -8960,7 +8984,7 @@ mod tests {
                         "matcher": "Bash",
                         "hooks": [{
                             "type": "command",
-                            "command": "/home/user/.claude/hooks/rtk-rewrite.sh"
+                            "command": "/home/user/.claude/hooks/ptk-rewrite.sh"
                         }]
                     },
                     {
@@ -8987,7 +9011,7 @@ mod tests {
             "version": 1,
             "hooks": {
                 "preToolUse": [{
-                    "command": "./hooks/rtk-rewrite.sh",
+                    "command": "./hooks/ptk-rewrite.sh",
                     "matcher": "Shell"
                 }]
             }
@@ -9005,7 +9029,7 @@ mod tests {
             "hooks": {
                 "preToolUse": [
                     {
-                        "command": "./hooks/rtk-rewrite.sh",
+                        "command": "./hooks/ptk-rewrite.sh",
                         "matcher": "Shell"
                     },
                     {
@@ -9055,7 +9079,7 @@ mod tests {
         with_claude_dir_override(&tmp, |claude_dir| {
             run_default_mode(true, PatchMode::Auto, false, InitContext::default()).unwrap();
 
-            assert!(claude_dir.join(RTK_MD).exists(), "RTK.md must be created");
+            assert!(claude_dir.join(PTK_MD).exists(), "PTK.md must be created");
             assert!(
                 claude_dir.join(CLAUDE_MD).exists(),
                 "CLAUDE.md must be created"
@@ -9150,7 +9174,7 @@ mod tests {
 
     #[test]
     fn test_patch_gemini_settings_malformed_json_warns_without_overwriting() {
-        // A parse failure (not a BOM) must not abort `rtk init` — by the time
+        // A parse failure (not a BOM) must not abort `ptk init` — by the time
         // patch_gemini_settings runs, run_gemini has already written the hook
         // script, GEMINI.md, and the integrity baseline, so aborting here
         // would leave a half-installed state with no summary. Treat it like
@@ -9201,7 +9225,7 @@ mod tests {
             )
             .unwrap();
 
-            assert!(!claude_dir.join(RTK_MD).exists(), "RTK.md must be removed");
+            assert!(!claude_dir.join(PTK_MD).exists(), "PTK.md must be removed");
             let settings_content =
                 fs::read_to_string(claude_dir.join(SETTINGS_JSON)).unwrap_or_default();
             assert!(
@@ -9231,13 +9255,13 @@ mod tests {
             run_claude_md_mode(true, false, InitContext::default()).unwrap();
             let claude_md_content = fs::read_to_string(claude_dir.join(CLAUDE_MD)).unwrap();
             assert!(
-                claude_md_content.contains(RTK_BLOCK_START),
+                claude_md_content.contains(PTK_BLOCK_START),
                 "pre-condition: old block must exist"
             );
 
             run_default_mode(true, PatchMode::Auto, false, InitContext::default()).unwrap();
 
-            assert!(claude_dir.join(RTK_MD).exists(), "RTK.md must be created");
+            assert!(claude_dir.join(PTK_MD).exists(), "PTK.md must be created");
             let settings = fs::read_to_string(claude_dir.join(SETTINGS_JSON)).unwrap();
             assert!(
                 settings.contains(CLAUDE_HOOK_COMMAND),
@@ -9274,8 +9298,8 @@ mod tests {
             run_hook_only_mode(true, PatchMode::Auto, false, InitContext::default()).unwrap();
 
             assert!(
-                !claude_dir.join(RTK_MD).exists(),
-                "RTK.md must NOT be created in hook-only mode"
+                !claude_dir.join(PTK_MD).exists(),
+                "PTK.md must NOT be created in hook-only mode"
             );
             let settings = fs::read_to_string(claude_dir.join(SETTINGS_JSON)).unwrap();
             assert!(
@@ -9296,8 +9320,8 @@ mod tests {
             run_default_mode(true, PatchMode::Auto, false, dry).unwrap();
 
             assert!(
-                !claude_dir.join(RTK_MD).exists(),
-                "dry-run must not create RTK.md"
+                !claude_dir.join(PTK_MD).exists(),
+                "dry-run must not create PTK.md"
             );
             assert!(
                 !claude_dir.join(CLAUDE_MD).exists(),
@@ -9316,11 +9340,11 @@ mod tests {
         with_claude_dir_override(&tmp, |claude_dir| {
             // Stage a real install first
             run_default_mode(true, PatchMode::Auto, false, InitContext::default()).unwrap();
-            assert!(claude_dir.join(RTK_MD).exists());
+            assert!(claude_dir.join(PTK_MD).exists());
             assert!(claude_dir.join(SETTINGS_JSON).exists());
 
             let settings_before = fs::read_to_string(claude_dir.join(SETTINGS_JSON)).unwrap();
-            let rtk_md_before = fs::read_to_string(claude_dir.join(RTK_MD)).unwrap();
+            let ptk_md_before = fs::read_to_string(claude_dir.join(PTK_MD)).unwrap();
 
             // Dry-run uninstall
             let dry = InitContext {
@@ -9331,17 +9355,17 @@ mod tests {
 
             // Files must still exist with identical content
             assert!(
-                claude_dir.join(RTK_MD).exists(),
-                "dry-run uninstall must not remove RTK.md"
+                claude_dir.join(PTK_MD).exists(),
+                "dry-run uninstall must not remove PTK.md"
             );
             assert!(
                 claude_dir.join(SETTINGS_JSON).exists(),
                 "dry-run uninstall must not remove settings.json"
             );
             assert_eq!(
-                fs::read_to_string(claude_dir.join(RTK_MD)).unwrap(),
-                rtk_md_before,
-                "dry-run uninstall must not modify RTK.md"
+                fs::read_to_string(claude_dir.join(PTK_MD)).unwrap(),
+                ptk_md_before,
+                "dry-run uninstall must not modify PTK.md"
             );
             assert_eq!(
                 fs::read_to_string(claude_dir.join(SETTINGS_JSON)).unwrap(),
@@ -9352,75 +9376,75 @@ mod tests {
     }
 
     #[test]
-    fn test_uninstall_removes_rtk_instructions_block() {
+    fn test_uninstall_removes_ptk_instructions_block() {
         let temp = TempDir::new().unwrap();
         let claude_md = temp.path().join("CLAUDE.md");
 
-        fs::write(&claude_md, RTK_INSTRUCTIONS).unwrap();
+        fs::write(&claude_md, PTK_INSTRUCTIONS).unwrap();
         assert!(claude_md.exists());
 
         let content = fs::read_to_string(&claude_md).unwrap();
-        assert!(content.contains(RTK_BLOCK_START));
+        assert!(content.contains(PTK_BLOCK_START));
 
-        let (cleaned, did_remove) = remove_rtk_block(&content);
+        let (cleaned, did_remove) = remove_ptk_block(&content);
         assert!(did_remove);
-        assert!(!cleaned.contains(RTK_BLOCK_START));
-        assert!(!cleaned.contains("rtk cargo test"));
+        assert!(!cleaned.contains(PTK_BLOCK_START));
+        assert!(!cleaned.contains("ptk cargo test"));
     }
 
     #[test]
-    fn test_uninstall_preserves_non_rtk_content() {
+    fn test_uninstall_preserves_non_ptk_content() {
         let content = format!(
             "# My Project\n\nSome custom instructions.\n\n{}\n\n## Other Notes\n\nKeep this.",
-            RTK_INSTRUCTIONS
+            PTK_INSTRUCTIONS
         );
 
-        let (cleaned, did_remove) = remove_rtk_block(&content);
+        let (cleaned, did_remove) = remove_ptk_block(&content);
 
         assert!(did_remove);
         assert!(cleaned.contains("# My Project"));
         assert!(cleaned.contains("Some custom instructions."));
         assert!(cleaned.contains("## Other Notes"));
         assert!(cleaned.contains("Keep this."));
-        assert!(!cleaned.contains(RTK_BLOCK_START));
+        assert!(!cleaned.contains(PTK_BLOCK_START));
     }
 
     #[test]
     fn test_uninstall_handles_both_artifacts() {
-        let content = format!("# Config\n\n@RTK.md\n\n{}\n\nMore stuff", RTK_INSTRUCTIONS);
+        let content = format!("# Config\n\n@PTK.md\n\n{}\n\nMore stuff", PTK_INSTRUCTIONS);
 
         let after_at_removal: String = content
             .lines()
-            .filter(|line| !line.trim().starts_with("@RTK.md"))
+            .filter(|line| !line.trim().starts_with("@PTK.md"))
             .collect::<Vec<_>>()
             .join("\n");
 
-        assert!(!after_at_removal.contains("@RTK.md"));
-        assert!(after_at_removal.contains(RTK_BLOCK_START));
+        assert!(!after_at_removal.contains("@PTK.md"));
+        assert!(after_at_removal.contains(PTK_BLOCK_START));
 
-        let (final_content, did_remove) = remove_rtk_block(&after_at_removal);
+        let (final_content, did_remove) = remove_ptk_block(&after_at_removal);
         assert!(did_remove);
-        assert!(!final_content.contains(RTK_BLOCK_START));
+        assert!(!final_content.contains(PTK_BLOCK_START));
         assert!(final_content.contains("# Config"));
         assert!(final_content.contains("More stuff"));
     }
 
     #[test]
     fn test_uninstall_integration_claude_md_only() {
-        let (cleaned, did_remove) = remove_rtk_block(RTK_INSTRUCTIONS);
-        assert!(did_remove, "remove_rtk_block must succeed for valid block");
+        let (cleaned, did_remove) = remove_ptk_block(PTK_INSTRUCTIONS);
+        assert!(did_remove, "remove_ptk_block must succeed for valid block");
         assert!(
             cleaned.trim().is_empty(),
-            "CLAUDE.md with only RTK content should be empty after removal"
+            "CLAUDE.md with only PTK content should be empty after removal"
         );
     }
 
     #[test]
     fn test_uninstall_integration_preserves_user_content() {
         let user_content = "# My Project Rules\n\nAlways use snake_case.";
-        let installed = format!("{}\n\n{}", user_content, RTK_INSTRUCTIONS);
+        let installed = format!("{}\n\n{}", user_content, PTK_INSTRUCTIONS);
 
-        let (cleaned, did_remove) = remove_rtk_block(&installed);
+        let (cleaned, did_remove) = remove_ptk_block(&installed);
         assert!(did_remove);
         assert!(!cleaned.trim().is_empty(), "user content should remain");
         assert!(
@@ -9432,12 +9456,12 @@ mod tests {
             "user content must be preserved"
         );
         assert!(
-            !cleaned.contains(RTK_BLOCK_START),
-            "RTK block must be fully removed"
+            !cleaned.contains(PTK_BLOCK_START),
+            "PTK block must be fully removed"
         );
         assert!(
-            !cleaned.contains(RTK_BLOCK_END),
-            "RTK end marker must be removed"
+            !cleaned.contains(PTK_BLOCK_END),
+            "PTK end marker must be removed"
         );
     }
 
@@ -9445,14 +9469,14 @@ mod tests {
     fn test_claude_md_mode_refuses_malformed_block() {
         // Mirrors `test_copilot_init_refuses_malformed_block`: a malformed
         // CLAUDE.md previously emitted a warning and exited 0, silently
-        // skipping the OpenCode plugin step. The shared `write_rtk_block`
+        // skipping the OpenCode plugin step. The shared `write_ptk_block`
         // dispatcher now bails for both paths.
         let tmp = TempDir::new().unwrap();
         with_claude_dir_override(&tmp, |claude_dir| {
             let claude_md = claude_dir.join(CLAUDE_MD);
             let malformed = format!(
-                "# Existing notes\n\n{}\nincomplete RTK block\n",
-                RTK_BLOCK_START
+                "# Existing notes\n\n{}\nincomplete PTK block\n",
+                PTK_BLOCK_START
             );
             fs::write(&claude_md, &malformed).unwrap();
 
@@ -9481,8 +9505,8 @@ mod tests {
 
             let content = fs::read_to_string(&plugin).unwrap();
             assert!(
-                content.contains("rtk rewrite"),
-                "extension must delegate to rtk rewrite"
+                content.contains("ptk rewrite"),
+                "extension must delegate to ptk rewrite"
             );
             // Regression guard for #2753: a value import (e.g. `import { isToolCallEventType }`)
             // pulls in the whole @earendil-works/pi-coding-agent barrel at extension load,
@@ -9899,7 +9923,7 @@ mod tests {
         let path = dir.join(PI_PLUGIN_FILE);
         fs::write(
             &path,
-            "// rtk rewrite is mentioned here\nexport default () => {}\n",
+            "// ptk rewrite is mentioned here\nexport default () => {}\n",
         )
         .unwrap();
 
@@ -9915,7 +9939,7 @@ mod tests {
         .unwrap();
         std::env::set_current_dir(&cwd).unwrap();
 
-        assert!(path.exists(), "non-RTK extension must be left in place");
+        assert!(path.exists(), "non-PTK extension must be left in place");
     }
 
     #[test]
@@ -9965,7 +9989,7 @@ mod tests {
                 "HEAD",
                 "--full-history",
                 "--",
-                "hooks/pi/rtk.ts",
+                "hooks/pi/ptk.ts",
             ])
             .output()
             .expect("git must be available to verify Pi extension history");
@@ -9985,7 +10009,7 @@ mod tests {
         commits.dedup();
 
         for commit in commits {
-            let object = format!("{commit}:hooks/pi/rtk.ts");
+            let object = format!("{commit}:hooks/pi/ptk.ts");
             let file = Command::new("git")
                 .current_dir(manifest_dir)
                 .args(["show", object.as_str()])
@@ -10012,17 +10036,17 @@ mod tests {
     }
 
     #[test]
-    fn test_rtk_pi_plugin_marker_tracks_code_not_comments() {
+    fn test_ptk_pi_plugin_marker_tracks_code_not_comments() {
         let code_without_comments: String = PI_PLUGIN
             .lines()
             .filter(|line| !line.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(looks_like_rtk_pi_plugin(&code_without_comments));
-        assert!(looks_like_rtk_pi_plugin(
-            "import { exec } from 'pi';\nexec(\"rtk\", [\"rewrite\", cmd]);\n"
+        assert!(looks_like_ptk_pi_plugin(&code_without_comments));
+        assert!(looks_like_ptk_pi_plugin(
+            "import { exec } from 'pi';\nexec(\"ptk\", [\"rewrite\", cmd]);\n"
         ));
-        assert!(!looks_like_rtk_pi_plugin("const note = 'rtk rewrite';\n"));
+        assert!(!looks_like_ptk_pi_plugin("const note = 'ptk rewrite';\n"));
     }
 
     // ─── OMP tests ───────────────────────────────────────────────────
@@ -10306,7 +10330,7 @@ mod tests {
         let path = dir.join(PI_PLUGIN_FILE);
         fs::write(
             &path,
-            "// user-modified extension\nexport default (pi) => { pi.exec(\"rtk\", [\"rewrite\", cmd]) }\n",
+            "// user-modified extension\nexport default (pi) => { pi.exec(\"ptk\", [\"rewrite\", cmd]) }\n",
         )
         .unwrap();
 
@@ -10343,7 +10367,7 @@ mod tests {
         let path = dir.join(PI_PLUGIN_FILE);
         fs::write(
             &path,
-            "// user-modified extension\nexport default (pi) => { pi.exec(\"rtk\", [\"rewrite\", cmd]) }\n",
+            "// user-modified extension\nexport default (pi) => { pi.exec(\"ptk\", [\"rewrite\", cmd]) }\n",
         )
         .unwrap();
 
@@ -10409,7 +10433,7 @@ mod tests {
         let path = dir.join(PI_PLUGIN_FILE);
         fs::write(
             &path,
-            "// rtk rewrite is mentioned here\nexport default () => {}\n",
+            "// ptk rewrite is mentioned here\nexport default () => {}\n",
         )
         .unwrap();
 
@@ -10428,7 +10452,7 @@ mod tests {
         std::env::set_current_dir(&cwd).unwrap();
         result.unwrap();
 
-        assert!(path.exists(), "non-RTK extension must be left in place");
+        assert!(path.exists(), "non-PTK extension must be left in place");
     }
 
     #[test]
@@ -10481,12 +10505,12 @@ mod tests {
             "User custom rule was destroyed. Got: {final_content}"
         );
         assert!(
-            final_content.contains(RTK_BLOCK_START),
-            "RTK block start marker missing"
+            final_content.contains(PTK_BLOCK_START),
+            "PTK block start marker missing"
         );
         assert!(
-            final_content.contains(RTK_BLOCK_END),
-            "RTK block end marker missing"
+            final_content.contains(PTK_BLOCK_END),
+            "PTK block end marker missing"
         );
     }
 
@@ -10507,15 +10531,15 @@ mod tests {
             "Second init must be a no-op (idempotent)"
         );
 
-        let count_start = after_first.matches(RTK_BLOCK_START).count();
-        let count_end = after_first.matches(RTK_BLOCK_END).count();
+        let count_start = after_first.matches(PTK_BLOCK_START).count();
+        let count_end = after_first.matches(PTK_BLOCK_END).count();
         assert_eq!(
             count_start, 1,
-            "RTK_BLOCK_START must appear once, got {count_start}"
+            "PTK_BLOCK_START must appear once, got {count_start}"
         );
         assert_eq!(
             count_end, 1,
-            "RTK_BLOCK_END must appear once, got {count_end}"
+            "PTK_BLOCK_END must appear once, got {count_end}"
         );
     }
 
@@ -10527,8 +10551,8 @@ mod tests {
 
         let instructions_path = github_dir.join("copilot-instructions.md");
         let stale = format!(
-            "# Project rules\n\nUse rg.\n\n{}\n# OLD RTK CONTENT\nrtk foo\n{}\n",
-            RTK_BLOCK_START, RTK_BLOCK_END
+            "# Project rules\n\nUse rg.\n\n{}\n# OLD PTK CONTENT\nrtk foo\n{}\n",
+            PTK_BLOCK_START, PTK_BLOCK_END
         );
         fs::write(&instructions_path, &stale).unwrap();
 
@@ -10541,11 +10565,11 @@ mod tests {
             "User content outside the block must be preserved"
         );
         assert!(
-            !updated.contains("# OLD RTK CONTENT"),
-            "Stale RTK block content must be removed"
+            !updated.contains("# OLD PTK CONTENT"),
+            "Stale PTK block content must be removed"
         );
         assert!(
-            updated.contains("rtk cargo test"),
+            updated.contains("ptk cargo test"),
             "Fresh COPILOT_INSTRUCTIONS content must be present"
         );
     }
@@ -10581,9 +10605,9 @@ mod tests {
             "Fresh install must create copilot-instructions.md"
         );
         let content = fs::read_to_string(&instructions_path).unwrap();
-        assert!(content.contains(RTK_BLOCK_START));
-        assert!(content.contains(RTK_BLOCK_END));
-        assert!(content.contains("rtk cargo test"));
+        assert!(content.contains(PTK_BLOCK_START));
+        assert!(content.contains(PTK_BLOCK_END));
+        assert!(content.contains("ptk cargo test"));
     }
 
     #[test]
@@ -10591,7 +10615,7 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(COPILOT_HOOK_JSON).unwrap();
 
         let vscode = &v["hooks"]["PreToolUse"][0];
-        assert_eq!(vscode["command"], "rtk hook copilot");
+        assert_eq!(vscode["command"], "ptk hook copilot");
         assert!(vscode["timeout"].is_number(), "VS Code uses `timeout`");
         assert_eq!(v["version"], 1);
 
@@ -10611,11 +10635,11 @@ mod tests {
             .path()
             .join(".github")
             .join("hooks")
-            .join("rtk-rewrite.json");
+            .join("ptk-rewrite.json");
         let v: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hook_path).unwrap()).unwrap();
 
-        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "rtk hook copilot");
+        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "ptk hook copilot");
         assert_eq!(v["version"], 1);
         assert!(v["hooks"].get("preToolUse").is_none());
     }
@@ -10624,16 +10648,16 @@ mod tests {
     fn test_copilot_init_upgrades_old_dual_schema_install() {
         // Simulates a pre-existing install from before this fix, which wrote
         // both a PascalCase PreToolUse and a camelCase preToolUse entry.
-        // Re-running `rtk init --copilot` must overwrite it with the current
+        // Re-running `ptk init --copilot` must overwrite it with the current
         // single-schema config, not leave the stale camelCase entry in place.
         let old_dual_schema_json = r#"{
   "version": 1,
   "hooks": {
     "PreToolUse": [
-      { "type": "command", "command": "rtk hook copilot", "cwd": ".", "timeout": 5 }
+      { "type": "command", "command": "ptk hook copilot", "cwd": ".", "timeout": 5 }
     ],
     "preToolUse": [
-      { "type": "command", "bash": "rtk hook copilot", "powershell": "rtk hook copilot", "cwd": ".", "timeoutSec": 5 }
+      { "type": "command", "bash": "ptk hook copilot", "powershell": "ptk hook copilot", "cwd": ".", "timeoutSec": 5 }
     ]
   }
 }
@@ -10642,14 +10666,14 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let hooks_dir = temp.path().join(".github").join("hooks");
         fs::create_dir_all(&hooks_dir).unwrap();
-        let hook_path = hooks_dir.join("rtk-rewrite.json");
+        let hook_path = hooks_dir.join("ptk-rewrite.json");
         fs::write(&hook_path, old_dual_schema_json).unwrap();
 
         run_copilot_at(temp.path(), InitContext::default()).unwrap();
 
         let v: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hook_path).unwrap()).unwrap();
-        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "rtk hook copilot");
+        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "ptk hook copilot");
         assert!(
             v["hooks"].get("preToolUse").is_none(),
             "re-running init must upgrade an old dual-schema install, dropping the \
@@ -10666,7 +10690,7 @@ mod tests {
             .path()
             .join(".github")
             .join("hooks")
-            .join("rtk-rewrite.json");
+            .join("ptk-rewrite.json");
         let instructions_path = temp.path().join(".github").join("copilot-instructions.md");
         assert!(hook_path.exists());
 
@@ -10676,8 +10700,8 @@ mod tests {
         assert!(!hook_path.exists(), "hook config must be removed");
         let instructions = fs::read_to_string(&instructions_path).unwrap();
         assert!(
-            !instructions.contains(RTK_BLOCK_START),
-            "RTK block must be removed"
+            !instructions.contains(PTK_BLOCK_START),
+            "PTK block must be removed"
         );
     }
 
@@ -10694,7 +10718,7 @@ mod tests {
 
         let after = fs::read_to_string(&instructions_path).unwrap();
         assert!(after.contains("Always use pnpm."), "user content preserved");
-        assert!(!after.contains(RTK_BLOCK_START), "RTK block removed");
+        assert!(!after.contains(PTK_BLOCK_START), "PTK block removed");
     }
 
     #[test]
@@ -10705,7 +10729,7 @@ mod tests {
             .path()
             .join(".github")
             .join("hooks")
-            .join("rtk-rewrite.json");
+            .join("ptk-rewrite.json");
 
         let ctx = InitContext {
             verbose: 0,
@@ -10740,7 +10764,7 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&other_hook).unwrap(),
             other_content,
-            "third-party hook content must be unchanged by rtk install"
+            "third-party hook content must be unchanged by ptk install"
         );
     }
 
@@ -10759,16 +10783,16 @@ mod tests {
 
         assert!(
             other_hook.exists(),
-            "third-party hook file must survive rtk uninstall"
+            "third-party hook file must survive ptk uninstall"
         );
         assert_eq!(
             fs::read_to_string(&other_hook).unwrap(),
             other_content,
-            "third-party hook content must be unchanged by rtk uninstall"
+            "third-party hook content must be unchanged by ptk uninstall"
         );
         assert!(
-            !hooks_dir.join("rtk-rewrite.json").exists(),
-            "rtk's own hook must still be removed"
+            !hooks_dir.join("ptk-rewrite.json").exists(),
+            "ptk's own hook must still be removed"
         );
     }
 
@@ -10777,12 +10801,12 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run_copilot_global_at(temp.path(), InitContext::default()).unwrap();
 
-        let hook_path = temp.path().join("hooks").join("rtk-rewrite.json");
+        let hook_path = temp.path().join("hooks").join("ptk-rewrite.json");
         assert!(hook_path.exists());
         let v: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hook_path).unwrap()).unwrap();
         assert_eq!(v["version"], 1);
-        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "rtk hook copilot");
+        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "ptk hook copilot");
         assert!(v["hooks"].get("preToolUse").is_none());
     }
 
@@ -10792,10 +10816,10 @@ mod tests {
   "version": 1,
   "hooks": {
     "PreToolUse": [
-      { "type": "command", "command": "rtk hook copilot", "cwd": ".", "timeout": 5 }
+      { "type": "command", "command": "ptk hook copilot", "cwd": ".", "timeout": 5 }
     ],
     "preToolUse": [
-      { "type": "command", "bash": "rtk hook copilot", "powershell": "rtk hook copilot", "cwd": ".", "timeoutSec": 5 }
+      { "type": "command", "bash": "ptk hook copilot", "powershell": "ptk hook copilot", "cwd": ".", "timeoutSec": 5 }
     ]
   }
 }
@@ -10804,14 +10828,14 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let hooks_dir = temp.path().join("hooks");
         fs::create_dir_all(&hooks_dir).unwrap();
-        let hook_path = hooks_dir.join("rtk-rewrite.json");
+        let hook_path = hooks_dir.join("ptk-rewrite.json");
         fs::write(&hook_path, old_dual_schema_json).unwrap();
 
         run_copilot_global_at(temp.path(), InitContext::default()).unwrap();
 
         let v: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hook_path).unwrap()).unwrap();
-        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "rtk hook copilot");
+        assert_eq!(v["hooks"]["PreToolUse"][0]["command"], "ptk hook copilot");
         assert!(
             v["hooks"].get("preToolUse").is_none(),
             "re-running global init must upgrade an old dual-schema install"
@@ -10828,8 +10852,8 @@ mod tests {
             "user-level instructions must be written"
         );
         let content = fs::read_to_string(&instructions).unwrap();
-        assert!(content.contains(RTK_BLOCK_START));
-        assert!(content.contains("rtk cargo test"));
+        assert!(content.contains(PTK_BLOCK_START));
+        assert!(content.contains("ptk cargo test"));
     }
 
     #[test]
@@ -10845,7 +10869,7 @@ mod tests {
             content.contains("Always use pnpm."),
             "user content must be preserved"
         );
-        assert!(content.contains(RTK_BLOCK_START));
+        assert!(content.contains(PTK_BLOCK_START));
     }
 
     #[test]
@@ -10859,14 +10883,14 @@ mod tests {
 
         let content = fs::read_to_string(&instructions).unwrap();
         assert!(content.contains("Always use pnpm."));
-        assert!(!content.contains(RTK_BLOCK_START), "RTK block removed");
+        assert!(!content.contains(PTK_BLOCK_START), "PTK block removed");
     }
 
     #[test]
     fn test_copilot_global_uninstall_removes_hook() {
         let temp = TempDir::new().unwrap();
         run_copilot_global_at(temp.path(), InitContext::default()).unwrap();
-        let hook_path = temp.path().join("hooks").join("rtk-rewrite.json");
+        let hook_path = temp.path().join("hooks").join("ptk-rewrite.json");
         assert!(hook_path.exists());
 
         let removed = uninstall_copilot_global_at(temp.path(), InitContext::default()).unwrap();
@@ -10908,7 +10932,7 @@ mod tests {
 
         assert!(other.exists());
         assert_eq!(fs::read_to_string(&other).unwrap(), payload);
-        assert!(!hooks_dir.join("rtk-rewrite.json").exists());
+        assert!(!hooks_dir.join("ptk-rewrite.json").exists());
     }
 
     #[test]
@@ -10920,7 +10944,7 @@ mod tests {
             ..Default::default()
         };
         run_copilot_global_at(temp.path(), ctx).unwrap();
-        assert!(!temp.path().join("hooks").join("rtk-rewrite.json").exists());
+        assert!(!temp.path().join("hooks").join("ptk-rewrite.json").exists());
     }
 
     #[test]
@@ -10930,7 +10954,7 @@ mod tests {
         fs::create_dir_all(&github_dir).unwrap();
 
         let instructions_path = github_dir.join("copilot-instructions.md");
-        let malformed = format!("# My rules\n\n{}\nincomplete RTK block\n", RTK_BLOCK_START);
+        let malformed = format!("# My rules\n\n{}\nincomplete PTK block\n", PTK_BLOCK_START);
         fs::write(&instructions_path, &malformed).unwrap();
 
         let result = run_copilot_at(temp.path(), InitContext::default());
@@ -10955,10 +10979,10 @@ mod tests {
         fs::create_dir_all(&github_dir).unwrap();
 
         let instructions_path = github_dir.join("copilot-instructions.md");
-        let malformed = format!("# My rules\n\n{}\nincomplete RTK block\n", RTK_BLOCK_START);
+        let malformed = format!("# My rules\n\n{}\nincomplete PTK block\n", PTK_BLOCK_START);
         fs::write(&instructions_path, &malformed).unwrap();
 
-        let hook_path = github_dir.join("hooks").join("rtk-rewrite.json");
+        let hook_path = github_dir.join("hooks").join("ptk-rewrite.json");
 
         let result = run_copilot_at(temp.path(), InitContext::default());
 
@@ -10973,11 +10997,11 @@ mod tests {
     // ── Vibe tests ────────────────────────────────────────────
 
     #[test]
-    fn test_vibe_detects_rtk_entry_by_name_field() {
+    fn test_vibe_detects_ptk_entry_by_name_field() {
         assert!(!vibe_hooks_toml_has_rtk(""));
         assert!(!vibe_hooks_toml_has_rtk("[[hooks]]\nname = \"other\"\n"));
         assert!(vibe_hooks_toml_has_rtk(
-            "[[hooks]]\nname = \"rtk-rewrite\"\n"
+            "[[hooks]]\nname = \"ptk-rewrite\"\n"
         ));
     }
 
@@ -10985,26 +11009,26 @@ mod tests {
     fn test_vibe_hook_entry_shape_matches_docs() {
         let entry = vibe_hook_entry();
         assert!(entry.contains("[[hooks]]"));
-        assert!(entry.contains(r#"name = "rtk-rewrite""#));
+        assert!(entry.contains(r#"name = "ptk-rewrite""#));
         assert!(entry.contains(r#"type = "pre_tool""#));
         assert!(entry.contains(r#"match = "bash""#));
-        assert!(entry.contains(r#"command = "rtk hook vibe""#));
+        assert!(entry.contains(r#"command = "ptk hook vibe""#));
         assert!(entry.contains("strict = false"));
     }
 
     #[test]
     fn test_vibe_strip_returns_none_when_entry_absent() {
         let content = "[[hooks]]\nname = \"other\"\ntype = \"post_tool\"\n";
-        assert!(strip_vibe_rtk_entry(content).is_none());
+        assert!(strip_vibe_ptk_entry(content).is_none());
     }
 
     #[test]
-    fn test_vibe_strip_removes_only_rtk_entry() {
-        let content = "[[hooks]]\nname = \"user-audit\"\ntype = \"post_tool\"\nmatch = \"*\"\ncommand = \"audit.py\"\n\n[[hooks]]\nname = \"rtk-rewrite\"\ntype = \"pre_tool\"\nmatch = \"bash\"\ncommand = \"rtk hook vibe\"\n";
-        let stripped = strip_vibe_rtk_entry(content).expect("expected removal");
+    fn test_vibe_strip_removes_only_ptk_entry() {
+        let content = "[[hooks]]\nname = \"user-audit\"\ntype = \"post_tool\"\nmatch = \"*\"\ncommand = \"audit.py\"\n\n[[hooks]]\nname = \"ptk-rewrite\"\ntype = \"pre_tool\"\nmatch = \"bash\"\ncommand = \"ptk hook vibe\"\n";
+        let stripped = strip_vibe_ptk_entry(content).expect("expected removal");
         assert!(stripped.contains(r#"name = "user-audit""#));
-        assert!(!stripped.contains(r#"name = "rtk-rewrite""#));
-        assert!(!stripped.contains("rtk hook vibe"));
+        assert!(!stripped.contains(r#"name = "ptk-rewrite""#));
+        assert!(!stripped.contains("ptk hook vibe"));
     }
 
     #[test]
@@ -11014,8 +11038,8 @@ mod tests {
         run_vibe_mode_at(&vibe_dir, false, PatchMode::Auto, InitContext::default()).unwrap();
 
         let hooks_content = fs::read_to_string(vibe_dir.join(VIBE_HOOKS_FILE)).unwrap();
-        assert!(hooks_content.contains(r#"name = "rtk-rewrite""#));
-        assert!(hooks_content.contains(r#"command = "rtk hook vibe""#));
+        assert!(hooks_content.contains(r#"name = "ptk-rewrite""#));
+        assert!(hooks_content.contains(r#"command = "ptk hook vibe""#));
 
         let prompt_path = vibe_dir.join(VIBE_PROMPTS_SUBDIR).join(VIBE_PROMPT_FILE);
         assert!(prompt_path.exists());
@@ -11029,7 +11053,7 @@ mod tests {
         run_vibe_mode_at(&vibe_dir, false, PatchMode::Auto, InitContext::default()).unwrap();
 
         let hooks_content = fs::read_to_string(vibe_dir.join(VIBE_HOOKS_FILE)).unwrap();
-        assert_eq!(hooks_content.matches("rtk-rewrite").count(), 1);
+        assert_eq!(hooks_content.matches("ptk-rewrite").count(), 1);
     }
 
     #[test]
@@ -11044,7 +11068,7 @@ mod tests {
 
         let hooks_content = fs::read_to_string(vibe_dir.join(VIBE_HOOKS_FILE)).unwrap();
         assert!(hooks_content.contains(r#"name = "user-audit""#));
-        assert!(hooks_content.contains(r#"name = "rtk-rewrite""#));
+        assert!(hooks_content.contains(r#"name = "ptk-rewrite""#));
     }
 
     #[test]
@@ -11063,7 +11087,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vibe_uninstall_removes_only_rtk_entry_and_prompt() {
+    fn test_vibe_uninstall_removes_only_ptk_entry_and_prompt() {
         let temp = TempDir::new().unwrap();
         let vibe_dir = temp.path().join(".vibe");
         fs::create_dir_all(&vibe_dir).unwrap();
@@ -11092,7 +11116,7 @@ mod tests {
 
         let remaining = fs::read_to_string(vibe_dir.join(VIBE_HOOKS_FILE)).unwrap();
         assert!(remaining.contains(r#"name = "user-audit""#));
-        assert!(!remaining.contains(r#"name = "rtk-rewrite""#));
+        assert!(!remaining.contains(r#"name = "ptk-rewrite""#));
     }
 
     #[test]

@@ -9,11 +9,11 @@
     "updated_at": "2026-03-05T14:30:00Z",
     "labels": ["enhancement", "glab"],
     "assignees": [{"username": "alice_dev"}],
-    "description": "## Request\n\nAdd support for `glab ci` pipeline filtering.\n\n<!-- internal tracking: PROJ-789 -->\n\n### Acceptance Criteria\n- [ ] `rtk glab ci list` shows compact pipeline summary\n- [ ] `rtk glab ci status` shows current pipeline status\n- [ ] Token savings >= 80%\n\n---\n\n[![status](https://img.shields.io/badge/status-in_progress-yellow)](https://example.com)\n"
+    "description": "## Request\n\nAdd support for `glab ci` pipeline filtering.\n\n<!-- internal tracking: PROJ-789 -->\n\n### Acceptance Criteria\n- [ ] `ptk glab ci list` shows compact pipeline summary\n- [ ] `ptk glab ci status` shows current pipeline status\n- [ ] Token savings >= 80%\n\n---\n\n[![status](https://img.shields.io/badge/status-in_progress-yellow)](https://example.com)\n"
   },
   {
     "iid": 150,
-    "title": "rtk cargo test shows full output when no failures",
+    "title": "ptk cargo test shows full output when no failures",
     "state": "opened",
     "author": {"username": "bob_report", "name": "Bob Reporter", "id": 100},
     "web_url": "https://gitlab.example.com/acme/toolkit/-/issues/150",
@@ -21,7 +21,7 @@
     "updated_at": "2026-03-02T16:00:00Z",
     "labels": ["bug", "cargo"],
     "assignees": [{"username": "dave_fix"}],
-    "description": "When all tests pass, `rtk cargo test` still shows verbose compilation output instead of just the summary line.\n\n### Steps to Reproduce\n1. Run `rtk cargo test` in a project with all passing tests\n2. Observe that compiler output is included\n\n### Expected\nOnly show test summary when all tests pass.\n\n### Actual\nFull compiler warnings and test output shown."
+    "description": "When all tests pass, `ptk cargo test` still shows verbose compilation output instead of just the summary line.\n\n### Steps to Reproduce\n1. Run `ptk cargo test` in a project with all passing tests\n2. Observe that compiler output is included\n\n### Expected\nOnly show test summary when all tests pass.\n\n### Actual\nFull compiler warnings and test output shown."
   },
   {
     "iid": 145,
@@ -33,7 +33,7 @@
     "updated_at": "2026-03-04T09:00:00Z",
     "labels": ["enhancement", "infra"],
     "assignees": [],
-    "description": "Helm CLI outputs are verbose. Would be great to have RTK support for:\n- `helm list` (compact table)\n- `helm status` (summary only)\n- `helm install/upgrade` (ok confirmation)\n\nSimilar to how `rtk kubectl` works."
+    "description": "Helm CLI outputs are verbose. Would be great to have PTK support for:\n- `helm list` (compact table)\n- `helm status` (summary only)\n- `helm install/upgrade` (ok confirmation)\n\nSimilar to how `ptk kubectl` works."
   },
   {
     "iid": 140,
@@ -49,7 +49,7 @@
   },
   {
     "iid": 135,
-    "title": "rtk gain --history shows wrong dates on macOS",
+    "title": "ptk gain --history shows wrong dates on macOS",
     "state": "closed",
     "author": {"username": "george_mac", "name": "George Mac", "id": 400},
     "web_url": "https://gitlab.example.com/acme/toolkit/-/issues/135",
@@ -57,7 +57,7 @@
     "updated_at": "2026-02-18T11:00:00Z",
     "labels": ["bug", "macos"],
     "assignees": [{"username": "alice_dev"}],
-    "description": "On macOS, `rtk gain --history` shows dates in UTC instead of local timezone.\n\nFixed in v0.23.1."
+    "description": "On macOS, `ptk gain --history` shows dates in UTC instead of local timezone.\n\nFixed in v0.23.1."
   },
   {
     "iid": 130,
@@ -69,7 +69,7 @@
     "updated_at": "2026-02-12T16:00:00Z",
     "labels": ["enhancement", "architecture"],
     "assignees": [],
-    "description": "Instead of writing Rust code for each new filter, allow users to define filters in TOML.\n\n```toml\n[[filter]]\ncommand = \"terraform plan\"\npattern = \"^(Plan|Apply|Error):\"\nformat = \"compact\"\n```\n\nThis would make RTK extensible without recompilation."
+    "description": "Instead of writing Rust code for each new filter, allow users to define filters in TOML.\n\n```toml\n[[filter]]\ncommand = \"terraform plan\"\npattern = \"^(Plan|Apply|Error):\"\nformat = \"compact\"\n```\n\nThis would make PTK extensible without recompilation."
   },
   {
     "iid": 125,
@@ -81,11 +81,11 @@
     "updated_at": "2026-02-06T09:00:00Z",
     "labels": ["enhancement", "ux"],
     "assignees": [{"username": "ivan_docs"}],
-    "description": "When the underlying command is not installed (e.g., `rtk glab mr list` without glab), the error message is confusing:\n\n```\nError: Failed to run glab mr list\n```\n\nShould say something like:\n```\nError: glab not found. Install it: https://gitlab.com/gitlab-org/cli\n```"
+    "description": "When the underlying command is not installed (e.g., `ptk glab mr list` without glab), the error message is confusing:\n\n```\nError: Failed to run glab mr list\n```\n\nShould say something like:\n```\nError: glab not found. Install it: https://gitlab.com/gitlab-org/cli\n```"
   },
   {
     "iid": 120,
-    "title": "Add rtk completion command for shell completions",
+    "title": "Add ptk completion command for shell completions",
     "state": "opened",
     "author": {"username": "judy_shell", "name": "Judy Shell", "id": 700},
     "web_url": "https://gitlab.example.com/acme/toolkit/-/issues/120",
@@ -93,11 +93,11 @@
     "updated_at": "2026-02-03T15:00:00Z",
     "labels": ["enhancement", "shell"],
     "assignees": [],
-    "description": "Clap supports generating shell completions via `clap_complete`. Add a `rtk completion bash/zsh/fish` command.\n\nThis would help discoverability of available commands."
+    "description": "Clap supports generating shell completions via `clap_complete`. Add a `ptk completion bash/zsh/fish` command.\n\nThis would help discoverability of available commands."
   },
   {
     "iid": 115,
-    "title": "rtk read crashes on binary files",
+    "title": "ptk read crashes on binary files",
     "state": "closed",
     "author": {"username": "karl_refactor", "name": "Karl Refactorer", "id": 800},
     "web_url": "https://gitlab.example.com/acme/toolkit/-/issues/115",
@@ -105,7 +105,7 @@
     "updated_at": "2026-01-30T12:00:00Z",
     "labels": ["bug", "crash"],
     "assignees": [{"username": "dave_fix"}],
-    "description": "Running `rtk read /path/to/binary.exe` panics with:\n```\nthread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Utf8Error'\n```\n\nShould detect binary files and skip filtering."
+    "description": "Running `ptk read /path/to/binary.exe` panics with:\n```\nthread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Utf8Error'\n```\n\nShould detect binary files and skip filtering."
   },
   {
     "iid": 110,
@@ -117,6 +117,6 @@
     "updated_at": "2026-01-27T14:00:00Z",
     "labels": ["enhancement", "analytics"],
     "assignees": [],
-    "description": "Currently `rtk gain` shows global stats. It would be useful to see savings broken down by project directory.\n\nProposal: store `cwd` in the tracking database and add `rtk gain --by-project` flag."
+    "description": "Currently `ptk gain` shows global stats. It would be useful to see savings broken down by project directory.\n\nProposal: store `cwd` in the tracking database and add `ptk gain --by-project` flag."
   }
 ]

@@ -28,7 +28,7 @@ The TOML DSL applies 8 stages in order:
 
 Three-tier filter lookup (first match wins):
 1. `.PTK/filters.toml` (project-local, requires `PTK trust`)
-2. `~/.config/PTK/filters.toml` (user-global)
+2. `~/.config/ptk/filters.toml` (user-global)
 3. Built-in filters concatenated by `build.rs` at compile time
 
 ## Tracking Database Schema
@@ -38,7 +38,7 @@ CREATE TABLE commands (
   id INTEGER PRIMARY KEY,
   timestamp TEXT,              -- UTC ISO8601
   original_cmd TEXT,           -- "ls -la"
-  RTK_cmd TEXT,                -- "PTK ls"
+  RTK_cmd TEXT,                -- "ptk ls"
   project_path TEXT,           -- cwd (for project-scoped stats)
   input_tokens INTEGER,        -- estimated from raw output (bytes / 4, no tokenizer)
   output_tokens INTEGER,       -- estimated from filtered output (bytes / 4)
@@ -145,13 +145,13 @@ Consumers must call `timer.track()` on **all** code paths — success, failure, 
 
 Consumers that parse structured output (JSON, NDJSON, state machines) should call `tee::tee_and_hint()` to persist raw output for LLM recovery on failure. It must be called before `std::process::exit()`.
 
-For truncation recovery on **success** (e.g. a list capped at 20 items), use `tee::force_tee_hint()` (multi-line blocks) or `tee::force_tee_tail_hint(content, slug, offset)` (flat lists). All three persist the full output to the content-addressed recall store ([`retriever.rs`](retriever.rs)) and emit a runnable hint — `[full output: PTK recall <hash>]` or `[+N hidden: PTK recall <hash>]` — instead of burning tokens working around missing data.
+For truncation recovery on **success** (e.g. a list capped at 20 items), use `tee::force_tee_hint()` (multi-line blocks) or `tee::force_tee_tail_hint(content, slug, offset)` (flat lists). All three persist the full output to the content-addressed recall store ([`retriever.rs`](retriever.rs)) and emit a runnable hint — `[full output: ptk recall <hash>]` or `[+N hidden: ptk recall <hash>]` — instead of burning tokens working around missing data.
 
-The agent runs `PTK recall <hash>` to get back exactly what was elided. For `force_tee_tail_hint`, `offset` is the 1-based first hidden line (`header_lines + MAX_CAP + 1`); it is stored so the default recall returns only the hidden tail. Storage is byte-faithful (`BLOB` + lossless gzip); tune limits via the `[retriever]` config section.
+The agent runs `ptk recall <hash>` to get back exactly what was elided. For `force_tee_tail_hint`, `offset` is the 1-based first hidden line (`header_lines + MAX_CAP + 1`); it is stored so the default recall returns only the hidden tail. Storage is byte-faithful (`BLOB` + lossless gzip); tune limits via the `[retriever]` config section.
 
 ### Truncation Caps (`truncate`)
 
-`src/core/truncate.rs` defines four global cap policies — `CAP_ERRORS`, `CAP_WARNINGS`, `CAP_LIST`, `CAP_INVENTORY` — for the data classes PTK filters truncate. Each filter binds the right CAP to a local `const MAX_*` so the cap is one named jump away from the call site. These CAPs are the staging point for filter-level cap configuration (planned, not yet implemented): once the config surface lands, overriding `CAP_LIST` in `~/.config/PTK/config.toml` will tune every list filter in one place instead of editing 20+ files.
+`src/core/truncate.rs` defines four global cap policies — `CAP_ERRORS`, `CAP_WARNINGS`, `CAP_LIST`, `CAP_INVENTORY` — for the data classes PTK filters truncate. Each filter binds the right CAP to a local `const MAX_*` so the cap is one named jump away from the call site. These CAPs are the staging point for filter-level cap configuration (planned, not yet implemented): once the config surface lands, overriding `CAP_LIST` in `~/.config/ptk/config.toml` will tune every list filter in one place instead of editing 20+ files.
 
 **Config policy.** Configured values are accepted as-is, including `0`, which means "summary only" — the filter still prints the count and the `[full output: …]` recovery hint, just no individual items. Caps are never refused and PTK never aborts on them, in keeping with the never-block-the-user fallback philosophy.
 

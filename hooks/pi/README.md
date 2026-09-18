@@ -16,11 +16,11 @@ with other Pi extensions.
 
 - TypeScript extension using Pi's `ExtensionAPI` (not a shell hook, no `zx` dependency)
 - Subscribes to `tool_call` event, narrows to `bash` tool via a local `isBashToolCallEvent` guard (avoids importing the package's value-exported `isToolCallEventType`, which pulls in its whole barrel at extension load)
-- Calls `PTK rewrite` via `pi.exec`; mutates `event.input.command` in-place if rewrite differs
+- Calls `ptk rewrite` via `pi.exec`; mutates `event.input.command` in-place if rewrite differs
 - All error paths return `undefined` (pass through); PTK never blocks execution
 - Version guard at load time: checks `PTK >= 0.23.0`; warns and registers no-op if too old or missing
 - Install updates only current or known historical stock content. For modified or unrelated content it asks before overwriting; `--auto-patch` approves and `--no-patch` leaves the file unchanged. A declined protected update, including `--no-patch`, exits nonzero; in `--dry-run` mode it reports the prompt without changing files or creating directories. LF and CRLF line endings are treated as the same stock content.
-- Installed to `.pi/extensions/PTK.ts` by `PTK init --agent pi` (project-local) or `~/.pi/agent/extensions/PTK.ts` by `PTK init --agent pi --global`
+- Installed to `.pi/extensions/PTK.ts` by `ptk init --agent pi` (project-local) or `~/.pi/agent/extensions/PTK.ts` by `ptk init --agent pi --global`
 
 The same extension is shared with Oh My Pi (OMP) through OMP's `legacy-pi-compat` layer. OMP installs it at `.omp/extensions/PTK.ts` (project-local) or `~/.omp/agent/extensions/PTK.ts` (global). The global OMP path follows `PI_CODING_AGENT_DIR`, which OMP also honors. When the Pi and OMP paths in either scope resolve to the same file, PTK records Pi/OMP ownership in an adjacent hidden `.PTK-agents` state file. A valid sidecar is authoritative; missing or unreadable state is treated as uncertain, warned about, and not used to claim sole ownership. A definitively shared project or global file prompts before removal (`--auto-patch` approves it); an uncertain legacy or corrupt-state uninstall warns and proceeds, while `--no-patch` still leaves definitively shared files in place with a nonzero exit. PTK currently targets OMP's default profile and `.omp` project directory, not named profiles or custom `PI_CONFIG_DIR` locations.
 
@@ -28,11 +28,11 @@ The same extension is shared with Oh My Pi (OMP) through OMP's `legacy-pi-compat
 
 ```bash
 # Remove project-local install (run from the project root)
-PTK init --uninstall --agent pi
+ptk init --uninstall --agent pi
 # → removes .pi/extensions/PTK.ts
 
 # Remove global install
-PTK init --uninstall --agent pi --global
+ptk init --uninstall --agent pi --global
 # → removes ~/.pi/agent/extensions/PTK.ts
 ```
 
@@ -45,18 +45,18 @@ Uninstalling an absent extension is a no-op. Current and known historical stock 
 pi -e ./hooks/pi/PTK.ts
 
 # Verify rewrites are active — ask the agent to run a command, then check history
-PTK gain --history   # should show PTK-prefixed commands with savings %
+ptk gain --history   # should show PTK-prefixed commands with savings %
 
-# Test RTK_DISABLED passthrough
-RTK_DISABLED=1 pi -e ./hooks/pi/PTK.ts
-# → commands pass through unchanged; no rewrites in PTK gain --history
+# Test PTK_DISABLED passthrough
+PTK_DISABLED=1 pi -e ./hooks/pi/PTK.ts
+# → commands pass through unchanged; no rewrites in ptk gain --history
 
-# Test version guard — temporarily shadow PTK with a stub that prints "PTK 0.22.0"
+# Test version guard — temporarily shadow PTK with a stub that prints "ptk 0.22.0"
 # → extension logs a warning at startup and registers a no-op; pi starts normally
 ```
 
 ## Design Notes
 
-- All filtering logic lives in `PTK rewrite` (the Rust registry), not in this file
+- All filtering logic lives in `ptk rewrite` (the Rust registry), not in this file
 - Exit codes 0 and 3 both mean "rewrite and allow"; they are handled identically
 - Uses `pi.exec` for subprocess management — consistent with Pi's extension API

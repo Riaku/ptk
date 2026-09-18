@@ -102,7 +102,7 @@ pub fn run(args: &[String], verbose: u8, skip_env: bool) -> Result<i32> {
     if is_run_explicit || is_npm_subcommand {
         effective_args.extend_from_slice(args);
     } else {
-        // "rtk npm build" → "npm run build" (assume script name)
+        // "ptk npm build" → "npm run build" (assume script name)
         effective_args.push("run".to_string());
         effective_args.extend_from_slice(args);
     }
@@ -113,7 +113,7 @@ pub fn run(args: &[String], verbose: u8, skip_env: bool) -> Result<i32> {
 /// Run an npx tool through the same filtered pipeline as `npm`.
 ///
 /// Used for unrouted tools in the `Commands::Npx` fallback so that
-/// `rtk npx cowsay hello` dispatches to `npx`, not `npm`. Honors `--skip-env`
+/// `ptk npx cowsay hello` dispatches to `npx`, not `npm`. Honors `--skip-env`
 /// the same way `run` does.
 pub fn exec(args: &[String], verbose: u8, skip_env: bool) -> Result<i32> {
     run_filtered("npx", args, verbose, skip_env, false)

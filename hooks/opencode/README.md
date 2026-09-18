@@ -5,7 +5,7 @@
 ## Specifics
 
 - TypeScript plugin using the zx library (not a shell hook)
-- Intercepts `tool.execute.before` events, calls `PTK rewrite` as a subprocess
+- Intercepts `tool.execute.before` events, calls `ptk rewrite` as a subprocess
 - Uses `.quiet().nothrow()` to silently ignore failures
 - Mutates `args.command` in-place if rewrite differs from original
-- Installed to `~/.config/opencode/plugins/PTK.ts` by `PTK init -g --opencode`
+- Installed to `~/.config/opencode/plugins/PTK.ts` by `ptk init -g --opencode`

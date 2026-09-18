@@ -6,34 +6,34 @@
 
 The **lifecycle management** layer for LLM agent hooks: install, uninstall, verify integrity, audit usage, and manage trust. This component creates and maintains the hook artifacts that live in `hooks/` (root), but does **not** execute rewrite logic itself — that lives in `discover/registry`.
 
-Owns: `PTK init` installation flows (6 agents via `AgentTarget` enum, now including Mistral Vibe + 3 special modes: Gemini, Codex, OpenCode), SHA-256 integrity verification, hook version checking, audit log analysis, `PTK rewrite` CLI entry point, and TOML filter trust management.
+Owns: `ptk init` installation flows (6 agents via `AgentTarget` enum, now including Mistral Vibe + 3 special modes: Gemini, Codex, OpenCode), SHA-256 integrity verification, hook version checking, audit log analysis, `ptk rewrite` CLI entry point, and TOML filter trust management.
 
 Does **not** own: the deployed hook scripts themselves (that's `hooks/`), the rewrite pattern registry (that's `discover/`), or command filtering (that's `cmds/`).
 
 Boundary notes:
-- `decision.rs` is the single place PTK decides what a hook should do with a command — deny, defer, rewrite-and-allow, or rewrite-and-ask. All three entry points route through it: the in-process `PTK hook <agent>` hosts (`hook_cmd.rs`), the `PTK rewrite` subprocess path (`rewrite_cmd.rs`), and the `PTK hook check` diagnostic (`main.rs`). Add a gate there, not in a caller.
-- `rewrite_cmd.rs` is a thin CLI bridge — it exists to serve hooks (hooks call `PTK rewrite` as a subprocess) and renders `decision.rs`'s verdict as the exit codes those delegates branch on.
+- `decision.rs` is the single place PTK decides what a hook should do with a command — deny, defer, rewrite-and-allow, or rewrite-and-ask. All three entry points route through it: the in-process `ptk hook <agent>` hosts (`hook_cmd.rs`), the `ptk rewrite` subprocess path (`rewrite_cmd.rs`), and the `ptk hook check` diagnostic (`main.rs`). Add a gate there, not in a caller.
+- `rewrite_cmd.rs` is a thin CLI bridge — it exists to serve hooks (hooks call `ptk rewrite` as a subprocess) and renders `decision.rs`'s verdict as the exit codes those delegates branch on.
 - `trust.rs` gates project-local TOML filter execution. It lives here because the trust workflow is tied to hook-installed filter discovery, not to the core filter engine.
 
 ## Purpose
-LLM agent integration layer that installs, validates, and executes command-rewriting hooks for AI coding assistants. Hooks intercept raw CLI commands (e.g., `git status`) and rewrite them to PTK equivalents (e.g., `PTK git status`) so that LLM agents automatically benefit from token savings without explicit user configuration.
+LLM agent integration layer that installs, validates, and executes command-rewriting hooks for AI coding assistants. Hooks intercept raw CLI commands (e.g., `git status`) and rewrite them to PTK equivalents (e.g., `ptk git status`) so that LLM agents automatically benefit from token savings without explicit user configuration.
 
 ## Installation Modes
 
-`PTK init` supports these installation flows:
+`ptk init` supports these installation flows:
 
 | Mode | Command | Creates | Patches |
 |------|---------|---------|----------|
-| Default (global) | `PTK init -g` | Hook, SHA-256 hash, @@PTKMD@@ | settings.json, CLAUDE.md |
-| Hook only | `PTK init -g --hook-only` | Hook, SHA-256 hash | settings.json |
-| Claude-MD (legacy) | `PTK init --claude-md` | 134-line PTK block | CLAUDE.md |
-| Windsurf | `PTK init -g --agent windsurf` | `.windsurfrules` | -- |
-| Cline | `PTK init --agent cline` | `.clinerules` | -- |
-| Codex | `PTK init --codex` | @@PTKMD@@ + `.codex/hooks.json` (local) or `$CODEX_HOME/hooks.json` (global) | AGENTS.md + `PreToolUse` hook |
-| Cursor | `PTK init -g --agent cursor` | Cursor hook | hooks.json |
-| Pi | `PTK init --agent pi` | `.pi/extensions/PTK.ts` | -- |
-| Oh My Pi (OMP) | `PTK init --agent omp` | `.omp/extensions/PTK.ts` (shared Pi extension) | -- |
-| Hermes | `PTK init --agent hermes` | Python plugin in `~/.hermes/plugins/rtk-rewrite/` | `config.yaml` `plugins.enabled` |
+| Default (global) | `ptk init -g` | Hook, SHA-256 hash, @@PTKMD@@ | settings.json, CLAUDE.md |
+| Hook only | `ptk init -g --hook-only` | Hook, SHA-256 hash | settings.json |
+| Claude-MD (legacy) | `ptk init --claude-md` | 134-line PTK block | CLAUDE.md |
+| Windsurf | `ptk init -g --agent windsurf` | `.windsurfrules` | -- |
+| Cline | `ptk init --agent cline` | `.clinerules` | -- |
+| Codex | `ptk init --codex` | @@PTKMD@@ + `.codex/hooks.json` (local) or `$CODEX_HOME/hooks.json` (global) | AGENTS.md + `PreToolUse` hook |
+| Cursor | `ptk init -g --agent cursor` | Cursor hook | hooks.json |
+| Pi | `ptk init --agent pi` | `.pi/extensions/PTK.ts` | -- |
+| Oh My Pi (OMP) | `ptk init --agent omp` | `.omp/extensions/PTK.ts` (shared Pi extension) | -- |
+| Hermes | `ptk init --agent hermes` | Python plugin in `~/.hermes/plugins/rtk-rewrite/` | `config.yaml` `plugins.enabled` |
 
 
 ## Integrity Verification
@@ -53,7 +53,7 @@ Five integrity states:
 
 ## PatchMode Behavior
 
-Controls how `PTK init` modifies agent settings files:
+Controls how `ptk init` modifies agent settings files:
 
 | Mode | Flag | Behavior |
 |------|------|----------|
@@ -63,7 +63,7 @@ Controls how `PTK init` modifies agent settings files:
 
 ## Atomicity and Safety
 
-All file operations use atomic writes (tempfile + rename) to prevent corruption on crash. Settings files are backed up to `.bak` before modification. All operations are idempotent -- running `PTK init` multiple times is safe.
+All file operations use atomic writes (tempfile + rename) to prevent corruption on crash. Settings files are backed up to `.bak` before modification. All operations are idempotent -- running `ptk init` multiple times is safe.
 
 ## Permission Model
 
@@ -87,12 +87,12 @@ Rules are loaded from all Claude Code `settings.json` files (project + global, i
 | Tool | ask support | Behavior on Default |
 |------|------------|-------------------|
 | Claude Code (rtk-rewrite.sh) | Yes | `permissionDecision: "ask"` — user prompted |
-| Copilot VS Code (PTK hook copilot) | Yes | `permissionDecision: "ask"` — user prompted |
-| Cursor (PTK hook cursor) | Ready | `permission: "ask",` — users will be prompted when Cursor enforces the permission; in the meantime, allow |
-| Gemini CLI (PTK hook gemini) | No (allow/deny only) | allow (limitation — no ask mode in Gemini) |
-| Copilot CLI (PTK hook copilot) | No updatedInput | deny-with-suggestion (unchanged) |
-| Codex (`PTK hook codex`) | Native approval runs after rewrite | Emit required protocol `allow` with `updatedInput`; Codex then evaluates the rewritten command normally |
-| Mistral Vibe (PTK hook vibe) | No native ask surface | passthrough — Vibe's own approval prompt fires on the rewritten command |
+| Copilot VS Code (ptk hook copilot) | Yes | `permissionDecision: "ask"` — user prompted |
+| Cursor (ptk hook cursor) | Ready | `permission: "ask",` — users will be prompted when Cursor enforces the permission; in the meantime, allow |
+| Gemini CLI (ptk hook gemini) | No (allow/deny only) | allow (limitation — no ask mode in Gemini) |
+| Copilot CLI (ptk hook copilot) | No updatedInput | deny-with-suggestion (unchanged) |
+| Codex (`ptk hook codex`) | Native approval runs after rewrite | Emit required protocol `allow` with `updatedInput`; Codex then evaluates the rewritten command normally |
+| Mistral Vibe (ptk hook vibe) | No native ask surface | passthrough — Vibe's own approval prompt fires on the rewritten command |
 
 ### Implementation
 
@@ -105,4 +105,4 @@ Rules are loaded from all Claude Code `settings.json` files (project + global, i
 Hook processors in `hook_cmd.rs` must return `Ok(())` on every path — success, no-match, parse error, and unexpected input. Returning `Err` propagates to `main()` and exits non-zero, which blocks the agent's command from executing. This violates the non-blocking guarantee documented in `hooks/README.md`.
 
 ## Adding New Functionality
-To add support for a new AI coding agent: (1) add the hook installation logic to `init.rs` following the existing agent patterns, (2) if the agent requires a custom hook protocol (like Gemini's `BeforeTool` or Vibe's `pre_tool`), add a processor function in `hook_cmd.rs` and a matching `HookCommands::<Agent>` variant + `AgentTarget::<Agent>` enum entry in `main.rs`, (3) if the agent has installable permission surfaces (denylist / allowlist), wire them into `permissions.rs::check_command_for` via a new `Host::<Agent>` variant, and (4) update `integrity.rs` with the expected hash for the new hook file. Note that `hook_check.rs::maybe_warn()` only checks the Claude Code hook — other agents don't have an outdated-hook warning path. Test by running `PTK init` in a fresh environment and verifying the hook rewrites commands correctly in the target agent.
+To add support for a new AI coding agent: (1) add the hook installation logic to `init.rs` following the existing agent patterns, (2) if the agent requires a custom hook protocol (like Gemini's `BeforeTool` or Vibe's `pre_tool`), add a processor function in `hook_cmd.rs` and a matching `HookCommands::<Agent>` variant + `AgentTarget::<Agent>` enum entry in `main.rs`, (3) if the agent has installable permission surfaces (denylist / allowlist), wire them into `permissions.rs::check_command_for` via a new `Host::<Agent>` variant, and (4) update `integrity.rs` with the expected hash for the new hook file. Note that `hook_check.rs::maybe_warn()` only checks the Claude Code hook — other agents don't have an outdated-hook warning path. Test by running `ptk init` in a fresh environment and verifying the hook rewrites commands correctly in the target agent.

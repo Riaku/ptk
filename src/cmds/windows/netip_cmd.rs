@@ -59,7 +59,9 @@ pub fn filter_netip_output(raw: &str) -> String {
         return clean.trim().trim_end().to_string();
     }
 
-    let header = format!("{:<28}  {:<6}  {}", "INTERFACE", "FAMILY", "IP/PREFIX").trim_end().to_string();
+    let header = format!("{:<28}  {:<6}  {}", "INTERFACE", "FAMILY", "IP/PREFIX")
+        .trim_end()
+        .to_string();
     let mut output = Vec::with_capacity(entries.len() + 1);
     output.push(header);
 

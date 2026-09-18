@@ -1,5 +1,5 @@
-pub const REWRITE_HOOK_FILE: &str = "rtk-rewrite.sh";
-pub const GEMINI_HOOK_FILE: &str = "rtk-hook-gemini.sh";
+pub const REWRITE_HOOK_FILE: &str = "ptk-rewrite.sh";
+pub const GEMINI_HOOK_FILE: &str = "ptk-hook-gemini.sh";
 pub const CLAUDE_DIR: &str = ".claude";
 pub const HOOKS_SUBDIR: &str = "hooks";
 pub const SETTINGS_JSON: &str = "settings.json";
@@ -8,28 +8,28 @@ pub const HOOKS_JSON: &str = "hooks.json";
 pub const PRE_TOOL_USE_KEY: &str = "PreToolUse";
 pub const BEFORE_TOOL_KEY: &str = "BeforeTool";
 
-/// Native Rust hook command for Claude Code (replaces rtk-rewrite.sh).
-pub const CLAUDE_HOOK_COMMAND: &str = "rtk hook claude";
+/// Native Rust hook command for Claude Code (replaces ptk-rewrite.sh).
+pub const CLAUDE_HOOK_COMMAND: &str = "ptk hook claude";
 /// Native Rust hook command for Codex CLI.
-pub const CODEX_HOOK_COMMAND: &str = "rtk hook codex";
-/// Native Rust hook command for Cursor (replaces rtk-rewrite.sh).
-pub const CURSOR_HOOK_COMMAND: &str = "rtk hook cursor";
+pub const CODEX_HOOK_COMMAND: &str = "ptk hook codex";
+/// Native Rust hook command for Cursor (replaces ptk-rewrite.sh).
+pub const CURSOR_HOOK_COMMAND: &str = "ptk hook cursor";
 /// Native Rust hook command for Factory Droid.
-pub const DROID_HOOK_COMMAND: &str = "rtk hook droid";
+pub const DROID_HOOK_COMMAND: &str = "ptk hook droid";
 /// Native Rust hook command for Mistral Vibe.
-pub const VIBE_HOOK_COMMAND: &str = "rtk hook vibe";
+pub const VIBE_HOOK_COMMAND: &str = "ptk hook vibe";
 
 pub const CONFIG_DIR: &str = ".config";
 pub const OPENCODE_SUBDIR: &str = "opencode";
 pub const PLUGIN_SUBDIR: &str = "plugins";
-pub const OPENCODE_PLUGIN_FILE: &str = "rtk.ts";
+pub const OPENCODE_PLUGIN_FILE: &str = "ptk.ts";
 
 pub const CURSOR_DIR: &str = ".cursor";
 pub const CODEX_DIR: &str = ".codex";
 pub const GEMINI_DIR: &str = ".gemini";
 
 pub const GITHUB_DIR: &str = ".github";
-pub const COPILOT_HOOK_FILE: &str = "rtk-rewrite.json";
+pub const COPILOT_HOOK_FILE: &str = "ptk-rewrite.json";
 pub const COPILOT_INSTRUCTIONS_FILE: &str = "copilot-instructions.md";
 pub const COPILOT_USER_DIR: &str = ".copilot";
 pub const COPILOT_HOME_ENV: &str = "COPILOT_HOME";
@@ -37,9 +37,9 @@ pub const COPILOT_HOME_ENV: &str = "COPILOT_HOME";
 pub const PI_DIR: &str = ".pi/agent";
 pub const PI_LOCAL_DIR: &str = ".pi";
 pub const PI_EXTENSIONS_SUBDIR: &str = "extensions";
-pub const PI_PLUGIN_FILE: &str = "rtk.ts";
+pub const PI_PLUGIN_FILE: &str = "ptk.ts";
 /// Hidden ownership state stored beside the shared Pi/OMP extension.
-pub const PI_AGENT_STATE_FILE: &str = ".rtk-agents";
+pub const PI_AGENT_STATE_FILE: &str = ".ptk-agents";
 pub const PI_CODING_AGENT_DIR_ENV: &str = "PI_CODING_AGENT_DIR";
 
 /// Oh My Pi (OMP) home subdirectory (`$HOME/.omp/agent`) and project
@@ -68,13 +68,13 @@ pub const DROID_HOME_ENV: &str = "FACTORY_HOME_OVERRIDE";
 
 pub const HERMES_DIR: &str = ".hermes";
 pub const HERMES_PLUGINS_SUBDIR: &str = "plugins";
-pub const HERMES_PLUGIN_NAME: &str = "rtk-rewrite";
+pub const HERMES_PLUGIN_NAME: &str = "ptk-rewrite";
 pub const HERMES_PLUGIN_INIT_FILE: &str = "__init__.py";
 pub const HERMES_PLUGIN_MANIFEST_FILE: &str = "plugin.yaml";
 
 pub const VIBE_DIR: &str = ".vibe";
 pub const VIBE_HOOKS_FILE: &str = "hooks.toml";
 pub const VIBE_PROMPTS_SUBDIR: &str = "prompts";
-pub const VIBE_PROMPT_FILE: &str = "rtk.md";
-pub const VIBE_HOOK_NAME: &str = "rtk-rewrite";
+pub const VIBE_PROMPT_FILE: &str = "ptk.md";
+pub const VIBE_HOOK_NAME: &str = "ptk-rewrite";
 pub const VIBE_BASH_MATCH: &str = "bash";

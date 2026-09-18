@@ -1,16 +1,16 @@
 #![cfg(unix)]
-//! Error/exit faithfulness: rtk surfaces the engine's own stderr and propagates
+//! Error/exit faithfulness: ptk surfaces the engine's own stderr and propagates
 //! its exit code, adding nothing (no synthetic "search failed" line). An engine
 //! error (exit >=2) must never look like a silent no-match (#2465 / #1436).
 
 use std::process::Command;
 
-fn rtk(args: &[&str]) -> std::process::Output {
+fn ptk(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_ptk"))
         .env("LC_ALL", "C")
         .args(args)
         .output()
-        .expect("rtk")
+        .expect("ptk")
 }
 
 fn grep_exit(args: &[&str]) -> Option<i32> {
@@ -43,7 +43,7 @@ fn file_not_found_propagates_exit_and_surfaces_error() {
     let d = tempfile::tempdir().unwrap();
     let missing = d.path().join("nope.txt");
     let m = missing.to_str().unwrap();
-    let out = rtk(&["grep", "fn", m]);
+    let out = ptk(&["grep", "fn", m]);
     assert_eq!(
         out.status.code(),
         grep_exit(&["fn", m]),
@@ -63,7 +63,7 @@ fn file_not_found_propagates_exit_and_surfaces_error() {
 #[test]
 fn bad_regex_surfaces_error_never_silent_no_match() {
     let (_d, f) = write_temp("fn alpha\n");
-    let out = rtk(&["grep", "[", &f]);
+    let out = ptk(&["grep", "[", &f]);
     assert_eq!(
         out.status.code(),
         Some(2),
@@ -82,7 +82,7 @@ fn partial_match_with_error_surfaces_both() {
     let (_d, f) = write_temp("fn alpha\nfn beta\n");
     let d2 = tempfile::tempdir().unwrap();
     let missing = d2.path().join("nope.txt");
-    let out = rtk(&["grep", "fn", &f, missing.to_str().unwrap()]);
+    let out = ptk(&["grep", "fn", &f, missing.to_str().unwrap()]);
     assert_eq!(out.status.code(), Some(2), "the error exit must propagate");
     assert!(
         String::from_utf8_lossy(&out.stderr).contains("No such file"),
@@ -97,7 +97,7 @@ fn partial_match_with_error_surfaces_both() {
 #[test]
 fn no_match_stays_exit_1_and_empty() {
     let (_d, f) = write_temp("fn alpha\n");
-    let out = rtk(&["grep", "zzzz_no_match", &f]);
+    let out = ptk(&["grep", "zzzz_no_match", &f]);
     assert_eq!(out.status.code(), Some(1), "no-match is exit 1");
     assert!(
         out.stdout.is_empty() && out.stderr.is_empty(),
@@ -111,7 +111,7 @@ fn rg_bad_regex_surfaces_error_exit_2() {
         return;
     }
     let (_d, f) = write_temp("GET /objects/{path}\n");
-    let out = rtk(&["rg", "a|{path}", &f]);
+    let out = ptk(&["rg", "a|{path}", &f]);
     assert_eq!(
         out.status.code(),
         Some(2),

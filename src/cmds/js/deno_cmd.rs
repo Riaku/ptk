@@ -53,7 +53,7 @@ fn chose_output_format(args: &[String]) -> bool {
         .any(|a| a == "--reporter" || a.starts_with("--reporter=") || a.starts_with("--junit-path"))
 }
 
-/// Run a subcommand unfiltered, keeping the argv rtk would have run.
+/// Run a subcommand unfiltered, keeping the argv ptk would have run.
 fn passthrough_subcmd(subcmd: &str, args: &[String], verbose: u8) -> Result<i32> {
     let mut passthrough: Vec<OsString> = vec![OsString::from(subcmd)];
     passthrough.extend(args.iter().map(OsString::from));

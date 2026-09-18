@@ -15,9 +15,9 @@ pub mod service_cmd;
 pub mod tnc_cmd;
 pub mod type_cmd;
 
-use anyhow::{Context, Result};
-use crate::core::windows_shell;
 use crate::core::runner::{self, RunOptions};
+use crate::core::windows_shell;
+use anyhow::{Context, Result};
 
 /// Intelligently routes and filters a raw command string through
 /// CMD or PowerShell based on the command syntax.
@@ -152,6 +152,8 @@ pub fn run_smart_command(raw: &str, verbose: u8) -> Result<i32> {
 
     // Default CMD execution
     let mut cmd = windows_shell::spawn_cmd(trimmed, &[]);
-    let status = cmd.status().with_context(|| format!("Failed to execute: {}", trimmed))?;
+    let status = cmd
+        .status()
+        .with_context(|| format!("Failed to execute: {}", trimmed))?;
     Ok(crate::core::utils::exit_code_from_status(&status, "run"))
 }

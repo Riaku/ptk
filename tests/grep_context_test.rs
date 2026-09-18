@@ -4,7 +4,7 @@
 
 use std::process::Command;
 
-fn rtk() -> Command {
+fn ptk() -> Command {
     Command::new(env!("CARGO_BIN_EXE_ptk"))
 }
 
@@ -24,7 +24,7 @@ fn after_context_lines_are_shown() {
     let dir = tempfile::tempdir().unwrap();
     let f = dir.path().join("ctx.txt");
     std::fs::write(&f, "before1\nbefore2\nMATCHME\nafter1\nafter2\nafter3\n").unwrap();
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-A2", "MATCHME", f.to_str().unwrap()])
         .output()
         .unwrap();
@@ -48,7 +48,7 @@ fn before_context_lines_are_shown() {
     let dir = tempfile::tempdir().unwrap();
     let f = dir.path().join("ctx.txt");
     std::fs::write(&f, "before1\nbefore2\nMATCHME\nafter1\n").unwrap();
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-B1", "MATCHME", f.to_str().unwrap()])
         .output()
         .unwrap();
@@ -68,7 +68,7 @@ fn count_output_has_no_nul_separator() {
     let dir = tempfile::tempdir().unwrap();
     let f = dir.path().join("nul.txt");
     std::fs::write(&f, "TODO one\nnope\nTODO two\n").unwrap();
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-c", "TODO", f.to_str().unwrap()])
         .output()
         .unwrap();
@@ -93,7 +93,7 @@ fn group_separator_between_non_adjacent_matches() {
     )
     .unwrap();
 
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-A1", "match", f.to_str().unwrap()])
         .output()
         .unwrap();
@@ -123,7 +123,7 @@ fn no_separator_without_context_flag() {
     )
     .unwrap();
 
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-n", "match", f.to_str().unwrap()])
         .output()
         .unwrap();
@@ -151,7 +151,7 @@ fn only_matching_output_has_no_nul_separator() {
     let dir = tempfile::tempdir().unwrap();
     let f = dir.path().join("nul.txt");
     std::fs::write(&f, "TODO one\nnope\nTODO two\n").unwrap();
-    let out = rtk()
+    let out = ptk()
         .args(["grep", "-o", "TODO", f.to_str().unwrap()])
         .output()
         .unwrap();

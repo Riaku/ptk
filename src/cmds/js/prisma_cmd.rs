@@ -66,14 +66,14 @@ fn run_generate(args: &[String], verbose: u8) -> Result<i32> {
         if !result.stderr.trim().is_empty() {
             eprint!("{}", result.stderr);
         }
-        timer.track("prisma generate", "rtk prisma generate", &raw, &raw);
+        timer.track("prisma generate", "ptk prisma generate", &raw, &raw);
         return Ok(result.exit_code);
     }
 
     let filtered = filter_prisma_generate(&raw);
     let shown = never_worse(&raw, &filtered);
     println!("{}", shown);
-    timer.track("prisma generate", "rtk prisma generate", &raw, shown);
+    timer.track("prisma generate", "ptk prisma generate", &raw, shown);
 
     Ok(0)
 }
@@ -121,7 +121,7 @@ fn run_migrate(subcommand: MigrateSubcommand, args: &[String], verbose: u8) -> R
         if !result.stderr.trim().is_empty() {
             eprint!("{}", result.stderr);
         }
-        timer.track(cmd_name, &format!("rtk {}", cmd_name), &raw, &raw);
+        timer.track(cmd_name, &format!("ptk {}", cmd_name), &raw, &raw);
         return Ok(result.exit_code);
     }
 
@@ -133,7 +133,7 @@ fn run_migrate(subcommand: MigrateSubcommand, args: &[String], verbose: u8) -> R
 
     let shown = never_worse(&raw, &filtered);
     println!("{}", shown);
-    timer.track(cmd_name, &format!("rtk {}", cmd_name), &raw, shown);
+    timer.track(cmd_name, &format!("ptk {}", cmd_name), &raw, shown);
 
     Ok(0)
 }
@@ -163,14 +163,14 @@ fn run_db_push(args: &[String], verbose: u8) -> Result<i32> {
         if !result.stderr.trim().is_empty() {
             eprint!("{}", result.stderr);
         }
-        timer.track("prisma db push", "rtk prisma db push", &raw, &raw);
+        timer.track("prisma db push", "ptk prisma db push", &raw, &raw);
         return Ok(result.exit_code);
     }
 
     let filtered = filter_db_push(&raw);
     let shown = never_worse(&raw, &filtered);
     println!("{}", shown);
-    timer.track("prisma db push", "rtk prisma db push", &raw, shown);
+    timer.track("prisma db push", "ptk prisma db push", &raw, shown);
 
     Ok(0)
 }

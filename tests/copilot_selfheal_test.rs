@@ -1,9 +1,9 @@
 //! End-to-end tests for the Copilot legacy hook config self-heal.
 //!
-//! Runs the real `rtk hook copilot` binary against crafted configs in
+//! Runs the real `ptk hook copilot` binary against crafted configs in
 //! sandboxed HOME/COPILOT_HOME and asserts the hook protocol is never
 //! broken: correct responses, exit 0, silent stderr, and configs only
-//! ever modified when they contain rtk's own stale camelCase entry.
+//! ever modified when they contain ptk's own stale camelCase entry.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -14,10 +14,10 @@ const LEGACY_STOCK: &str = r#"{
   "version": 1,
   "hooks": {
     "PreToolUse": [
-      { "type": "command", "command": "rtk hook copilot", "cwd": ".", "timeout": 5 }
+      { "type": "command", "command": "ptk hook copilot", "cwd": ".", "timeout": 5 }
     ],
     "preToolUse": [
-      { "type": "command", "bash": "rtk hook copilot", "powershell": "rtk hook copilot", "cwd": ".", "timeoutSec": 5 }
+      { "type": "command", "bash": "ptk hook copilot", "powershell": "ptk hook copilot", "cwd": ".", "timeoutSec": 5 }
     ]
   }
 }
@@ -29,7 +29,7 @@ const CURRENT_STOCK: &str = r#"{
     "PreToolUse": [
       {
         "type": "command",
-        "command": "rtk hook copilot",
+        "command": "ptk hook copilot",
         "cwd": ".",
         "timeout": 5
       }
@@ -71,11 +71,11 @@ impl Sandbox {
     }
 
     fn project_config(&self) -> PathBuf {
-        self.project.join(".github/hooks/rtk-rewrite.json")
+        self.project.join(".github/hooks/ptk-rewrite.json")
     }
 
     fn global_config(&self) -> PathBuf {
-        self.copilot_home.join("hooks/rtk-rewrite.json")
+        self.copilot_home.join("hooks/ptk-rewrite.json")
     }
 
     fn write_project(&self, content: &str) {
@@ -97,14 +97,14 @@ impl Sandbox {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .expect("spawn rtk");
+            .expect("spawn ptk");
         child
             .stdin
             .take()
             .expect("stdin")
             .write_all(payload.as_bytes())
             .expect("write payload");
-        let out = child.wait_with_output().expect("wait rtk");
+        let out = child.wait_with_output().expect("wait ptk");
         (
             String::from_utf8_lossy(&out.stdout).into_owned(),
             String::from_utf8_lossy(&out.stderr).into_owned(),
@@ -145,7 +145,7 @@ fn legacy_invocation_heals_project_and_global_to_current_stock() {
 
     assert_hook_ok(LEGACY_PAYLOAD, &stdout, &stderr, code);
     assert!(
-        stdout.contains("rtk git status"),
+        stdout.contains("ptk git status"),
         "rewrite must still work during heal: {stdout}"
     );
     assert_eq!(read(&sb.project_config()), CURRENT_STOCK);
@@ -173,10 +173,10 @@ fn heal_preserves_user_hooks_and_key_order() {
       { "type": "command", "command": "echo hi" }
     ],
     "PreToolUse": [
-      { "type": "command", "command": "rtk hook copilot", "cwd": ".", "timeout": 5 }
+      { "type": "command", "command": "ptk hook copilot", "cwd": ".", "timeout": 5 }
     ],
     "preToolUse": [
-      { "type": "command", "bash": "rtk hook copilot", "powershell": "rtk hook copilot", "cwd": ".", "timeoutSec": 5 }
+      { "type": "command", "bash": "ptk hook copilot", "powershell": "ptk hook copilot", "cwd": ".", "timeoutSec": 5 }
     ]
   }
 }
@@ -194,7 +194,7 @@ fn heal_preserves_user_hooks_and_key_order() {
     assert_eq!(healed["hooks"]["sessionStart"][0]["command"], "echo hi");
     assert_eq!(
         healed["hooks"]["PreToolUse"][0]["command"],
-        "rtk hook copilot"
+        "ptk hook copilot"
     );
     let keys: Vec<&str> = healed["hooks"]
         .as_object()
@@ -247,7 +247,7 @@ fn pascalcase_invocation_works_and_never_touches_configs() {
 
     assert_hook_ok(PASCAL_PAYLOAD, &stdout, &stderr, code);
     assert!(
-        stdout.contains("rtk git status"),
+        stdout.contains("ptk git status"),
         "PascalCase rewrite must work: {stdout}"
     );
     assert_eq!(read(&sb.project_config()), LEGACY_STOCK);
@@ -263,7 +263,7 @@ fn jetbrains_invocation_works_and_never_touches_configs() {
 
     assert_hook_ok(JETBRAINS_PAYLOAD, &stdout, &stderr, code);
     assert!(
-        stdout.contains("rtk git status"),
+        stdout.contains("ptk git status"),
         "JetBrains deny-with-suggestion must carry the rewrite: {stdout}"
     );
     assert_eq!(read(&sb.project_config()), LEGACY_STOCK);
@@ -301,7 +301,7 @@ fn garbage_and_empty_stdin_exit_zero_without_touching_configs() {
 #[test]
 fn non_stock_configs_are_never_modified_by_legacy_invocations() {
     let customized = LEGACY_STOCK.replace(
-        r#""bash": "rtk hook copilot""#,
+        r#""bash": "ptk hook copilot""#,
         r#""bash": "my-wrapper.sh""#,
     );
     let extra_field = LEGACY_STOCK.replace(r#""timeoutSec": 5"#, r#""timeoutSec": 5, "x": 1"#);
@@ -309,18 +309,18 @@ fn non_stock_configs_are_never_modified_by_legacy_invocations() {
         r#""preToolUse": [
       {"#,
         r#""preToolUse": [
-      { "type": "command", "bash": "rtk hook copilot", "powershell": "rtk hook copilot", "cwd": ".", "timeoutSec": 5 },
+      { "type": "command", "bash": "ptk hook copilot", "powershell": "ptk hook copilot", "cwd": ".", "timeoutSec": 5 },
       {"#,
     );
     let missing_pascal = LEGACY_STOCK.replace(
         r#""PreToolUse": [
-      { "type": "command", "command": "rtk hook copilot", "cwd": ".", "timeout": 5 }
+      { "type": "command", "command": "ptk hook copilot", "cwd": ".", "timeout": 5 }
     ],
     "#,
         "",
     );
     let foreign_pascal = LEGACY_STOCK.replace(
-        r#""command": "rtk hook copilot""#,
+        r#""command": "ptk hook copilot""#,
         r#""command": "other-tool --hook""#,
     );
     for (label, content) in [
@@ -343,7 +343,7 @@ fn non_stock_configs_are_never_modified_by_legacy_invocations() {
 
         assert_hook_ok(LEGACY_PAYLOAD, &stdout, &stderr, code);
         assert!(
-            stdout.contains("rtk git status"),
+            stdout.contains("ptk git status"),
             "{label}: hook must keep rewriting: {stdout}"
         );
         assert_eq!(
@@ -418,7 +418,7 @@ fn unwritable_hooks_dir_never_breaks_the_hook() {
 
     assert_hook_ok(LEGACY_PAYLOAD, &stdout, &stderr, code);
     assert!(
-        stdout.contains("rtk git status"),
+        stdout.contains("ptk git status"),
         "rewrite must survive write failure: {stdout}"
     );
     assert_eq!(
