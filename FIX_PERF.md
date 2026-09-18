@@ -1,15 +1,15 @@
-# FIX_PERF — why rtk costs tokens instead of saving them
+# FIX_PERF — why PTK costs tokens instead of saving them
 
 Investigation date: 2026-07-20
-Evidence: `benchmarking/benchmark-sessions/results/20260713-133110` (rtk `pr:2781`,
+Evidence: `benchmarking/benchmark-sessions/results/20260713-133110` (PTK `pr:2781`,
 claude-opus-4-8, 10 paired ON/OFF VMs, task `rust-bottom-global-audit`)
 
 ---
 
 ## 1. Verdict
 
-On our own benchmark, on the task most favourable to rtk (every prescribed command is
-rtk-covered, read-only, fixed trajectory):
+On our own benchmark, on the task most favourable to PTK (every prescribed command is
+PTK-covered, read-only, fixed trajectory):
 
 | Metric | OFF | ON | savings* |
 |---|---|---|---|
@@ -19,9 +19,9 @@ rtk-covered, read-only, fixed trajectory):
 | API turns (`total_turns`) | 9.8 | 9.9 | −1% |
 | Bash commands (`total_tool_invocations`) | 17.4 | 20.8 | **−19.5%** |
 | Errors (total across 10 VMs) | 0 | 5 | — |
-| Hook coverage (`is_rtk_prefixed`) | — | 57% | expected ~100% |
+| Hook coverage (`is_RTK_prefixed`) | — | 57% | expected ~100% |
 
-\* `_savings_pct(on, off) = (1 - on/off) * 100`; positive = ON cheaper = good for rtk.
+\* `_savings_pct(on, off) = (1 - on/off) * 100`; positive = ON cheaper = good for PTK.
 
 **Compression works. It does not reach the invoice.** The +3.5% new-input saving is
 consumed by ~3.4 extra commands per session. Net cost is a wash.
@@ -31,13 +31,13 @@ derived by replaying agent transcripts. Two different methods, same number.
 
 **Reading `bash_result_bytes` as the headline is the error.** It measures bytes out of
 the filter, not dollars off the invoice — the same counterfactual substitution that makes
-`rtk gain` report savings while cost rises.
+`PTK gain` report savings while cost rises.
 
 ---
 
 ## 2. Root cause
 
-> rtk emits **human-readable** output where the wrapped command emits **machine-readable**
+> PTK emits **human-readable** output where the wrapped command emits **machine-readable**
 > output, and the hook rewrites commands that sit inside a pipeline.
 
 Agents pipe constantly. In this run:
@@ -47,7 +47,7 @@ Agents pipe constantly. In this run:
 
 ### 2.1 Confirmed hard failure — 100% incidence
 
-`rtk find src -name "*.rs" | xargs wc -l` ran on **10/10 ON VMs and failed on all 10**:
+`PTK find src -name "*.rs" | xargs wc -l` ran on **10/10 ON VMs and failed on all 10**:
 
 ```
 wc: 166F: No such file or directory
@@ -56,17 +56,17 @@ wc: ./: Is a directory
 wc: app.rs: No such file or directory
 ```
 
-`find` emits newline-separated paths. `rtk find` emits a listing with size annotations
+`find` emits newline-separated paths. `PTK find` emits a listing with size annotations
 (`166F`, `39D:`) and basenames stripped of their directories. Nothing downstream can
 consume it. on-9 exited 123.
 
 The agent recovers by re-running raw — this is the source of the extra commands:
 
 ```
-[on-2] rtk find src -name "*.rs" | xargs wc -l | tail -5    → garbage
+[on-2] PTK find src -name "*.rs" | xargs wc -l | tail -5    → garbage
 [on-2] find src -name "*.rs" | xargs wc -l | sort -rn       → 37604 total ✓
 
-[on-9] t1 RTK ERR  rtk find src -name "*.rs" | xargs wc -l   ← fails
+[on-9] t1 PTK ERR  PTK find src -name "*.rs" | xargs wc -l   ← fails
 [on-9] t2          find src -name "*.rs" | wc -l; ...        ← raw retry
 [on-9] t2          find src -name "*.rs" | xargs wc -l | tail -1  ← raw retry
 ```
@@ -90,8 +90,8 @@ git/tree/ls are identical to the command; cargo is *lower* in ON. **There is no 
 
 ### 2.1.2 Refuted: trust erosion
 
-An earlier reading of this data claimed the agent learns to route around rtk. The
-rtk-prefix rate does collapse from 100% before the first failure to ~47% after, in all 10
+An earlier reading of this data claimed the agent learns to route around PTK. The
+PTK-prefix rate does collapse from 100% before the first failure to ~47% after, in all 10
 VMs. **The control refutes it:**
 
 | | turns 1-3 | turns 4+ |
@@ -116,7 +116,7 @@ classified as `echo`. Corrected, grep is 1.06x. Flat.
   → ===WARN COUNT=== 0
 ```
 
-The tee'd log holds rtk's filtered summary, so `grep -c "^warning"` counts zero. The agent
+The tee'd log holds PTK's filtered summary, so `grep -c "^warning"` counts zero. The agent
 reports **0 clippy warnings** with no error and no retry. Same pattern on on-7.
 
 This is a correctness bug, not a token bug, and it justifies the fix on its own.
@@ -133,8 +133,8 @@ TokenKind::Pipe => {
 ```
 
 Added in v0.31.0 (#666), so it was present in the `pr:2781` build. Yet all 10 VMs show
-`is_rtk_prefixed=True` on `rtk find ... | sort`. `src/discover/rules.rs:118-124` performs
-an unconditional `^find\s+` → `rtk find` regex rewrite. **Two rewrite paths; the live hook
+`is_RTK_prefixed=True` on `PTK find ... | sort`. `src/discover/rules.rs:118-124` performs
+an unconditional `^find\s+` → `PTK find` regex rewrite. **Two rewrite paths; the live hook
 appears to take the one without the guard.** Tracing that dispatch is the first task.
 
 ---
@@ -145,25 +145,25 @@ Initial recommendation was to gate filtering on `std::io::stdout().is_terminal()
 `src/cmds/system/ls.rs:102` and `src/cmds/cloud/curl_cmd.rs:76` already do. **This does not
 work under an agent harness.**
 
-Claude Code's Bash tool captures stdout. From rtk's perspective:
+Claude Code's Bash tool captures stdout. From PTK's perspective:
 
 | Invocation | stdout | `is_terminal()` |
 |---|---|---|
-| `rtk find src` (agent reads output) | pipe to harness | **false** |
-| `rtk find src \| xargs wc -l` (program reads output) | pipe to xargs | **false** |
+| `PTK find src` (agent reads output) | pipe to harness | **false** |
+| `PTK find src \| xargs wc -l` (program reads output) | pipe to xargs | **false** |
 
 Identical. `isatty` cannot distinguish "consumed by the LLM" from "consumed by another
-program" — both are pipes. Gating passthrough on it would make rtk a **no-op under Claude
+program" — both are pipes. Gating passthrough on it would make PTK a **no-op under Claude
 Code**, destroying the filtering entirely while fixing nothing.
 
 Corollary worth noting: `ls.rs:102` only appends its summary line when `is_tty`, so under
 Claude Code **that summary is dead code** — the agent never sees it.
 
-`isatty` is still correct for interactive human use (`$ rtk find src | xargs wc -l` at a
+`isatty` is still correct for interactive human use (`$ PTK find src | xargs wc -l` at a
 real terminal does have a non-TTY stdout). It is simply blind in the deployment that matters.
 
 **Only the hook has the syntactic context needed to make this decision.** It sees the full
-command line before execution and can tell whether the rtk-rewritten segment feeds another
+command line before execution and can tell whether the PTK-rewritten segment feeds another
 program.
 
 ---
@@ -173,23 +173,23 @@ program.
 ### The invariant being violated
 
 Every command has an **output contract**: `find` emits newline-separated paths, `wc -l`
-emits counts, `git status --porcelain` emits a stable machine format. rtk substitutes a
+emits counts, `git status --porcelain` emits a stable machine format. PTK substitutes a
 lossy human-readable summary for that contract.
 
 That substitution is sound only when the consumer tolerates format changes — i.e. when the
 consumer is the language model. It is catastrophic when the consumer is another program.
 
-> **Invariant: a filter may only be applied when rtk's stdout is terminal — when nothing
+> **Invariant: a filter may only be applied when PTK's stdout is terminal — when nothing
 > but the agent reads it.**
 
-rtk currently has no representation of this invariant anywhere in its design.
+PTK currently has no representation of this invariant anywhere in its design.
 
 ### Where consumer identity is knowable
 
 | Layer | Can it tell who consumes the output? |
 |---|---|
 | Filter function | No — sees only bytes |
-| rtk binary at runtime | No — stdout is a pipe in both cases under an agent harness |
+| PTK binary at runtime | No — stdout is a pipe in both cases under an agent harness |
 | **Hook, pre-execution** | **Yes — the full command line is visible as text** |
 
 Consumer identity is a *syntactic* property of the command line and is destroyed the moment
@@ -197,7 +197,7 @@ the shell forks. It must be decided in the hook.
 
 ### The decision rule
 
-Per pipeline segment, given `rtk`-eligible command `C`:
+Per pipeline segment, given `PTK`-eligible command `C`:
 
 | Shell form | Consumer of C's stdout | Rewrite? |
 |---|---|---|
@@ -219,7 +219,7 @@ than what ships today.**
 
 ### Two strategies, both needed
 
-**A. Contract preservation** — reduce volume, preserve shape. `rtk find` should emit
+**A. Contract preservation** — reduce volume, preserve shape. `PTK find` should emit
 newline-separated paths, just fewer of them, with an elision marker on stderr rather than
 stdout. Then piping is safe by construction and needs no gating.
 
@@ -237,13 +237,13 @@ it appears.
 
 ### Why this is the whole problem
 
-rtk's founding bet is that a lossy human summary can be substituted for a machine data
+PTK's founding bet is that a lossy human summary can be substituted for a machine data
 stream, because the consumer is a model that prefers prose. That bet holds only when the
 model is the *terminal* consumer.
 
 In this benchmark, **73% of commands use a pipe or chain** — agents use the shell as a
 computation engine (counting, sorting, filtering), not merely as a way to produce text to
-read. rtk cannot see downstream, so it applies a human-facing transformation to data that
+read. PTK cannot see downstream, so it applies a human-facing transformation to data that
 is on its way to a program. Everything in §2 follows from that single blind spot.
 
 ---
@@ -259,7 +259,7 @@ is on its way to a program. Everything in §2 follows from that single blind spo
    -mtime -not …`) instead of exec'ing real `find`; `main.rs:1494-1500` turns any escaped
    `Err` into exit 1 with no fallback layer. `pipe_cmd.rs:258` bails on >10 MiB stdin and
    **discards it**.
-4. **Fix `rtk gain`'s counterfactual.** It credits the full raw byte count as "saved" even
+4. **Fix `PTK gain`'s counterfactual.** It credits the full raw byte count as "saved" even
    when the harness would have truncated the output anyway. Cap the counterfactual at what
    the agent would actually have received.
 5. **`pnpm outdated` masks failure.** `pnpm_cmd.rs:434-470` — `run_outdated` lacks the

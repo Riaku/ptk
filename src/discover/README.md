@@ -6,9 +6,9 @@
 
 This module has two jobs:
 
-1. **Rewrite commands** — Every LLM agent hook calls `rtk rewrite "git status"`. This module decides whether to rewrite it (`rtk git status`) or pass it through unchanged. This is the hot path — every command the LLM runs goes through here.
+1. **Rewrite commands** — Every LLM agent hook calls `PTK rewrite "git status"`. This module decides whether to rewrite it (`PTK git status`) or pass it through unchanged. This is the hot path — every command the LLM runs goes through here.
 
-2. **Analyze history** — `rtk discover` scans past LLM sessions to find commands that *could have been* rewritten but weren't. Same classification logic, different consumer.
+2. **Analyze history** — `PTK discover` scans past LLM sessions to find commands that *could have been* rewritten but weren't. Same classification logic, different consumer.
 
 ## How Command Rewriting Works
 
@@ -26,28 +26,28 @@ When a hook sends `cargo fmt --all && cargo test 2>&1 | tail -20`:
 **Per-segment rewriting** — Each segment goes through:
 
 1. Strip trailing redirects (`2>&1`, `>/dev/null`) — matched via lexer tokens, set aside, re-appended after rewriting
-2. Short-circuit special cases — `head -20 file` → `rtk read file --head-lines 20`, `tail -n 5 file` → `rtk read file --tail-lines 5`. These can't go through generic prefix replacement because it would produce `rtk read -20 file` (wrong flag position)
+2. Short-circuit special cases — `head -20 file` → `PTK read file --head-lines 20`, `tail -n 5 file` → `PTK read file --tail-lines 5`. These can't go through generic prefix replacement because it would produce `PTK read -20 file` (wrong flag position)
 3. Classify the command — strip env prefixes (`FOO="bar baz"`), normalize paths (`/usr/bin/grep` → `grep`), strip git global opts (`git -C /tmp` → `git`), then match against 60+ regex patterns from `rules.rs`
-4. Apply the rewrite — find the matching rule, replace the command prefix with `rtk <cmd>`, re-prepend the env prefix, re-append the redirect suffix
+4. Apply the rewrite — find the matching rule, replace the command prefix with `PTK <cmd>`, re-prepend the env prefix, re-append the redirect suffix
 
 **Guards along the way:**
 - `RTK_DISABLED=1` in the env prefix → skip rewrite
-- `gh` with `--json`/`--jq`/`--template` → skip (structured output, rtk would corrupt it)
-- `cat` with flags other than `-n` → skip (different semantics than `rtk read`)
+- `gh` with `--json`/`--jq`/`--template` → skip (structured output, PTK would corrupt it)
+- `cat` with flags other than `-n` → skip (different semantics than `PTK read`)
 - `cat`/`head`/`tail` with `>` or `>>` → skip (write operation, not a read)
 - Command in `hooks.exclude_commands` config → skip
 
-**Result**: `rtk cargo fmt --all && rtk cargo test 2>&1 | tail -20`. Bash handles the `&&` and `|` at execution time — each `rtk` invocation is a separate process.
+**Result**: `PTK cargo fmt --all && PTK cargo test 2>&1 | tail -20`. Bash handles the `&&` and `|` at execution time — each `PTK` invocation is a separate process.
 
 ## Shared Lexer Toolkit
 
-`lexer.rs` is layer 1 of RTK's command parsing (raw string → quote/operator-aware tokens and words) — layer 2, already-split argv → flags/values, is `core/arg_tokenizer.rs`. It's not private to this module: `hooks/permissions.rs`, `hooks/mod.rs`, and `main.rs`'s `rtk proxy` all build on it instead of re-scanning commands themselves.
+`lexer.rs` is layer 1 of PTK's command parsing (raw string → quote/operator-aware tokens and words) — layer 2, already-split argv → flags/values, is `core/arg_tokenizer.rs`. It's not private to this module: `hooks/permissions.rs`, `hooks/mod.rs`, and `main.rs`'s `PTK proxy` all build on it instead of re-scanning commands themselves.
 
 | Function | Purpose | Used outside `discover/` by |
 |---|---|---|
 | `tokenize(cmd)` | Full shell-syntax tokens: quotes, escapes, operators, pipes, redirects, shellisms | — |
 | `tokenize_with_newlines(cmd)` | Like `tokenize`, plus a `\n` `Operator` token per unquoted newline (a lone `\r` stays glued to its word, matching real bash) | — |
-| `shell_split(cmd)` | Quote-aware split into argv-ready words (quotes stripped, escapes resolved) | `hooks/mod.rs::is_claude_hook_command`, `main.rs`'s `rtk proxy '...'` |
+| `shell_split(cmd)` | Quote-aware split into argv-ready words (quotes stripped, escapes resolved) | `hooks/mod.rs::is_claude_hook_command`, `main.rs`'s `PTK proxy '...'` |
 | `split_for_permissions(cmd)` | Segments a compound command for the **permission gate** — deliberately the most conservative of three segmenters (see its doc comment for the full comparison table) | `hooks/permissions.rs::check_command_with_rules` |
 | `split_on_operators(cmd, stop_at_pipe)` | Segments for classification only — not safe for permission/security decisions | `registry.rs::split_command_chain` |
 | `contains_unattestable_construct(cmd)` | True for command/process substitution or a file-target redirect — constructs the permission gate can't decompose and must never auto-allow | `hooks/permissions.rs::check_command_with_rules` |
@@ -56,7 +56,7 @@ The permission gate, discover/analytics classification, and rewrite each segment
 
 ## How History Analysis Works
 
-`rtk discover` reads Claude Code JSONL session files. Each file contains `tool_use`/`tool_result` pairs for every command the LLM ran. The module:
+`PTK discover` reads Claude Code JSONL session files. Each file contains `tool_use`/`tool_result` pairs for every command the LLM ran. The module:
 
 1. Extracts commands from the JSONL (via `SessionProvider` trait — currently only Claude Code)
 2. Splits compound commands using the same lexer-based tokenization
@@ -80,7 +80,7 @@ The prefix is stripped twice: once in `classify_command()` to match the underlyi
 
 A process wrapper runs another command without changing which command runs, so
 the rewrite peels it, rewrites what it wraps, and re-prepends the wrapper text
-byte for byte: `timeout 300 cargo test` becomes `timeout 300 rtk cargo test`.
+byte for byte: `timeout 300 cargo test` becomes `timeout 300 PTK cargo test`.
 `PROCESS_WRAPPERS` in `registry.rs` describes each wrapper's own arguments —
 options that take a value, options that do not, values that may be attached to
 their option, and any positional argument the wrapper consumes before the
@@ -93,11 +93,11 @@ redirect, a subshell, a glob) does the same, because the wrapper's argv can no
 longer be read off the token list.
 
 `stdbuf` is deliberately not a wrapper here: it exists to make the wrapped
-command emit output incrementally, and routing through rtk buffers that output
+command emit output incrementally, and routing through PTK buffers that output
 until the child exits, so rewriting it would remove the only reason to type it.
 
-Wrapping also changes who receives a signal. `timeout 300 rtk cargo test`
-signals rtk rather than cargo, so `core::stream` relays SIGINT/SIGTERM to the
+Wrapping also changes who receives a signal. `timeout 300 PTK cargo test`
+signals PTK rather than cargo, so `core::stream` relays SIGINT/SIGTERM to the
 child and lets the normal filter-and-print path finish. Without that relay a
 killed run prints nothing at all, which is strictly worse than the unwrapped
 command.
@@ -106,7 +106,7 @@ command.
 
 Add an entry to `rules.rs`. Each rule has:
 - `pattern` — regex that matches the command (used by `RegexSet` for fast matching)
-- `rtk_cmd` — the RTK command it maps to (e.g., `"rtk cargo"`)
+- `RTK_cmd` — the PTK command it maps to (e.g., `"PTK cargo"`)
 - `rewrite_prefixes` — command prefixes to replace (e.g., `&["cargo"]`)
 - `category`, `savings_pct` — metadata for discover reports
 - `subcmd_savings`, `subcmd_status` — per-subcommand overrides

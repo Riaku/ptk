@@ -6,10 +6,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rtk-ai/rtk",
+    "url": "https://github.com/Riaku/ptk",
     "directory": "openclaw"
   },
-  "homepage": "https://github.com/rtk-ai/rtk",
+  "homepage": "https://github.com/Riaku/ptk",
   "keywords": [
     "rtk",
     "openclaw",

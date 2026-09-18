@@ -4,33 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**rtk (Rust Token Killer)** is a high-performance CLI proxy that minimizes LLM token consumption by filtering and compressing command outputs. It reduces bash output by 60-90% on common development operations through smart filtering, grouping, truncation, and deduplication. All percentages in this repo measure bash output, not your bill. RTK ships no tokenizer (`src/core/tracking.rs` estimates tokens as `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
+**PTK (Proxy Token Killer)** is a high-performance CLI proxy that minimizes LLM token consumption by filtering and compressing command outputs. It reduces bash output by 60-90% on common development operations through smart filtering, grouping, truncation, and deduplication. All percentages in this repo measure bash output, not your bill. PTK ships no tokenizer (`src/core/tracking.rs` estimates tokens as `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
 
-This is a fork with critical fixes for git argument parsing and modern JavaScript stack support (pnpm, vitest, Next.js, TypeScript, Playwright, Prisma).
+This is a fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk) (Rust Token Killer) with native Windows support: PowerShell cmdlets (`Get-ChildItem`, `Get-Content`, `Select-String`, ...), CMD built-ins (`dir`, `type`, `findstr`, `where`), console code page decoding, plus fixes for git argument parsing and modern JavaScript stack support (pnpm, vitest, Next.js, TypeScript, Playwright, Prisma).
 
 ### Name Collision Warning
 
-**Two different "rtk" projects exist:**
-- This project: Rust Token Killer (rtk-ai/rtk)
-- reachingforthejack/rtk: Rust Type Kit (DIFFERENT - generates Rust types)
+**Two different "PTK" projects exist:**
+- This project: PTK (Proxy Token Killer) — fork of rtk-ai/rtk (Rust Token Killer)
+- reachingforthejack/PTK: Rust Type Kit (DIFFERENT - generates Rust types)
 
 **Verify correct installation:**
 ```bash
-rtk --version  # Should show "rtk 0.28.2" (or newer)
-rtk gain       # Should show token savings stats (NOT "command not found")
+ptk --version  # Should show "ptk 0.48.0" (or newer)
+ptk gain       # Should show token savings stats (NOT "command not found")
 ```
 
-If `rtk gain` fails, you have the wrong package installed.
+If `ptk gain` fails, you have the wrong package installed.
 
 ## Development Commands
 
-> **Note**: If rtk is installed, prefer `rtk <cmd>` over raw commands for token-optimized output.
-> All commands work with passthrough support even for subcommands rtk doesn't specifically handle.
+> **Note**: If PTK is installed, prefer `ptk <cmd>` over raw commands for token-optimized output.
+> All commands work with passthrough support even for subcommands PTK doesn't specifically handle.
 
 ### Build & Run
 ```bash
 cargo build                   # raw
-rtk cargo build               # preferred (token-optimized)
+ptk cargo build               # preferred (token-optimized)
 cargo build --release         # release build (optimized)
 cargo run -- <command>        # run directly
 cargo install --path .        # install locally
@@ -39,7 +39,7 @@ cargo install --path .        # install locally
 ### Testing
 ```bash
 cargo test                    # all tests
-rtk cargo test                # preferred (token-optimized)
+ptk cargo test                # preferred (token-optimized)
 cargo test <test_name>        # specific test
 cargo test <module_name>::    # module tests
 cargo test -- --nocapture     # with stdout
@@ -51,7 +51,7 @@ bash scripts/test-all.sh      # smoke tests (installed binary required)
 cargo check                   # check without building
 cargo fmt                     # format code
 cargo clippy --all-targets    # all clippy lints
-rtk cargo clippy --all-targets # preferred
+ptk cargo clippy --all-targets # preferred
 ```
 
 ### Pre-commit Gate
@@ -67,7 +67,7 @@ cargo generate-rpm            # RPM package (needs cargo-generate-rpm, after rel
 
 ## Architecture
 
-rtk uses a **command proxy architecture**: `main.rs` routes CLI commands via a Clap `Commands` enum to specialized filter modules in `src/cmds/*/`, each of which executes the underlying command and compresses its output. Token savings are tracked in SQLite via `src/core/tracking.rs`.
+PTK uses a **command proxy architecture**: `main.rs` routes CLI commands via a Clap `Commands` enum to specialized filter modules in `src/cmds/*/`, each of which executes the underlying command and compresses its output. Token savings are tracked in SQLite via `src/core/tracking.rs`.
 
 For the full architecture, component details, and module development patterns, see:
 - [ARCHITECTURE.md](docs/contributing/ARCHITECTURE.md) — System design, module organization, filtering strategies, error handling
@@ -81,21 +81,21 @@ Supported ecosystems: git/gh/gt, cargo, go/golangci-lint, npm/pnpm/npx, ruff/pyt
 
 **Purpose**: Execute commands without filtering but track usage for metrics.
 
-**Usage**: `rtk proxy <command> [args...]`
+**Usage**: `ptk proxy <command> [args...]`
 
 **Benefits**:
-- **Bypass RTK filtering**: Workaround bugs or get full unfiltered output
-- **Track usage metrics**: Measure which commands Claude uses most (visible in `rtk gain --history`)
-- **Guaranteed compatibility**: Always works even if RTK doesn't implement the command
+- **Bypass PTK filtering**: Workaround bugs or get full unfiltered output
+- **Track usage metrics**: Measure which commands Claude uses most (visible in `ptk gain --history`)
+- **Guaranteed compatibility**: Always works even if PTK doesn't implement the command
 
 **Examples**:
 ```bash
-rtk proxy git log --oneline -20    # Full git log output (no truncation)
-rtk proxy npm install express      # Raw npm output (no filtering)
-rtk proxy curl https://api.example.com/data  # Any command works
+ptk proxy git log --oneline -20    # Full git log output (no truncation)
+ptk proxy npm install express      # Raw npm output (no filtering)
+ptk proxy curl https://api.example.com/data  # Any command works
 ```
 
-All proxy commands appear in `rtk gain --history` with 0% bash output reduction (input = output).
+All proxy commands appear in `ptk gain --history` with 0% bash output reduction (input = output).
 
 ## Coding Rules
 
@@ -127,9 +127,9 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 
 **Performance verification** (for filter changes):
 ```bash
-hyperfine 'rtk git log -10' --warmup 3          # before
+hyperfine 'ptk git log -10' --warmup 3          # before
 cargo build --release
-hyperfine 'target/release/rtk git log -10' --warmup 3  # after (should be <10ms)
+hyperfine 'target/release/ptk git log -10' --warmup 3  # after (should be <10ms)
 ```
 
 ## Working Directory Confirmation
@@ -137,7 +137,7 @@ hyperfine 'target/release/rtk git log -10' --warmup 3  # after (should be <10ms)
 **ALWAYS confirm working directory before starting any work**:
 
 ```bash
-pwd  # Verify you're in the rtk project root
+pwd  # Verify you're in the PTK project root
 git branch  # Verify correct branch (main, feature/*, etc.)
 ```
 

@@ -1,25 +1,25 @@
-# RTK Plugin for OpenClaw
+# PTK Plugin for OpenClaw
 
-Transparently rewrites shell commands executed via OpenClaw's `exec` tool to their RTK equivalents, cutting up to 90% of the bash output that reaches the LLM context.
+Transparently rewrites shell commands executed via OpenClaw's `exec` tool to their PTK equivalents, cutting up to 90% of the bash output that reaches the LLM context.
 
 This is the OpenClaw equivalent of the Claude Code hooks in `hooks/rtk-rewrite.sh`.
 
 ## How it works
 
-The plugin registers a `before_tool_call` hook that intercepts `exec` tool calls. When the agent runs a command like `git status`, the plugin delegates to `rtk rewrite` which returns the optimized command (e.g. `rtk git status`). The compressed output enters the agent's context window, saving tokens.
+The plugin registers a `before_tool_call` hook that intercepts `exec` tool calls. When the agent runs a command like `git status`, the plugin delegates to `PTK rewrite` which returns the optimized command (e.g. `PTK git status`). The compressed output enters the agent's context window, saving tokens.
 
-All rewrite logic lives in RTK itself (`rtk rewrite`). This plugin is a thin delegate -- when new filters are added to RTK, the plugin picks them up automatically with zero changes.
+All rewrite logic lives in PTK itself (`PTK rewrite`). This plugin is a thin delegate -- when new filters are added to PTK, the plugin picks them up automatically with zero changes.
 
 ## Installation
 
 ### Prerequisites
 
-RTK must be installed and available in `$PATH`:
+PTK must be installed and available in `$PATH`:
 
 ```bash
-brew install rtk
+brew install PTK
 # or
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Riaku/ptk/develop/install.sh | sh
 ```
 
 ### Install the plugin
@@ -61,15 +61,15 @@ In `openclaw.json`:
 
 ## What gets rewritten
 
-Everything that `rtk rewrite` supports (30+ commands). See the [full command list](https://github.com/rtk-ai/rtk#commands).
+Everything that `PTK rewrite` supports (30+ commands). See the [full command list](https://github.com/Riaku/ptk#what-it-does).
 
 ## What's NOT rewritten
 
-Handled by `rtk rewrite` guards:
-- Commands already using `rtk`
+Handled by `PTK rewrite` guards:
+- Commands already using `PTK`
 - Piped commands (`|`, `&&`, `;`)
 - Heredocs (`<<`)
-- Commands without an RTK filter
+- Commands without an PTK filter
 
 ## Measured savings
 
@@ -83,4 +83,4 @@ Handled by `rtk rewrite` guards:
 
 ## License
 
-Apache 2.0 -- same as RTK.
+Apache 2.0 -- same as PTK.

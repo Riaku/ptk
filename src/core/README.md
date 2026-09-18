@@ -11,7 +11,7 @@ Owns: configuration loading, token tracking persistence, TOML filter engine, tee
 Does **not** own: command-specific filtering logic (that's `cmds/`), hook lifecycle management (that's `src/hooks/`), or analytics dashboards (that's `analytics/`).
 
 ## Purpose
-Core infrastructure shared by all RTK command modules. Every filter, tracker, and command handler depends on these modules. No inward dependencies — leaf in the dependency graph (no circular imports possible).
+Core infrastructure shared by all PTK command modules. Every filter, tracker, and command handler depends on these modules. No inward dependencies — leaf in the dependency graph (no circular imports possible).
 
 ## TOML Filter Pipeline
 
@@ -27,8 +27,8 @@ The TOML DSL applies 8 stages in order:
 8. **on_empty**: Return message if result is empty after all stages
 
 Three-tier filter lookup (first match wins):
-1. `.rtk/filters.toml` (project-local, requires `rtk trust`)
-2. `~/.config/rtk/filters.toml` (user-global)
+1. `.PTK/filters.toml` (project-local, requires `PTK trust`)
+2. `~/.config/PTK/filters.toml` (user-global)
 3. Built-in filters concatenated by `build.rs` at compile time
 
 ## Tracking Database Schema
@@ -38,7 +38,7 @@ CREATE TABLE commands (
   id INTEGER PRIMARY KEY,
   timestamp TEXT,              -- UTC ISO8601
   original_cmd TEXT,           -- "ls -la"
-  rtk_cmd TEXT,                -- "rtk ls"
+  RTK_cmd TEXT,                -- "PTK ls"
   project_path TEXT,           -- cwd (for project-scoped stats)
   input_tokens INTEGER,        -- estimated from raw output (bytes / 4, no tokenizer)
   output_tokens INTEGER,       -- estimated from filtered output (bytes / 4)
@@ -121,7 +121,7 @@ Four rules, each of which cost a real bug before it was written down:
 
 - **One grammar per tool and subcommand.** Never reuse a sibling's predicate wholesale because it looks close enough — `-u` means `-p` in `git log` but `--include-untracked` in `git stash show`, and `-T` is `--initial-tab` in grep but `--type-not` in rg. Transcribe from the tool's own `--help` and verify against the real binary; grep and rg share 13 of ~50 value-taking flags, so one merged table is wrong for both.
 - **Scope the lookup to the region the tool parses.** Everything past `--` is a pathspec or an argument forwarded to another program — `before_dashdash` gives the tool's own tokens. `Dialect::Msbuild` keeps classifying past the boundary (it forwards rather than ending option parsing), which makes this explicit slice mandatory there, not optional.
-- **Inject before the boundary.** RTK's own flags go at `injection_point`, never appended: dotnet parks anything after `--` in UnparsedTokens and git reads it as a pathspec, so an appended `--verify-no-changes` silently does nothing.
+- **Inject before the boundary.** PTK's own flags go at `injection_point`, never appended: dotnet parks anything after `--` in UnparsedTokens and git reads it as a pathspec, so an appended `--verify-no-changes` silently does nothing.
 - **Detect and act with one rule.** Strip or inject using the detected token's `source_index`; re-matching the text lets the two disagree, which deleted a pathspec named `--no-compact` and swallowed a forwarded `--write`.
 
 `takes_value` returns `Option<ValueSpec>`, not a `bool`: one table per tool, answering every question the tokenizer has about a flag's value rather than one predicate per question, which is how two lists start drifting apart.
@@ -145,15 +145,15 @@ Consumers must call `timer.track()` on **all** code paths — success, failure, 
 
 Consumers that parse structured output (JSON, NDJSON, state machines) should call `tee::tee_and_hint()` to persist raw output for LLM recovery on failure. It must be called before `std::process::exit()`.
 
-For truncation recovery on **success** (e.g. a list capped at 20 items), use `tee::force_tee_hint()` (multi-line blocks) or `tee::force_tee_tail_hint(content, slug, offset)` (flat lists). All three persist the full output to the content-addressed recall store ([`retriever.rs`](retriever.rs)) and emit a runnable hint — `[full output: rtk recall <hash>]` or `[+N hidden: rtk recall <hash>]` — instead of burning tokens working around missing data.
+For truncation recovery on **success** (e.g. a list capped at 20 items), use `tee::force_tee_hint()` (multi-line blocks) or `tee::force_tee_tail_hint(content, slug, offset)` (flat lists). All three persist the full output to the content-addressed recall store ([`retriever.rs`](retriever.rs)) and emit a runnable hint — `[full output: PTK recall <hash>]` or `[+N hidden: PTK recall <hash>]` — instead of burning tokens working around missing data.
 
-The agent runs `rtk recall <hash>` to get back exactly what was elided. For `force_tee_tail_hint`, `offset` is the 1-based first hidden line (`header_lines + MAX_CAP + 1`); it is stored so the default recall returns only the hidden tail. Storage is byte-faithful (`BLOB` + lossless gzip); tune limits via the `[retriever]` config section.
+The agent runs `PTK recall <hash>` to get back exactly what was elided. For `force_tee_tail_hint`, `offset` is the 1-based first hidden line (`header_lines + MAX_CAP + 1`); it is stored so the default recall returns only the hidden tail. Storage is byte-faithful (`BLOB` + lossless gzip); tune limits via the `[retriever]` config section.
 
 ### Truncation Caps (`truncate`)
 
-`src/core/truncate.rs` defines four global cap policies — `CAP_ERRORS`, `CAP_WARNINGS`, `CAP_LIST`, `CAP_INVENTORY` — for the data classes RTK filters truncate. Each filter binds the right CAP to a local `const MAX_*` so the cap is one named jump away from the call site. These CAPs are the staging point for filter-level cap configuration (planned, not yet implemented): once the config surface lands, overriding `CAP_LIST` in `~/.config/rtk/config.toml` will tune every list filter in one place instead of editing 20+ files.
+`src/core/truncate.rs` defines four global cap policies — `CAP_ERRORS`, `CAP_WARNINGS`, `CAP_LIST`, `CAP_INVENTORY` — for the data classes PTK filters truncate. Each filter binds the right CAP to a local `const MAX_*` so the cap is one named jump away from the call site. These CAPs are the staging point for filter-level cap configuration (planned, not yet implemented): once the config surface lands, overriding `CAP_LIST` in `~/.config/PTK/config.toml` will tune every list filter in one place instead of editing 20+ files.
 
-**Config policy.** Configured values are accepted as-is, including `0`, which means "summary only" — the filter still prints the count and the `[full output: …]` recovery hint, just no individual items. Caps are never refused and rtk never aborts on them, in keeping with the never-block-the-user fallback philosophy.
+**Config policy.** Configured values are accepted as-is, including `0`, which means "summary only" — the filter still prints the count and the `[full output: …]` recovery hint, just no individual items. Caps are never refused and PTK never aborts on them, in keeping with the never-block-the-user fallback philosophy.
 
 **Deviating from a cap.** A filter whose items are unusually verbose (multi-line entries, backtraces) may show fewer than its class cap. Use `truncate::reduced(cap, by)` rather than a bare `cap - by`: `reduced` returns `cap - by`, except when the reduction would empty the list (`by >= cap`), in which case it drops the deviation and uses the full `cap`. This guarantees a deviation can never hide every item, and — crucially — stays a `usize`-underflow-safe `const fn` once caps become runtime-configurable (a bare `CAP_WARNINGS - 5` would panic or wrap to "no truncation" if a user set `CAP_WARNINGS` below `5`). Never deviate with a bare literal or with `*`/`/` (those scale unboundedly). Each deviation needs a one-line comment stating why.
 

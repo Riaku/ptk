@@ -1,407 +1,96 @@
-# RTK Installation Guide - For AI Coding Assistants
+# Installation
 
-## ⚠️ Name Collision Warning
+PTK is distributed as pre-built binaries and via Cargo. This fork does **not** use Homebrew, winget, or any other package manager — install from [GitHub Releases](https://github.com/Riaku/ptk/releases) or from source.
 
-**There are TWO completely different projects named "rtk":**
+> PTK is a fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk). Upstream install channels belong to the original project.
 
-1. ✅ **Rust Token Killer** (this project) - LLM token optimizer
-   - Repos: `rtk-ai/rtk`
-   - Has `rtk gain` command showing the savings dashboard
+## Pre-built Binaries
 
-2. ❌ **Rust Type Kit** (reachingforthejack/rtk) - DIFFERENT PROJECT
-   - Rust codebase query tool and type generator
-   - **DO NOT install if you want token optimization**
+Download the archive for your platform from [releases](https://github.com/Riaku/ptk/releases):
 
-## Pre-Installation Check (REQUIRED)
+| Platform | Asset |
+|----------|-------|
+| Windows (x64) | `ptk-x86_64-pc-windows-msvc.zip` |
+| macOS (Intel) | `ptk-x86_64-apple-darwin.tar.gz` |
+| macOS (Apple Silicon) | `ptk-aarch64-apple-darwin.tar.gz` |
+| Linux (x64, static) | `ptk-x86_64-unknown-linux-musl.tar.gz` |
+| Linux (ARM64) | `ptk-aarch64-unknown-linux-gnu.tar.gz` |
 
-**AI assistants should ALWAYS verify if RTK is already installed before attempting installation.**
-
-```bash
-# Check if RTK is installed
-rtk --version
-
-# CRITICAL: Verify it's the Token Killer (not Type Kit)
-rtk gain    # Should show the savings dashboard, NOT "command not found"
-
-# Check installation path
-which rtk
-```
-
-If `rtk gain` works, you have the **correct** RTK installed. **DO NOT reinstall**. Skip to "Project Initialization".
-
-If `rtk gain` fails but `rtk --version` succeeds, you have the **wrong** RTK (Type Kit). Uninstall and reinstall the correct one (see below).
-
-## Installation (only if RTK not available or wrong RTK installed)
-
-### Step 0: Uninstall Wrong RTK (if needed)
-
-If you accidentally installed Rust Type Kit:
+Each release includes `checksums.txt`. Verify before installing:
 
 ```bash
-cargo uninstall rtk
+sha256sum --check --ignore-missing checksums.txt   # Linux
+shasum -a 256 --check --ignore-missing checksums.txt  # macOS
 ```
 
-### Quick Install (Linux/macOS)
+### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh
+tar -xzf ptk-<target>.tar.gz
+mkdir -p ~/.local/bin
+mv ptk ~/.local/bin/
+export PATH="$HOME/.local/bin:$PATH"   # add to ~/.bashrc or ~/.zshrc
 ```
 
-After installation, **verify you have the correct rtk**:
-```bash
-rtk gain  # Must show the savings dashboard (not "command not found")
-```
+### Windows
 
-### Quick Install (Windows)
+1. Extract `ptk-x86_64-pc-windows-msvc.zip`
+2. Place `ptk.exe` in a directory on your PATH (e.g. `C:\Users\<you>\.local\bin`)
+3. Run from Command Prompt, PowerShell, or Windows Terminal — **do not double-click the `.exe`** (it prints usage and exits)
 
-```powershell
-winget install rtk-ai.rtk
-```
+> Some filters shell out to [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`). Keep it on your PATH to avoid `Binary 'rg' not found on PATH` warnings.
 
-### Alternative: Manual Installation
-
-```bash
-# From rtk-ai repository (NOT reachingforthejack!)
-cargo install --git https://github.com/rtk-ai/rtk
-
-# OR (if published and correct on crates.io)
-cargo install rtk
-
-# ALWAYS VERIFY after installation
-rtk gain  # MUST show the savings dashboard, not "command not found"
-```
-
-⚠️ **WARNING**: `cargo install rtk` from crates.io might install the wrong package. Always verify with `rtk gain`.
-
-## Project Initialization
-
-### Which mode to choose?
-
-```
-  Do you want RTK active across ALL Claude Code projects?
-  │
-  ├─ YES → rtk init -g              (recommended)
-  │         Hook + RTK.md (~10 tokens in context)
-  │         Commands auto-rewritten transparently
-  │
-  ├─ YES, minimal → rtk init -g --hook-only
-  │         Hook only, nothing added to CLAUDE.md
-  │         Zero tokens in context
-  │
-  └─ NO, single project → rtk init
-            Local CLAUDE.md only (137 lines)
-            No hook, no global effect
-```
-
-### Recommended: Global Hook-First Setup
-
-**Best for: All projects, automatic RTK usage**
+## Cargo
 
 ```bash
-rtk init -g
-# → Installs hook to ~/.claude/hooks/rtk-rewrite.sh
-# → Creates ~/.claude/RTK.md (10 lines, meta commands only)
-# → Adds @RTK.md reference to ~/.claude/CLAUDE.md
-# → Prompts: "Patch settings.json? [y/N]"
-# → If yes: patches + creates backup (~/.claude/settings.json.bak)
-
-# Automated alternatives:
-rtk init -g --auto-patch    # Patch without prompting
-rtk init -g --no-patch      # Print manual instructions instead
-
-# Verify installation
-rtk init --show  # Check hook is installed and executable
+cargo install --git https://github.com/Riaku/ptk
 ```
 
-**Context cost**: the hook adds a 10-line `RTK.md` to your context instead of a full command reference, and rewrites commands transparently at no per-command context cost.
-
-**What is settings.json?**
-Claude Code's hook registry. RTK adds a PreToolUse hook that rewrites commands transparently. Without this, Claude won't invoke the hook automatically.
-
-```
-  Claude Code          settings.json        rtk-rewrite.sh        RTK binary
-       │                    │                     │                    │
-       │  "git status"      │                     │                    │
-       │ ──────────────────►│                     │                    │
-       │                    │  PreToolUse trigger  │                    │
-       │                    │ ───────────────────►│                    │
-       │                    │                     │  rewrite command   │
-       │                    │                     │  → rtk git status  │
-       │                    │◄────────────────────│                    │
-       │                    │  updated command     │                    │
-       │                    │                                          │
-       │  execute: rtk git status                                      │
-       │ ─────────────────────────────────────────────────────────────►│
-       │                                                               │  filter
-       │  "3 modified, 1 untracked ✓"                                  │
-       │◄──────────────────────────────────────────────────────────────│
-```
-
-**Backup Safety**:
-RTK backs up existing settings.json before changes. Restore if needed:
-```bash
-cp ~/.claude/settings.json.bak ~/.claude/settings.json
-```
-
-### Alternative: Local Project Setup
-
-**Best for: Single project without hook**
+Or from a clone:
 
 ```bash
-cd /path/to/your/project
-rtk init  # Creates ./CLAUDE.md with full RTK instructions (137 lines)
+git clone https://github.com/Riaku/ptk.git
+cd ptk
+cargo install --path .
 ```
 
-**Context cost**: instructions loaded only for this project
+Requires Rust 1.91+ (edition 2024).
 
-### Upgrading from Previous Version
-
-#### From old 137-line CLAUDE.md injection (pre-0.22)
+## Verify Installation
 
 ```bash
-rtk init -g  # Automatically migrates to hook-first mode
-# → Removes old 137-line block
-# → Installs hook + RTK.md
-# → Adds @RTK.md reference
+ptk --version   # Should show "ptk <version>"
+ptk gain        # Should show the savings dashboard
 ```
 
-#### From old hook with inline logic (pre-0.24) — ⚠️ Breaking Change
+> **Name collision warning**: another project named "PTK" (Rust Type Kit, reachingforthejack/PTK) exists. If `ptk gain` fails, you have the wrong package — reinstall via `cargo install --git` above.
 
-RTK 0.24.0 replaced the inline command-detection hook (~200 lines) with a **thin delegator** that calls `rtk rewrite`. The binary now contains the rewrite logic, so adding new commands no longer requires a hook update.
+## AI Tool Setup
 
-The old hook still works but won't benefit from new rules added in future releases.
+After installing the binary, set up the auto-rewrite hook for your agent:
 
 ```bash
-# Upgrade hook to thin delegator
-rtk init --global
-
-# Verify the new hook is active
-rtk init --show
-# Should show: ✅ Hook: ... (thin delegator, up to date)
+ptk init -g                     # Claude Code / Copilot (default)
+ptk init -g --gemini            # Gemini CLI
+ptk init -g --codex             # Codex (OpenAI)
+ptk init -g --agent cursor      # Cursor
+ptk init --agent cline          # Cline / Roo Code
+ptk init -g --opencode          # OpenCode
+ptk init --show                 # Verify installation
 ```
 
-## Common User Flows
+Restart your AI tool after install. See the module docs in `hooks/` for per-agent details.
 
-### First-Time User (Recommended)
-```bash
-# 1. Install RTK
-cargo install --git https://github.com/rtk-ai/rtk
-rtk gain  # Verify (must show the savings dashboard)
+## WSL
 
-# 2. Setup with prompts
-rtk init -g
-# → Answer 'y' when prompted to patch settings.json
-# → Creates backup automatically
+WSL behaves exactly like Linux — use the Linux binary or Cargo instructions above inside WSL.
 
-# 3. Restart Claude Code
-# 4. Test: git status (should use rtk)
-```
-
-### CI/CD or Automation
-```bash
-# Non-interactive setup (no prompts)
-rtk init -g --auto-patch
-
-# Verify in scripts
-rtk init --show | grep "Hook:"
-```
-
-### Conservative User (Manual Control)
-```bash
-# Get manual instructions without patching
-rtk init -g --no-patch
-
-# Review printed JSON snippet
-# Manually edit ~/.claude/settings.json
-# Restart Claude Code
-```
-
-### Temporary Trial
-```bash
-# Install hook
-rtk init -g --auto-patch
-
-# Later: remove everything
-rtk init -g --uninstall
-
-# Restore backup if needed
-cp ~/.claude/settings.json.bak ~/.claude/settings.json
-```
-
-## Installation Verification
+## Uninstall
 
 ```bash
-# Basic test
-rtk ls .
-
-# Test with git
-rtk git status
-
-# Test with pnpm
-rtk pnpm list
-
-# Test with Vitest
-rtk vitest
+ptk init -g --uninstall         # Remove hook, RTK.md, settings entries
+cargo uninstall ptk             # Remove binary (if installed via Cargo)
+rm ~/.local/bin/ptk             # Remove binary (if installed manually)
 ```
 
-## Uninstalling
-
-### Complete Removal (Global Installations Only)
-
-```bash
-# Complete removal (global installations only)
-rtk init -g --uninstall
-
-# What gets removed:
-#   - Hook: ~/.claude/hooks/rtk-rewrite.sh
-#   - Context: ~/.claude/RTK.md
-#   - Reference: @RTK.md line from ~/.claude/CLAUDE.md
-#   - Registration: RTK hook entry from settings.json
-
-# Restart Claude Code after uninstall
-```
-
-**For Local Projects**: Manually remove RTK block from `./CLAUDE.md`
-
-### Binary Removal
-
-```bash
-# If installed via cargo
-cargo uninstall rtk
-
-# If installed via package manager
-brew uninstall rtk          # macOS Homebrew
-winget uninstall rtk-ai.rtk # Windows winget
-sudo apt remove rtk         # Debian/Ubuntu
-sudo dnf remove rtk         # Fedora/RHEL
-```
-
-### Restore from Backup (if needed)
-
-```bash
-cp ~/.claude/settings.json.bak ~/.claude/settings.json
-```
-
-## Essential Commands
-
-### Files
-```bash
-rtk ls .              # Compact tree view
-rtk read file.rs      # Optimized reading
-rtk grep "pattern" .  # Grouped search results
-```
-
-### Git
-```bash
-rtk git status        # Compact status
-rtk git log -n 10     # Condensed logs
-rtk git diff          # Optimized diff
-rtk git add .         # → "ok ✓"
-rtk git commit -m "msg"  # → "ok ✓ abc1234"
-rtk git push          # → "ok ✓ main"
-```
-
-> Percentages below are **reductions in bash output**, not reductions in your bill.
-
-### Pnpm (fork only)
-```bash
-rtk pnpm list     # Dependency tree (-70%)
-rtk pnpm outdated # Available updates (-80-90%)
-rtk pnpm install  # Silent installation
-```
-
-### Tests
-```bash
-rtk cargo test      # Filtered Cargo test output (-90%)
-rtk go test         # Filtered Go tests (NDJSON, -90%)
-rtk jest            # Filtered Jest output (-99.6%)
-rtk vitest          # Filtered Vitest output (-99.6%)
-rtk playwright test # Filtered Playwright output (-94%)
-rtk pytest          # Filtered Python tests (-90%)
-rtk rake test       # Filtered Ruby tests (-90%)
-rtk rspec           # Filtered RSpec tests (-60%)
-rtk test <cmd>      # Generic test wrapper - failures only (-90%)
-```
-
-### Statistics
-```bash
-rtk gain              # Savings dashboard
-rtk gain --graph      # With ASCII graph
-rtk gain --history    # With command history
-```
-
-## What RTK Filters
-
-RTK compresses the output of a shell command before your agent reads it. What that looks like in practice:
-
-| Operation | What RTK does to the output |
-|-----------|-----------------------------|
-| `vitest` / `jest` | Failures only; passing suites collapse to a count |
-| `git status` | Compact stat format, grouped by state |
-| `pnpm list` | Compact dependency tree |
-| `pnpm outdated` | Package, current and target version only |
-| `cargo test` | Failures only, with the assertion and location |
-
-The percentages shown next to commands above are **reductions in bash output bytes**. That is the part RTK controls — it is not the same as reducing your bill by the same amount, because bash output is only one contributor to input tokens, and input tokens are only part of a bill that also counts output tokens.
-
-See [How RTK Savings Work](docs/guide/resources/savings-explained.md) for the full explanation, including why the token counts RTK reports are estimates.
-
-## Troubleshooting
-
-### RTK command not found after installation
-```bash
-# Check PATH
-echo $PATH | grep -o '[^:]*\.cargo[^:]*'
-
-# Add to PATH if needed (~/.bashrc or ~/.zshrc)
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Reload shell
-source ~/.bashrc  # or source ~/.zshrc
-```
-
-### RTK command not available (e.g., vitest)
-```bash
-# Check branch
-cd /path/to/rtk
-git branch
-
-# Switch to feat/vitest-support if needed
-git checkout feat/vitest-support
-
-# Reinstall
-cargo install --path . --force
-```
-
-### Compilation error
-```bash
-# Update Rust
-rustup update stable
-
-# Clean and recompile
-cargo clean
-cargo build --release
-cargo install --path . --force
-```
-
-## Support and Contributing
-
-- **Website**: https://www.rtk-ai.app
-- **Contact**: contact@rtk-ai.app
-- **Troubleshooting**: See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues
-- **GitHub issues**: https://github.com/rtk-ai/rtk/issues
-- **Pull Requests**: https://github.com/rtk-ai/rtk/pulls
-
-⚠️ **If you installed the wrong rtk (Type Kit)**, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#problem-rtk-gain-command-not-found)
-
-## AI Assistant Checklist
-
-Before each session:
-
-- [ ] Verify RTK is installed: `rtk --version`
-- [ ] If not installed → follow "Install from fork"
-- [ ] If project not initialized → `rtk init`
-- [ ] Use `rtk` for ALL git/pnpm/test/vitest commands
-- [ ] Check savings: `rtk gain`
-
-**Golden Rule**: AI coding assistants should ALWAYS use `rtk` as a proxy for shell commands that generate verbose output (git, pnpm, npm, cargo test, vitest, docker, kubectl).
+Data lives in `~/.config/ptk/` (macOS: `~/Library/Application Support/ptk/`, Windows: `%APPDATA%\ptk\`) — delete it to clear all local state, or run `ptk telemetry forget` first if telemetry was enabled.

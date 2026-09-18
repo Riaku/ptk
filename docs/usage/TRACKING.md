@@ -1,10 +1,10 @@
-# RTK Tracking API Documentation
+# PTK Tracking API Documentation
 
-Comprehensive documentation for RTK's tracking system, which records how much **bash output** each filtered command removed.
+Comprehensive documentation for PTK's tracking system, which records how much **bash output** each filtered command removed.
 
 Everything the tracker stores is measured on bash output bytes, converted to estimated tokens. Bash output is one contributor to input tokens, alongside your prompt, the system prompt and conversation history, and input tokens are in turn only part of the bill, which also counts output tokens. `savings_pct` is therefore a **bash output byte ratio** — not a cost figure and not a share of your token bill.
 
-See [How RTK Savings Work](../guide/resources/savings-explained.md) for the full breakdown.
+See [How PTK Savings Work](../guide/resources/savings-explained.md) for the full breakdown.
 
 ## Table of Contents
 
@@ -18,8 +18,8 @@ See [How RTK Savings Work](../guide/resources/savings-explained.md) for the full
 
 ## Overview
 
-RTK's tracking system records every command execution to provide analytics on bash output reduction. The system:
-- Stores command history in SQLite (~/.local/share/rtk/tracking.db)
+PTK's tracking system records every command execution to provide analytics on bash output reduction. The system:
+- Stores command history in SQLite (~/.local/share/PTK/tracking.db)
 - Tracks estimated input/output tokens, bash output reduction percentage, and execution time
 - Automatically cleans up records older than 90 days
 - Provides aggregation APIs (daily/weekly/monthly)
@@ -30,28 +30,28 @@ RTK's tracking system records every command execution to provide analytics on ba
 ### Data Flow
 
 ```
-rtk command execution
+PTK command execution
   ↓
 TimedExecution::start()
   ↓
 [command runs]
   ↓
-TimedExecution::track(original_cmd, rtk_cmd, input, output)
+TimedExecution::track(original_cmd, RTK_cmd, input, output)
   ↓
-Tracker::record(original_cmd, rtk_cmd, input_tokens, output_tokens, exec_time_ms)
+Tracker::record(original_cmd, RTK_cmd, input_tokens, output_tokens, exec_time_ms)
   ↓
-SQLite database (~/.local/share/rtk/tracking.db)
+SQLite database (~/.local/share/PTK/tracking.db)
   ↓
 Aggregation APIs (get_summary, get_all_days, etc.)
   ↓
-CLI output (rtk gain) or JSON/CSV export
+CLI output (PTK gain) or JSON/CSV export
 ```
 
 ### Storage Location
 
-- **Linux**: `~/.local/share/rtk/tracking.db`
-- **macOS**: `~/Library/Application Support/rtk/tracking.db`
-- **Windows**: `%APPDATA%\rtk\tracking.db`
+- **Linux**: `~/.local/share/PTK/tracking.db`
+- **macOS**: `~/Library/Application Support/PTK/tracking.db`
+- **Windows**: `%APPDATA%\PTK\tracking.db`
 
 ### Data Retention
 
@@ -78,7 +78,7 @@ impl Tracker {
     pub fn record(
         &self,
         original_cmd: &str,      // Standard command (e.g., "ls -la")
-        rtk_cmd: &str,            // RTK command (e.g., "rtk ls")
+        RTK_cmd: &str,            // PTK command (e.g., "PTK ls")
         input_tokens: usize,      // Estimated tokens from raw output (bytes / 4)
         output_tokens: usize,     // Estimated tokens after filtering (bytes / 4)
         exec_time_ms: u64,        // Execution time in milliseconds
@@ -181,7 +181,7 @@ Individual command record from history.
 ```rust
 pub struct CommandRecord {
     pub timestamp: DateTime<Utc>, // UTC timestamp
-    pub rtk_cmd: String,           // RTK command used
+    pub RTK_cmd: String,           // PTK command used
     pub saved_tokens: usize,       // Estimated tokens saved
     pub savings_pct: f64,          // Bash output reduction, in percent
 }
@@ -201,16 +201,16 @@ impl TimedExecution {
     pub fn start() -> Self;
 
     /// Track command with elapsed time
-    pub fn track(&self, original_cmd: &str, rtk_cmd: &str, input: &str, output: &str);
+    pub fn track(&self, original_cmd: &str, RTK_cmd: &str, input: &str, output: &str);
 
     /// Track passthrough commands (timing-only, no token counting)
-    pub fn track_passthrough(&self, original_cmd: &str, rtk_cmd: &str);
+    pub fn track_passthrough(&self, original_cmd: &str, RTK_cmd: &str);
 }
 ```
 
 ### Utility Functions
 
-`rtk gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). RTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which RTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
+`PTK gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). PTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which PTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
 
 ```rust
 /// Estimate token count (~4 chars = 1 token)
@@ -221,7 +221,7 @@ pub fn args_display(args: &[OsString]) -> String;
 
 /// Legacy tracking function (deprecated, use TimedExecution)
 #[deprecated(note = "Use TimedExecution instead")]
-pub fn track(original_cmd: &str, rtk_cmd: &str, input: &str, output: &str);
+pub fn track(original_cmd: &str, RTK_cmd: &str, input: &str, output: &str);
 ```
 
 ## Usage Examples
@@ -229,7 +229,7 @@ pub fn track(original_cmd: &str, rtk_cmd: &str, input: &str, output: &str);
 ### Basic Tracking
 
 ```rust
-use rtk::tracking::{TimedExecution, Tracker};
+use PTK::tracking::{TimedExecution, Tracker};
 
 fn main() -> anyhow::Result<()> {
     // Start timer
@@ -237,10 +237,10 @@ fn main() -> anyhow::Result<()> {
 
     // Execute command
     let input = execute_original_command()?;
-    let output = execute_rtk_command()?;
+    let output = execute_RTK_command()?;
 
     // Track execution
-    timer.track("ls -la", "rtk ls", &input, &output);
+    timer.track("ls -la", "PTK ls", &input, &output);
 
     Ok(())
 }
@@ -249,7 +249,7 @@ fn main() -> anyhow::Result<()> {
 ### Querying Statistics
 
 ```rust
-use rtk::tracking::Tracker;
+use PTK::tracking::Tracker;
 
 fn main() -> anyhow::Result<()> {
     let tracker = Tracker::new()?;
@@ -271,7 +271,7 @@ fn main() -> anyhow::Result<()> {
     let recent = tracker.get_recent(10)?;
     for cmd in recent {
         println!("{}: {} saved {:.1}%",
-            cmd.timestamp, cmd.rtk_cmd, cmd.savings_pct);
+            cmd.timestamp, cmd.RTK_cmd, cmd.savings_pct);
     }
 
     Ok(())
@@ -283,7 +283,7 @@ fn main() -> anyhow::Result<()> {
 For commands that stream output or run interactively (no output capture):
 
 ```rust
-use rtk::tracking::TimedExecution;
+use PTK::tracking::TimedExecution;
 
 fn main() -> anyhow::Result<()> {
     let timer = TimedExecution::start();
@@ -292,7 +292,7 @@ fn main() -> anyhow::Result<()> {
     execute_streaming_command()?;
 
     // Track timing only (input_tokens=0, output_tokens=0)
-    timer.track_passthrough("git tag --list", "rtk git tag --list");
+    timer.track_passthrough("git tag --list", "PTK git tag --list");
 
     Ok(())
 }
@@ -362,8 +362,8 @@ date,commands,input_tokens,output_tokens,saved_tokens,savings_pct,total_time_ms,
 ### GitHub Actions - Track Savings in CI
 
 ```yaml
-# .github/workflows/track-rtk-savings.yml
-name: Track RTK Savings
+# .github/workflows/track-PTK-savings.yml
+name: Track PTK Savings
 
 on:
   schedule:
@@ -374,29 +374,29 @@ jobs:
   track-savings:
     runs-on: ubuntu-latest
     steps:
-      - name: Install RTK
-        run: cargo install --git https://github.com/rtk-ai/rtk --branch master
+      - name: Install PTK
+        run: cargo install --git https://github.com/Riaku/ptk
 
       - name: Export weekly stats
         run: |
-          rtk gain --weekly --format json > rtk-weekly.json
-          cat rtk-weekly.json
+          PTK gain --weekly --format json > PTK-weekly.json
+          cat PTK-weekly.json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: rtk-metrics
-          path: rtk-weekly.json
+          name: PTK-metrics
+          path: PTK-weekly.json
 
       - name: Post to Slack
         if: success()
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
-          SAVINGS=$(jq -r '.[0].saved_tokens' rtk-weekly.json)
-          PCT=$(jq -r '.[0].savings_pct' rtk-weekly.json)
+          SAVINGS=$(jq -r '.[0].saved_tokens' PTK-weekly.json)
+          PCT=$(jq -r '.[0].savings_pct' PTK-weekly.json)
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"📊 RTK Weekly: ${SAVINGS} tokens saved (${PCT}%)\"}" \
+            --data "{\"text\":\"📊 PTK Weekly: ${SAVINGS} tokens saved (${PCT}%)\"}" \
             $SLACK_WEBHOOK
 ```
 
@@ -405,16 +405,16 @@ jobs:
 ```python
 #!/usr/bin/env python3
 """
-Export RTK metrics to Grafana/Datadog/etc.
+Export PTK metrics to Grafana/Datadog/etc.
 """
 import json
 import subprocess
 from datetime import datetime
 
-def get_rtk_metrics():
-    """Fetch RTK metrics as JSON."""
+def get_RTK_metrics():
+    """Fetch PTK metrics as JSON."""
     result = subprocess.run(
-        ["rtk", "gain", "--all", "--format", "json"],
+        ["PTK", "gain", "--all", "--format", "json"],
         capture_output=True,
         text=True
     )
@@ -428,31 +428,31 @@ def export_to_datadog(metrics):
 
     for day in metrics.get("daily", []):
         datadog.api.Metric.send(
-            metric="rtk.tokens_saved",
+            metric="PTK.tokens_saved",
             points=[(datetime.now().timestamp(), day["saved_tokens"])],
             tags=[f"date:{day['date']}"]
         )
 
         datadog.api.Metric.send(
-            metric="rtk.savings_pct",
+            metric="PTK.savings_pct",
             points=[(datetime.now().timestamp(), day["savings_pct"])],
             tags=[f"date:{day['date']}"]
         )
 
 if __name__ == "__main__":
-    metrics = get_rtk_metrics()
+    metrics = get_RTK_metrics()
     export_to_datadog(metrics)
     print(f"Exported {len(metrics.get('daily', []))} days to Datadog")
 ```
 
-### Rust Integration (Using RTK as Library)
+### Rust Integration (Using PTK as Library)
 
 ```rust
 // In your Cargo.toml
 // [dependencies]
-// rtk = { git = "https://github.com/rtk-ai/rtk" }
+// PTK = { git = "https://github.com/Riaku/ptk" }
 
-use rtk::tracking::{Tracker, TimedExecution};
+use PTK::tracking::{Tracker, TimedExecution};
 use anyhow::Result;
 
 fn main() -> Result<()> {
@@ -496,7 +496,7 @@ CREATE TABLE commands (
     id INTEGER PRIMARY KEY,
     timestamp TEXT NOT NULL,           -- RFC3339 UTC timestamp
     original_cmd TEXT NOT NULL,        -- Original command (e.g., "ls -la")
-    rtk_cmd TEXT NOT NULL,             -- RTK command (e.g., "rtk ls")
+    RTK_cmd TEXT NOT NULL,             -- PTK command (e.g., "PTK ls")
     input_tokens INTEGER NOT NULL,     -- Estimated tokens from raw output (bytes / 4)
     output_tokens INTEGER NOT NULL,    -- Estimated tokens after filtering (bytes / 4)
     saved_tokens INTEGER NOT NULL,     -- input_tokens - output_tokens
@@ -545,8 +545,8 @@ let _ = conn.execute(
 ## Security & Privacy
 
 - **Local storage only**: Tracking database never leaves the machine
-- **Telemetry requires consent**: RTK can send a daily anonymous usage ping (version, OS, command counts, token savings). Disabled by default, requires explicit consent via `rtk init` or `rtk telemetry enable`. Manage with `rtk telemetry status/disable/forget`. Override: `RTK_TELEMETRY_DISABLED=1`
-- **User control**: Users can delete `~/.local/share/rtk/tracking.db` anytime
+- **Telemetry requires consent**: PTK can send a daily anonymous usage ping (version, OS, command counts, token savings). Disabled by default, requires explicit consent via `PTK init` or `PTK telemetry enable`. Manage with `PTK telemetry status/disable/forget`. Override: `RTK_TELEMETRY_DISABLED=1`
+- **User control**: Users can delete `~/.local/share/PTK/tracking.db` anytime
 - **90-day retention**: Old data automatically purged
 
 ## Troubleshooting
@@ -554,16 +554,16 @@ let _ = conn.execute(
 ### Database locked error
 
 If you see "database is locked" errors:
-- Ensure only one RTK process writes at a time
-- Check file permissions on `~/.local/share/rtk/tracking.db`
-- Delete and recreate: `rm ~/.local/share/rtk/tracking.db && rtk gain`
+- Ensure only one PTK process writes at a time
+- Check file permissions on `~/.local/share/PTK/tracking.db`
+- Delete and recreate: `rm ~/.local/share/PTK/tracking.db && PTK gain`
 
 ### Missing exec_time_ms column
 
-Older databases may not have the `exec_time_ms` column. RTK automatically migrates on first use, but you can force it:
+Older databases may not have the `exec_time_ms` column. PTK automatically migrates on first use, but you can force it:
 
 ```bash
-sqlite3 ~/.local/share/rtk/tracking.db \
+sqlite3 ~/.local/share/PTK/tracking.db \
   "ALTER TABLE commands ADD COLUMN exec_time_ms INTEGER DEFAULT 0"
 ```
 
@@ -585,5 +585,5 @@ Planned improvements (contributions welcome):
 ## See Also
 
 - [README.md](../README.md) - Main project documentation
-- [COMMAND_AUDIT.md](../claudedocs/COMMAND_AUDIT.md) - List of all RTK commands
+- [COMMAND_AUDIT.md](../claudedocs/COMMAND_AUDIT.md) - List of all PTK commands
 - [Rust docs](https://docs.rs/) - Run `cargo doc --open` for API docs

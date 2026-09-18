@@ -2,7 +2,7 @@
 
 ## Scope
 
-**Deployed hook artifacts** — the files and agent-specific configuration installed on user machines by `rtk init`. External scripts and plugins are thin delegates to `rtk rewrite`; native processors such as Codex call the same Rust rewrite registry directly. Zero filtering logic is duplicated in this directory.
+**Deployed hook artifacts** — the files and agent-specific configuration installed on user machines by `PTK init`. External scripts and plugins are thin delegates to `PTK rewrite`; native processors such as Codex call the same Rust rewrite registry directly. Zero filtering logic is duplicated in this directory.
 
 Owns: per-agent hook scripts and configuration files for 11 supported agents (Claude Code, Copilot, Cursor, Cline, Windsurf, Codex, OpenCode, Hermes, Pi, Oh My Pi, Mistral Vibe).
 
@@ -12,14 +12,14 @@ Relationship to `src/hooks/`: that component **creates** these files; this direc
 
 ## Awareness files
 
-`rtk-awareness.md`, `rtk-awareness-high.md`, `rtk-awareness-full.md` are the agent-neutral
-instruction files embedded by `rtk init` (`RTK.md`, `GEMINI.md`, rules files, `AGENTS.md` blocks).
+`PTK-awareness.md`, `PTK-awareness-high.md`, `PTK-awareness-full.md` are the agent-neutral
+instruction files embedded by `PTK init` (`@@PTKMD@@`, `GEMINI.md`, rules files, `AGENTS.md` blocks).
 `awareness.level` in `config.toml` picks one for hook-based agents; agents without a hook always get
-`rtk-awareness-full.md`, the only one that tells the agent to prefix commands with `rtk`.
+`PTK-awareness-full.md`, the only one that tells the agent to prefix commands with `PTK`.
 
 ## Purpose
 
-LLM agent integrations that intercept CLI commands and route them through RTK for token optimization. Each hook transparently rewrites raw commands (e.g., `git status`) to their RTK equivalents (e.g., `rtk git status`), cutting up to 90% of the bash output that reaches the LLM context without requiring the agent or user to change their workflow.
+LLM agent integrations that intercept CLI commands and route them through PTK for token optimization. Each hook transparently rewrites raw commands (e.g., `git status`) to their PTK equivalents (e.g., `PTK git status`), cutting up to 90% of the bash output that reaches the LLM context without requiring the agent or user to change their workflow.
 
 ## How It Works
 
@@ -27,14 +27,14 @@ LLM agent integrations that intercept CLI commands and route them through RTK fo
 Agent runs command (e.g., "cargo test --nocapture")
   -> Hook intercepts (PreToolUse / plugin event)
   -> Reads JSON input, extracts command string
-  -> Uses the shared RTK rewrite registry
-  -> Registry matches pattern, returns "rtk cargo test --nocapture"
+  -> Uses the shared PTK rewrite registry
+  -> Registry matches pattern, returns "PTK cargo test --nocapture"
   -> Hook sends response in agent-specific JSON format
-  -> Agent executes "rtk cargo test --nocapture" instead
+  -> Agent executes "PTK cargo test --nocapture" instead
   -> Filtered output reaches LLM (up to 90% fewer bash output bytes)
 ```
 
-All rewrite logic lives in the Rust binary (`src/discover/registry.rs`). External hook scripts call `rtk rewrite`; native Rust hook processors call the registry directly. This keeps one source of truth for all 70+ rewrite patterns.
+All rewrite logic lives in the Rust binary (`src/discover/registry.rs`). External hook scripts call `PTK rewrite`; native Rust hook processors call the registry directly. This keeps one source of truth for all 70+ rewrite patterns.
 
 ## Directory Structure
 
@@ -45,29 +45,29 @@ Each agent subdirectory has its own README with hook-specific details:
 - **[`cursor/`](cursor/README.md)** — Shell hook, Cursor JSON format, empty `{}` response requirement
 - **[`cline/`](cline/README.md)** — Rules file (prompt-level), `.clinerules` project-local installation
 - **[`windsurf/`](windsurf/README.md)** — Rules file (prompt-level), `.windsurfrules` workspace-scoped
-- **[`codex/`](codex/README.md)** — Rust binary hook (`rtk hook codex`), `PreToolUse.updatedInput`, `.codex/hooks.json` / `$CODEX_HOME/hooks.json`, plus `AGENTS.md` awareness
+- **[`codex/`](codex/README.md)** — Rust binary hook (`PTK hook codex`), `PreToolUse.updatedInput`, `.codex/hooks.json` / `$CODEX_HOME/hooks.json`, plus `AGENTS.md` awareness
 - **[`opencode/`](opencode/README.md)** — TypeScript plugin, `zx` library, `tool.execute.before` event, in-place mutation
 - **[`pi/`](pi/README.md)** — TypeScript extension, `tool_call` event, local `isBashToolCallEvent` guard, in-place mutation, `~/.pi/agent/extensions/`; **shared with Oh My Pi (OMP)** — OMP installs the same file at `.omp/extensions/` via its `legacy-pi-compat` layer
 - **[`hermes/`](hermes/README.md)** — Python plugin, `pre_tool_call` hook, in-place terminal command mutation
-- **[`vibe/`](vibe/README.md)** — Rust binary hook (`rtk hook vibe`), `pre_tool` entry in `~/.vibe/hooks.toml`, `hook_specific_output.tool_input` rewrite plus `system_message` for UI visibility
+- **[`vibe/`](vibe/README.md)** — Rust binary hook (`PTK hook vibe`), `pre_tool` entry in `~/.vibe/hooks.toml`, `hook_specific_output.tool_input` rewrite plus `system_message` for UI visibility
 
 ## Supported Agents
 
 | Agent | Mechanism | Hook Type | Can Modify Command? |
 |-------|-----------|-----------|---------------------|
 | Claude Code | Shell hook (`PreToolUse`) | Transparent rewrite | Yes (`updatedInput`) |
-| VS Code Copilot Chat | Rust binary (`rtk hook copilot`) | Transparent rewrite | Yes (`updatedInput`) |
-| GitHub Copilot CLI | Rust binary (`rtk hook copilot`) | Deny-with-suggestion | No (agent retries) |
+| VS Code Copilot Chat | Rust binary (`PTK hook copilot`) | Transparent rewrite | Yes (`updatedInput`) |
+| GitHub Copilot CLI | Rust binary (`PTK hook copilot`) | Deny-with-suggestion | No (agent retries) |
 | Cursor | Rust binary | Transparent rewrite | Yes (`updated_input`) |
-| Gemini CLI | Rust binary (`rtk hook gemini`) | Transparent rewrite | Yes (`hookSpecificOutput`) |
+| Gemini CLI | Rust binary (`PTK hook gemini`) | Transparent rewrite | Yes (`hookSpecificOutput`) |
 | Cline / Roo Code | Custom instructions (rules file) | Prompt-level guidance | N/A |
 | Windsurf | Custom instructions (rules file) | Prompt-level guidance | N/A |
-| Codex CLI | Rust binary (`rtk hook codex`) | Transparent rewrite | Yes (`updatedInput`) |
+| Codex CLI | Rust binary (`PTK hook codex`) | Transparent rewrite | Yes (`updatedInput`) |
 | OpenCode | TypeScript plugin (`tool.execute.before`) | In-place mutation | Yes |
 | Pi | TypeScript extension (`tool_call` event) | In-place mutation | Yes |
 | Oh My Pi (OMP) | TypeScript extension (`tool_call` event, shared with Pi) | In-place mutation | Yes |
 | Hermes | Python plugin (`pre_tool_call`) | In-place mutation | Yes |
-| Mistral Vibe | Rust binary (`rtk hook vibe`) | Transparent rewrite | Yes (`hook_specific_output.tool_input`) |
+| Mistral Vibe | Rust binary (`PTK hook vibe`) | Transparent rewrite | Yes (`hook_specific_output.tool_input`) |
 
 ## JSON Formats by Agent
 
@@ -89,8 +89,8 @@ Each agent subdirectory has its own README with hook-specific details:
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "allow",
-    "permissionDecisionReason": "RTK auto-rewrite",
-    "updatedInput": { "command": "rtk git status" }
+    "permissionDecisionReason": "PTK auto-rewrite",
+    "updatedInput": { "command": "PTK git status" }
   }
 }
 ```
@@ -104,7 +104,7 @@ Each agent subdirectory has its own README with hook-specific details:
 ```json
 {
   "permission": "allow",
-  "updated_input": { "command": "rtk git status" }
+  "updated_input": { "command": "PTK git status" }
 }
 ```
 
@@ -130,13 +130,13 @@ Returns `{}` when no rewrite (Cursor requires JSON for all paths).
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "allow",
-    "permissionDecisionReason": "RTK auto-rewrite",
-    "updatedInput": { "command": "rtk git status" }
+    "permissionDecisionReason": "PTK auto-rewrite",
+    "updatedInput": { "command": "PTK git status" }
   }
 }
 ```
 
-The `allow` value is required by Codex to accept `updatedInput`; Codex still runs its native approval and sandbox checks after applying the replacement. Those checks classify the rewritten command, and Codex does not currently unwrap the `rtk` binary for its safe/dangerous-command heuristics. Missing or unknown permission modes and other no-rewrite cases produce no stdout.
+The `allow` value is required by Codex to accept `updatedInput`; Codex still runs its native approval and sandbox checks after applying the replacement. Those checks classify the rewritten command, and Codex does not currently unwrap the `PTK` binary for its safe/dangerous-command heuristics. Missing or unknown permission modes and other no-rewrite cases produce no stdout.
 
 ### Copilot CLI (Rust Binary)
 
@@ -154,7 +154,7 @@ The `allow` value is required by Codex to accept `updatedInput`; Codex still run
 ```json
 {
   "permissionDecision": "deny",
-  "permissionDecisionReason": "Token savings: use `rtk git status` instead"
+  "permissionDecisionReason": "Token savings: use `PTK git status` instead"
 }
 ```
 
@@ -188,7 +188,7 @@ The `allow` value is required by Codex to accept `updatedInput`; Codex still run
 {
   "decision": "allow",
   "hookSpecificOutput": {
-    "tool_input": { "command": "rtk git status" }
+    "tool_input": { "command": "PTK git status" }
   }
 }
 ```
@@ -213,9 +213,9 @@ The `allow` value is required by Codex to accept `updatedInput`; Codex still run
 ```json
 {
   "hook_specific_output": {
-    "tool_input": { "command": "rtk git status" }
+    "tool_input": { "command": "PTK git status" }
   },
-  "system_message": "rtk: rewrote to `rtk git status`"
+  "system_message": "PTK: rewrote to `PTK git status`"
 }
 ```
 
@@ -226,7 +226,7 @@ The `allow` value is required by Codex to accept `updatedInput`; Codex still run
 Mutates `args.command` in-place via the zx library:
 
 ```typescript
-const result = await $`rtk rewrite ${command}`.quiet().nothrow()
+const result = await $`PTK rewrite ${command}`.quiet().nothrow()
 const rewritten = String(result.stdout).trim()
 if (rewritten && rewritten !== command) {
   (args as Record<string, unknown>).command = rewritten
@@ -238,7 +238,7 @@ if (rewritten && rewritten !== command) {
 Mutates `args["command"]` in-place via the `pre_tool_call` hook:
 
 ```python
-result = subprocess.run(["rtk", "rewrite", command], capture_output=True, text=True, timeout=2)
+result = subprocess.run(["PTK", "rewrite", command], capture_output=True, text=True, timeout=2)
 rewritten = result.stdout.strip()
 if result.returncode in {0, 3} and rewritten and rewritten != command:
     args["command"] = rewritten
@@ -268,13 +268,13 @@ The registry handles `&&`, `||`, `;`, `|`, `|&`, and `&` operators:
 - **And/Or/Semicolon** (`&&`, `||`, `;`): Both sides rewritten independently
 - **Pipeline-safe rules**: Initially limited to argument-safe `grep`, `rg`, and `wc` invocations; search pattern-file forms defer
 
-Example: `cargo fmt --all && cargo test` becomes `rtk cargo fmt --all && rtk cargo test`
+Example: `cargo fmt --all && cargo test` becomes `PTK cargo fmt --all && PTK cargo test`
 
 ### Override Controls
 
 - **`RTK_DISABLED=1`**: Per-command override (`RTK_DISABLED=1 git status` runs raw)
-- **`exclude_commands`**: In `~/.config/rtk/config.toml`, list commands to never rewrite. Matches against the full command after stripping env prefixes. Subcommand patterns work (`"git push"` excludes `git push origin main`). Patterns starting with `^` are treated as regex.
-- **Already-RTK**: `rtk git status` passes through unchanged (no `rtk rtk git`)
+- **`exclude_commands`**: In `~/.config/PTK/config.toml`, list commands to never rewrite. Matches against the full command after stripping env prefixes. Subcommand patterns work (`"git push"` excludes `git push origin main`). Patterns starting with `^` are treated as regex.
+- **Already-PTK**: `PTK git status` passes through unchanged (no `PTK PTK git`)
 
 ## Exit Code Contract
 
@@ -291,10 +291,10 @@ When there is no rewrite to apply, the hook must produce no output (or `{}` for 
 Hooks are **non-blocking** -- they never prevent a command from executing:
 
 - jq not installed: warning to stderr, exit 0 (command runs raw)
-- rtk binary not found: warning to stderr, exit 0
-- rtk version too old (< 0.23.0): warning to stderr, exit 0
+- PTK binary not found: warning to stderr, exit 0
+- PTK version too old (< 0.23.0): warning to stderr, exit 0
 - Invalid JSON input: pass through unchanged
-- `rtk rewrite` crashes: hook exits 0 (subprocess error ignored)
+- `PTK rewrite` crashes: hook exits 0 (subprocess error ignored)
 - Filter logic error: fallback to raw command output
 
 ## Adding a New Agent Integration
@@ -311,7 +311,7 @@ New integrations must follow the [Exit Code Contract](#exit-code-contract) and [
 
 ### Eligibility
 
-RTK supports AI coding assistants that developers actually use day-to-day. To add a new agent:
+PTK supports AI coding assistants that developers actually use day-to-day. To add a new agent:
 
 - Agent has a **documented, stable hook/plugin API** (not experimental/alpha)
 - Agent is **actively maintained** (commit activity in last 3 months)

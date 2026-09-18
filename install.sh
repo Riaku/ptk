@@ -1,11 +1,11 @@
 #!/usr/bin/env sh
-# rtk installer - https://github.com/rtk-ai/rtk
-# Usage: curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+# ptk installer - https://github.com/Riaku/ptk
+# Usage: curl -fsSL https://raw.githubusercontent.com/Riaku/ptk/develop/install.sh | sh
 
 set -e
 
-REPO="rtk-ai/rtk"
-BINARY_NAME="rtk"
+REPO="Riaku/ptk"
+BINARY_NAME="ptk"
 INSTALL_DIR="${RTK_INSTALL_DIR:-$HOME/.local/bin}"
 
 # Colors

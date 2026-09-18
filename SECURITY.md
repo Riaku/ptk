@@ -2,9 +2,9 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in RTK, please report it to the maintainers privately:
+If you discover a security vulnerability in PTK, please report it to the maintainers privately:
 
-- **Email**: security@rtk-ai.app (or create a private security advisory on GitHub)
+- **Email**: a private GitHub security advisory (https://github.com/Riaku/ptk/security/advisories/new) (or create a private security advisory on GitHub)
 - **Response time**: We aim to acknowledge reports within 48 hours
 - **Disclosure**: We follow responsible disclosure practices (90-day embargo)
 
@@ -16,7 +16,7 @@ If you discover a security vulnerability in RTK, please report it to the maintai
 
 ## Security Review Process for Pull Requests
 
-RTK is a CLI tool that executes shell commands and handles user input. PRs from external contributors undergo enhanced security review to protect against:
+PTK is a CLI tool that executes shell commands and handles user input. PRs from external contributors undergo enhanced security review to protect against:
 
 - **Shell injection** (command execution vulnerabilities)
 - **Supply chain attacks** (malicious dependencies)
@@ -84,7 +84,7 @@ Use the comprehensive security review process:
 
 ```bash
 # If Claude Code available, run the dedicated skill:
-/rtk-pr-security <PR_NUMBER>
+/PTK-pr-security <PR_NUMBER>
 
 # Manual review (without Claude):
 gh pr view <PR_NUMBER>
@@ -114,7 +114,7 @@ bash scripts/detect-dangerous-patterns.sh /tmp/pr.diff
 | `SystemTime::now() > ...` | Logic bombs | Delayed malicious behavior |
 | Base64/hex strings | Obfuscation | Hides malicious URLs/commands |
 
-See [Dangerous Patterns Reference](https://github.com/rtk-ai/rtk/wiki/Dangerous-Patterns) for exploitation examples.
+See the upstream [Dangerous Patterns Reference](https://github.com/rtk-ai/rtk/wiki/Dangerous-Patterns) for exploitation examples.
 
 ---
 
@@ -208,9 +208,9 @@ Critical vulnerabilities (remote code execution, data exfiltration) may be fast-
 
 ## Contact
 
-- **Security issues**: security@rtk-ai.app
-- **General questions**: https://github.com/rtk-ai/rtk/discussions
-- **Maintainers**: @FlorianBruniaux (active fork maintainer)
+- **Security issues**: a private GitHub security advisory (https://github.com/Riaku/ptk/security/advisories/new)
+- **General questions**: https://github.com/Riaku/ptk/issues
+- **Maintainer**: @Riaku
 
 ---
 
