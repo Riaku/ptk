@@ -106,64 +106,9 @@ jobs:
           name: ptk-${{ matrix.target }}
           path: ptk-${{ matrix.target }}.${{ matrix.archive }}
 
-  build-deb:
-    name: Build DEB package
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
-
-      - name: Build DEB
-        run: cargo deb
-        env:
-          RTK_TELEMETRY_URL: ${{ vars.RTK_TELEMETRY_URL }}
-          RTK_TELEMETRY_TOKEN: ${{ secrets.RTK_TELEMETRY_TOKEN }}
-
-      - name: Upload DEB
-        uses: actions/upload-artifact@v4
-        with:
-          name: ptk-deb
-          path: target/debian/*.deb
-
-  build-rpm:
-    name: Build RPM package
-    runs-on: ubuntu-latest
-    container: fedora:latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          dnf install -y rust cargo rpm-build
-
-      - name: Install cargo-generate-rpm
-        run: cargo install cargo-generate-rpm
-
-      - name: Build release
-        run: cargo build --release
-        env:
-          RTK_TELEMETRY_URL: ${{ vars.RTK_TELEMETRY_URL }}
-          RTK_TELEMETRY_TOKEN: ${{ secrets.RTK_TELEMETRY_TOKEN }}
-
-      - name: Generate RPM
-        run: cargo generate-rpm
-
-      - name: Upload RPM
-        uses: actions/upload-artifact@v4
-        with:
-          name: ptk-rpm
-          path: target/generate-rpm/*.rpm
-
   release:
     name: Create Release
-    needs: [build, build-deb, build-rpm]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: Check app credentials
@@ -209,17 +154,7 @@ jobs:
       - name: Flatten artifacts
         run: |
           mkdir -p release
-          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" \) -exec cp {} release/ \;
-
-      - name: Create version-agnostic package names
-        run: |
-          cd release
-          for f in *.deb; do
-            [ -f "$f" ] && cp "$f" "ptk_amd64.deb"
-          done
-          for f in *.rpm; do
-            [ -f "$f" ] && cp "$f" "ptk.x86_64.rpm"
-          done
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
 
       - name: Create checksums
         run: |

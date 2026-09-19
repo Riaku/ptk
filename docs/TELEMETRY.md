@@ -43,7 +43,7 @@ This data directly drives our roadmap. For example, if telemetry shows that 40% 
 | `version` | `0.34.1` | Track adoption of new versions |
 | `os` | `macos` | Know which platforms to support and test |
 | `arch` | `aarch64` | Prioritize ARM vs x86 builds |
-| `install_method` | `homebrew` | Understand distribution channels (homebrew/cargo/script/nix) |
+| `install_method` | `script` | Understand distribution channels (script/cargo/other) |
 
 ### Usage volume
 

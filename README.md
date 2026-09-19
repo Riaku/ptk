@@ -4,7 +4,7 @@ A high-performance CLI proxy that minimizes LLM token consumption by filtering a
 
 PTK is a fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk) by [Patrick Szymkowiak](https://github.com/pszymkowiak). It retains all of RTK's cross-platform and POSIX capabilities and adds native support for **Windows PowerShell cmdlets** (`Get-ChildItem`, `Get-Content`, `Select-String`, `Get-Process`, ...) and **Windows CMD built-ins** (`dir`, `type`, `findstr`, `where`), closing long-standing gaps for Windows developers and AI coding agents.
 
-This fork is maintained independently. Upstream distribution channels (winget, Homebrew, Discord) are **not** supported here — see the [original RTK project](https://github.com/rtk-ai/rtk) for those.
+This fork is maintained independently and distributed **only** via [GitHub Releases](https://github.com/Riaku/ptk/releases). Upstream distribution channels belong to the original project.
 
 ## Installation
 
@@ -18,7 +18,7 @@ Download from [releases](https://github.com/Riaku/ptk/releases):
 
 > **Windows users**: extract the zip and place `ptk.exe` somewhere on your PATH (e.g. `C:\Users\<you>\.local\bin`). Run it from a terminal — do not double-click the `.exe`.
 
-### Cargo
+GitHub Releases is the only supported install method for end users. Developers and contributors can also build from source:
 
 ```bash
 cargo install --git https://github.com/Riaku/ptk

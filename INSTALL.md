@@ -1,6 +1,6 @@
 # Installation
 
-PTK is distributed as pre-built binaries and via Cargo. This fork does **not** use Homebrew, winget, or any other package manager — install from [GitHub Releases](https://github.com/Riaku/ptk/releases) or from source.
+PTK is distributed as pre-built binaries via [GitHub Releases](https://github.com/Riaku/ptk/releases). This is the only supported install method. Developers can also build from source (see [Build from Source](#build-from-source-developers)).
 
 > PTK is a fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk). Upstream install channels belong to the original project.
 
@@ -40,7 +40,9 @@ export PATH="$HOME/.local/bin:$PATH"   # add to ~/.bashrc or ~/.zshrc
 
 > Some filters shell out to [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`). Keep it on your PATH to avoid `Binary 'rg' not found on PATH` warnings.
 
-## Cargo
+## Build from Source (Developers)
+
+> GitHub Releases is the supported install path for end users. Building from source is for developers and contributors only.
 
 ```bash
 cargo install --git https://github.com/Riaku/ptk
@@ -63,7 +65,7 @@ ptk --version   # Should show "ptk <version>"
 ptk gain        # Should show the savings dashboard
 ```
 
-> **Name collision warning**: another project named "PTK" (Rust Type Kit, reachingforthejack/PTK) exists. If `ptk gain` fails, you have the wrong package — reinstall via `cargo install --git` above.
+> **Name collision warning**: another project named "PTK" (Rust Type Kit, reachingforthejack/PTK) exists. If `ptk gain` fails, you have the wrong package — reinstall the correct binary from [GitHub Releases](https://github.com/Riaku/ptk/releases).
 
 ## AI Tool Setup
 
@@ -83,7 +85,7 @@ Restart your AI tool after install. See the module docs in `hooks/` for per-agen
 
 ## WSL
 
-WSL behaves exactly like Linux — use the Linux binary or Cargo instructions above inside WSL.
+WSL behaves exactly like Linux — use the Linux binary from [GitHub Releases](https://github.com/Riaku/ptk/releases) inside WSL.
 
 ## Uninstall
 

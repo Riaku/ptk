@@ -14,11 +14,9 @@ All rewrite logic lives in PTK itself (`ptk rewrite`). This plugin is a thin del
 
 ### Prerequisites
 
-PTK must be installed and available in `$PATH`:
+PTK must be installed and available in `$PATH`. Install the pre-built binary from [GitHub Releases](https://github.com/Riaku/ptk/releases), or via the install script:
 
 ```bash
-brew install PTK
-# or
 curl -fsSL https://raw.githubusercontent.com/Riaku/ptk/develop/install.sh | sh
 ```
 

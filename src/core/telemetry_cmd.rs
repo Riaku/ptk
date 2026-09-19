@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn salt_missing_label_distinguishes_consent_not_given_from_real_failure() {
-        // #1656: a fresh `brew install ptk` followed by `ptk telemetry status`
+        // #1656: a fresh install followed by `ptk telemetry status`
         // (without ever running `ptk init`) leaves `consent_given == None` and
         // therefore never writes a salt — that is by design, not a failure.
         // Surfacing it as `(no salt file)` reads as an error to users.

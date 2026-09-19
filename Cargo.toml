@@ -66,23 +66,6 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
-# cargo-deb configuration
-[package.metadata.deb]
-maintainer = "PTK Contributors"
-copyright = "2026 PTK Contributors"
-license-file = ["LICENSE", "0"]
-extended-description = "ptk filters and compresses command outputs before they reach your LLM context, saving tokens."
-section = "utility"
-priority = "optional"
-assets = [
-    ["target/release/ptk", "usr/bin/", "755"],
-]
-# cargo-generate-rpm configuration
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/ptk", dest = "/usr/bin/ptk", mode = "755" },
-]
-
 [lints.rust]
 unsafe_code = "deny"
 warnings = "deny"

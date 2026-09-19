@@ -59,12 +59,6 @@ ptk cargo clippy --all-targets # preferred
 cargo fmt --all && cargo clippy --all-targets && cargo test --all
 ```
 
-### Package Building
-```bash
-cargo deb                     # DEB package (needs cargo-deb)
-cargo generate-rpm            # RPM package (needs cargo-generate-rpm, after release build)
-```
-
 ## Architecture
 
 PTK uses a **command proxy architecture**: `main.rs` routes CLI commands via a Clap `Commands` enum to specialized filter modules in `src/cmds/*/`, each of which executes the underlying command and compresses its output. Token savings are tracked in SQLite via `src/core/tracking.rs`.

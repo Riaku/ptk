@@ -60,18 +60,15 @@ Trigger: push to develop | workflow_dispatch (not master) | Concurrency: cancel-
      │ prerelease = true         │
      └────────┬──────────────────┘
               │
-     ┌────────▼──────────────────┐
-     │ Build                     │
-     │ 5 platforms + DEB + RPM   │
-     └────────┬──────────────────┘
-              │
-     ┌────────▼──────────────────┐
-     │ GitHub Release            │
-     │ (pre-release badge)       │
-     │                           │
-     │ Discord:  SKIPPED         │
-     │ Homebrew: SKIPPED         │
-     └──────────────────────────┘
+      ┌────────▼──────────────────┐
+      │ Build                     │
+      │ 5 platforms               │
+      └────────┬──────────────────┘
+               │
+      ┌────────▼──────────────────┐
+      │ GitHub Release            │
+      │ (pre-release badge)       │
+      └──────────────────────────┘
 ```
 
 ## Merge to master — stable release (cd.yml)
@@ -99,19 +96,18 @@ Trigger: push to master (only) | Concurrency: never cancelled
   │ release PR   │    │ prerelease = false     │
   └──────────────┘    └───────────┬───────────┘
                                   │
-                     ┌────────────▼────────────┐
-                     │ Build                   │
-                     │ 5 platforms + DEB + RPM  │
-                     └────────────┬────────────┘
-                                  │
-                     ┌────────────▼────────────┐
-                     │ GitHub Release           │
-                     │ (stable, "Latest" badge) │
-                     └──┬─────────┬─────────┬──┘
-                        │         │         │
-                        ▼         ▼         ▼
-                    Discord   Homebrew   latest
-                    notify    tap update  tag
+                      ┌────────────▼────────────┐
+                      │ Build                   │
+                      │ 5 platforms             │
+                      └────────────┬────────────┘
+                                   │
+                      ┌────────────▼────────────┐
+                      │ GitHub Release           │
+                      │ (stable, "Latest" badge) │
+                      └────────────┬────────────┘
+                                   │
+                                   ▼
+                              latest tag
 ```
 
 ## Manual release (release.yml)
@@ -124,17 +120,16 @@ Trigger: workflow_dispatch
      │ inputs: tag, prerelease │
      └───────────┬────────────┘
                  │
-     ┌───────────▼────────────┐
-     │ Full build pipeline     │
-     │ 5 platforms + DEB + RPM │
-     └───────────┬────────────┘
-                 │
-          ┌──────┴──────┐
-          │             │
-   prerelease=false  prerelease=true
-          │             │
-          ▼             ▼
-     Discord        pre-release
-     Homebrew       badge only
-     latest tag
+      ┌───────────▼────────────┐
+      │ Full build pipeline     │
+      │ 5 platforms             │
+      └───────────┬────────────┘
+                  │
+           ┌──────┴──────┐
+           │             │
+    prerelease=false  prerelease=true
+           │             │
+           ▼             ▼
+      latest tag     pre-release
+                   badge only
 ```
