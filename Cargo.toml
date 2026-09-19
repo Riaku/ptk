@@ -7,6 +7,7 @@ authors = ["PTK Contributors", "Patrick Szymkowiak"]
 description = "Proxy Token Killer - High-performance CLI proxy to minimize LLM token consumption across Windows and POSIX shells"
 license = "Apache-2.0"
 repository = "https://github.com/rtk-ai/rtk"
+publish = false
 readme = "README.md"
 keywords = ["cli", "llm", "token", "filter", "productivity"]
 categories = ["command-line-utilities", "development-tools"]
