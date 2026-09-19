@@ -36,16 +36,16 @@ git status --short && git branch --show-current
 
 ```bash
 # Hook configuration check
-if [ -f ".claude/hooks/rtk-rewrite.sh" ]; then
-    echo "✅ OK: rtk-rewrite.sh hook present"
+if [ -f ".claude/hooks/ptk-rewrite.sh" ]; then
+    echo "✅ OK: ptk-rewrite.sh hook present"
     # Check if hook is executable
-    if [ -x ".claude/hooks/rtk-rewrite.sh" ]; then
+    if [ -x ".claude/hooks/ptk-rewrite.sh" ]; then
         echo "✅ OK: hook is executable"
     else
         echo "⚠️ WARNING: hook not executable (chmod +x needed)"
     fi
 else
-    echo "❌ MISSING: rtk-rewrite.sh hook"
+    echo "❌ MISSING: ptk-rewrite.sh hook"
 fi
 ```
 
@@ -135,7 +135,7 @@ fi
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📦 PTK Binary:      ✅ OK (v0.16.0) | ❌ NOT FOUND
-🔗 Hooks:           ✅ OK (rtk-rewrite.sh + PTK-suggest.sh executable)
+🔗 Hooks:           ✅ OK (ptk-rewrite.sh + PTK-suggest.sh executable)
                     ❌ MISSING or ⚠️ WARNING (not executable)
 📊 Token Analytics: ✅ OK (ptk gain working)
                     ❌ FAILED (command not available)
@@ -247,7 +247,7 @@ l'installation et obtenir les commandes de fix.
 
 **Cas 2 : Hook permission denied**
 ```
-L'erreur "Permission denied" sur le hook rtk-rewrite.sh indique que
+L'erreur "Permission denied" sur le hook ptk-rewrite.sh indique que
 les hooks ne sont pas exécutables. Lance `/diagnose` pour identifier
 le problème et corriger les permissions avec `chmod +x`.
 ```

@@ -1228,7 +1228,7 @@ Claude Code "git status"
 settings.json -> PreToolUse hook
     |
     v
-rtk-rewrite.sh (bash)
+ptk-rewrite.sh (bash)
     |
     v
 ptk rewrite "git status"  ->  "ptk git status"
@@ -1262,7 +1262,7 @@ ptk init -g --uninstall         # Desinstaller
 
 | Fichier | Description |
 |---------|-------------|
-| `~/.claude/hooks/rtk-rewrite.sh` | Script hook (delegue a `ptk rewrite`) |
+| `~/.claude/hooks/ptk-rewrite.sh` | Script hook (delegue a `ptk rewrite`) |
 | `~/.claude/@@PTKMD@@` | Instructions minimales pour le LLM |
 | `~/.claude/settings.json` | Enregistrement du hook PreToolUse |
 

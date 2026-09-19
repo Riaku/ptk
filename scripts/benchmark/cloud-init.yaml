@@ -1,7 +1,7 @@
 #cloud-config
-# RTK Integration Test VM — Ubuntu 24.04
-# Installs all tools needed for comprehensive RTK testing (~200 commands)
-# Usage: multipass launch --name rtk-test --cloud-init scripts/benchmark/cloud-init.yaml --cpus 2 --memory 4G --disk 20G 24.04
+# PTK Integration Test VM — Ubuntu 24.04
+# Installs all tools needed for comprehensive PTK testing (~200 commands)
+# Usage: multipass launch --name ptk-test --cloud-init scripts/benchmark/cloud-init.yaml --cpus 2 --memory 4G --disk 20G 24.04
 
 package_update: true
 package_upgrade: false
@@ -262,7 +262,7 @@ runcmd:
   - |
     su - ubuntu -c '
     mkdir -p /tmp/test-git && cd /tmp/test-git
-    git init && git config user.email "test@rtk.dev" && git config user.name "RTK Test"
+    git init && git config user.email "test@ptk.dev" && git config user.name "PTK Test"
     for i in $(seq 1 20); do echo "line $i" >> file.txt && git add file.txt && git commit -m "feat: commit number $i"; done
     echo "modified" >> file.txt && echo "new file" > new.txt
     '
@@ -310,6 +310,6 @@ runcmd:
   # Signal completion
   - touch /home/ubuntu/.cloud-init-complete
   - chown ubuntu:ubuntu /home/ubuntu/.cloud-init-complete
-  - echo "RTK cloud-init setup complete" | tee /var/log/rtk-setup.log
+  - echo "PTK cloud-init setup complete" | tee /var/log/ptk-setup.log
 
-final_message: "RTK test VM ready in $UPTIME seconds"
+final_message: "PTK test VM ready in $UPTIME seconds"

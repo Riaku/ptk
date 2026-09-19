@@ -1,8 +1,8 @@
 /**
- * Test helpers for RTK integration testing.
+ * Test helpers for PTK integration testing.
  */
 
-import { vmExec, RTK_BIN } from "./vm";
+import { vmExec, PTK_BIN } from "./vm";
 
 export type TestStatus = "PASS" | "FAIL" | "SKIP";
 
@@ -88,19 +88,19 @@ export async function testCmd(
 }
 
 /**
- * Test token savings: compare raw command output vs RTK filtered output.
+ * Test token savings: compare raw command output vs PTK filtered output.
  */
 export async function testSavings(
   name: string,
   rawCmd: string,
-  rtkCmd: string,
+  ptkCmd: string,
   targetPct: number
 ): Promise<TestResult> {
   const raw = await vmExec(rawCmd);
-  const rtk = await vmExec(rtkCmd);
+  const ptk = await vmExec(ptkCmd);
 
   const rawSize = raw.stdout.length;
-  const rtkSize = rtk.stdout.length;
+  const ptkSize = ptk.stdout.length;
 
   if (rawSize === 0) {
     const result: TestResult = {
@@ -112,17 +112,17 @@ export async function testSavings(
     return result;
   }
 
-  const savings = Math.round(100 - (rtkSize * 100) / rawSize);
+  const savings = Math.round(100 - (ptkSize * 100) / rawSize);
 
   let status: TestStatus;
   let detail: string;
 
   if (savings >= targetPct) {
     status = "PASS";
-    detail = `raw=${rawSize}b filtered=${rtkSize}b savings=${savings}% (target: >=${targetPct}%)`;
+    detail = `raw=${rawSize}b filtered=${ptkSize}b savings=${savings}% (target: >=${targetPct}%)`;
   } else {
     status = "FAIL";
-    detail = `savings=${savings}% < target ${targetPct}% (raw=${rawSize}b filtered=${rtkSize}b)`;
+    detail = `savings=${savings}% < target ${targetPct}% (raw=${rawSize}b filtered=${ptkSize}b)`;
   }
 
   const result: TestResult = { name, status, detail, savings };
@@ -138,7 +138,7 @@ export async function testRewrite(
   expected: string
 ): Promise<TestResult> {
   const escaped = input.replace(/'/g, "'\\''");
-  const { stdout } = await vmExec(`${RTK_BIN} rewrite '${escaped}'`);
+  const { stdout } = await vmExec(`${PTK_BIN} rewrite '${escaped}'`);
   const actual = stdout.trim();
 
   let status: TestStatus;

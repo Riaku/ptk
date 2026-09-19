@@ -11,7 +11,7 @@ set -euo pipefail
 
 if [ "${1:-}" = "--self-test" ]; then
     # Self-test: create a tempfile without tests and verify the check catches it
-    TMPFILE="src/cmds/system/_rtk_check_self_test_cmd.rs"
+    TMPFILE="src/cmds/system/_ptk_check_self_test_cmd.rs"
     echo "pub fn run() {}" > "$TMPFILE"
     trap 'rm -f "$TMPFILE"' EXIT
 

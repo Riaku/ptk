@@ -359,32 +359,9 @@ jobs:
       - name: Commit stats
         run: |
           git add stats/
-          git commit -m "Weekly PTK stats"
-          git push
-```
-
-### Slack Bot
-
-```python
-import subprocess
-import json
-import requests
-
-def send_RTK_stats():
-    result = subprocess.run(['PTK', 'gain', '--format', 'json'],
-                           capture_output=True, text=True)
-    data = json.loads(result.stdout)
-
-    message = f"""
-    📊 *PTK Token Savings Report*
-
-    Total Saved: {data['summary']['total_saved']:,} tokens
-    Savings Rate: {data['summary']['avg_savings_pct']:.1f}%
-    Commands: {data['summary']['total_commands']}
-    """
-
-    requests.post(SLACK_WEBHOOK_URL, json={'text': message})
-```
+           git commit -m "Weekly PTK stats"
+           git push
+ ```
 
 ## Troubleshooting
 

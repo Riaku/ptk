@@ -2,7 +2,7 @@
 
 Transparently rewrites shell commands executed via OpenClaw's `exec` tool to their PTK equivalents, cutting up to 90% of the bash output that reaches the LLM context.
 
-This is the OpenClaw equivalent of the Claude Code hooks in `hooks/rtk-rewrite.sh`.
+This is the OpenClaw equivalent of the Claude Code hooks in `hooks/ptk-rewrite.sh`.
 
 ## How it works
 

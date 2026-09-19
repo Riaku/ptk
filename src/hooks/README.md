@@ -86,7 +86,7 @@ Rules are loaded from all Claude Code `settings.json` files (project + global, i
 
 | Tool | ask support | Behavior on Default |
 |------|------------|-------------------|
-| Claude Code (rtk-rewrite.sh) | Yes | `permissionDecision: "ask"` — user prompted |
+| Claude Code (ptk-rewrite.sh) | Yes | `permissionDecision: "ask"` — user prompted |
 | Copilot VS Code (ptk hook copilot) | Yes | `permissionDecision: "ask"` — user prompted |
 | Cursor (ptk hook cursor) | Ready | `permission: "ask",` — users will be prompted when Cursor enforces the permission; in the meantime, allow |
 | Gemini CLI (ptk hook gemini) | No (allow/deny only) | allow (limitation — no ask mode in Gemini) |

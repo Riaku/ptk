@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# RTK Smoke Tests — Ruby (RSpec, RuboCop, Minitest, Bundle)
-# Creates a minimal Rails app, exercises all Ruby RTK filters, then cleans up.
+# PTK Smoke Tests — Ruby (RSpec, RuboCop, Minitest, Bundle)
+# Creates a minimal Rails app, exercises all Ruby PTK filters, then cleans up.
 # Usage: bash scripts/test-ruby.sh
 #
-# Prerequisites: rtk (installed), ruby, bundler, rails gem
+# Prerequisites: ptk (installed), ruby, bundler, rails gem
 # Duration: ~60-120s (rails new + bundle install dominate)
 #
 set -euo pipefail
@@ -104,9 +104,9 @@ section() {
 
 # ── Prerequisite checks ─────────────────────────────
 
-RTK=$(command -v rtk || echo "")
-if [[ -z "$RTK" ]]; then
-    echo "rtk not found in PATH. Run: cargo install --path ."
+PTK=$(command -v ptk || echo "")
+if [[ -z "$PTK" ]]; then
+    echo "ptk not found in PATH. Run: cargo install --path ."
     exit 1
 fi
 
@@ -127,8 +127,8 @@ fi
 
 # ── Preamble ─────────────────────────────────────────
 
-printf "${BOLD}RTK Smoke Tests — Ruby (RSpec, RuboCop, Minitest, Bundle)${NC}\n"
-printf "Binary: %s (%s)\n" "$RTK" "$(rtk --version)"
+printf "${BOLD}PTK Smoke Tests — Ruby (RSpec, RuboCop, Minitest, Bundle)${NC}\n"
+printf "Binary: %s (%s)\n" "$PTK" "$(ptk --version)"
 printf "Ruby: %s\n" "$(ruby --version)"
 printf "Rails: %s\n" "$(rails --version)"
 printf "Bundler: %s\n" "$(bundle --version)"
@@ -136,7 +136,7 @@ printf "Date: %s\n\n" "$(date '+%Y-%m-%d %H:%M')"
 
 # ── Temp dir + cleanup trap ──────────────────────────
 
-TMPDIR=$(mktemp -d /tmp/rtk-ruby-smoke-XXXXXX)
+TMPDIR=$(mktemp -d /tmp/ptk-ruby-smoke-XXXXXX)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 printf "${BOLD}Setting up temporary Rails app in %s ...${NC}\n" "$TMPDIR"
@@ -147,8 +147,8 @@ cd "$TMPDIR"
 
 # 1. Create minimal Rails app
 printf "  → rails new (--minimal --skip-git --skip-docker) ...\n"
-rails new rtk_smoke_app --minimal --skip-git --skip-docker --quiet 2>&1 | tail -1 || true
-cd rtk_smoke_app
+rails new ptk_smoke_app --minimal --skip-git --skip-docker --quiet 2>&1 | tail -1 || true
+cd ptk_smoke_app
 
 # 2. Add rspec-rails and rubocop to Gemfile
 cat >> Gemfile <<'GEMFILE'
@@ -269,69 +269,69 @@ printf "\n${BOLD}Setup complete. Running tests...${NC}\n"
 
 section "RSpec"
 
-assert_output "rtk rspec (with failure)" \
+assert_output "ptk rspec (with failure)" \
     "failed" \
-    rtk rspec
+    ptk rspec
 
-assert_output "rtk rspec spec/models/post_spec.rb (pass)" \
+assert_output "ptk rspec spec/models/post_spec.rb (pass)" \
     "RSpec.*passed" \
-    rtk rspec spec/models/post_spec.rb
+    ptk rspec spec/models/post_spec.rb
 
-assert_output "rtk rspec spec/models/post_fail_spec.rb (fail)" \
+assert_output "ptk rspec spec/models/post_fail_spec.rb (fail)" \
     "failed\|❌" \
-    rtk rspec spec/models/post_fail_spec.rb
+    ptk rspec spec/models/post_fail_spec.rb
 
 # ── 2. RuboCop ───────────────────────────────────────
 
 section "RuboCop"
 
-assert_output "rtk rubocop (with offenses)" \
+assert_output "ptk rubocop (with offenses)" \
     "offense" \
-    rtk rubocop
+    ptk rubocop
 
-assert_output "rtk rubocop app/ (with offenses)" \
+assert_output "ptk rubocop app/ (with offenses)" \
     "rubocop_bait\|offense" \
-    rtk rubocop app/
+    ptk rubocop app/
 
 # ── 3. Minitest (rake test) ──────────────────────────
 
 section "Minitest (rake test)"
 
-assert_output "rtk rake test (with failure)" \
+assert_output "ptk rake test (with failure)" \
     "failure\|error\|FAIL" \
-    rtk rake test
+    ptk rake test
 
-assert_output "rtk rake test single passing file" \
+assert_output "ptk rake test single passing file" \
     "ok rake test\|0 failures" \
-    rtk rake test TEST=test/models/post_pass_test.rb
+    ptk rake test TEST=test/models/post_pass_test.rb
 
-assert_exit_nonzero "rtk rake test single failing file" \
+assert_exit_nonzero "ptk rake test single failing file" \
     "failure\|FAIL" \
-    rtk rake test test/models/post_fail_test.rb
+    ptk rake test test/models/post_fail_test.rb
 
 # ── 4. Bundle install ────────────────────────────────
 
 section "Bundle install"
 
-assert_output "rtk bundle install (idempotent)" \
+assert_output "ptk bundle install (idempotent)" \
     "bundle\|ok\|complete\|install" \
-    rtk bundle install
+    ptk bundle install
 
 # ── 5. Exit code preservation ────────────────────────
 
 section "Exit code preservation"
 
-assert_exit_nonzero "rtk rspec exits non-zero on failure" \
+assert_exit_nonzero "ptk rspec exits non-zero on failure" \
     "failed\|failure" \
-    rtk rspec spec/models/post_fail_spec.rb
+    ptk rspec spec/models/post_fail_spec.rb
 
-assert_exit_nonzero "rtk rubocop exits non-zero on offenses" \
+assert_exit_nonzero "ptk rubocop exits non-zero on offenses" \
     "offense" \
-    rtk rubocop app/models/rubocop_bait.rb
+    ptk rubocop app/models/rubocop_bait.rb
 
-assert_exit_nonzero "rtk rake test exits non-zero on failure" \
+assert_exit_nonzero "ptk rake test exits non-zero on failure" \
     "failure\|FAIL" \
-    rtk rake test test/models/post_fail_test.rb
+    ptk rake test test/models/post_fail_test.rb
 
 # ── 6. bundle exec variants ─────────────────────────
 
@@ -339,11 +339,11 @@ section "bundle exec variants"
 
 assert_output "bundle exec rspec spec/models/post_spec.rb" \
     "passed\|example" \
-    rtk bundle exec rspec spec/models/post_spec.rb
+    ptk bundle exec rspec spec/models/post_spec.rb
 
 assert_output "bundle exec rubocop app/" \
     "offense" \
-    rtk bundle exec rubocop app/
+    ptk bundle exec rubocop app/
 
 # ── 7. RuboCop autocorrect ───────────────────────────
 
@@ -353,9 +353,9 @@ section "RuboCop autocorrect"
 cp app/models/rubocop_bait.rb app/models/rubocop_bait_ac.rb
 sed -i.bak 's/RubocopBait/RubocopBaitAc/' app/models/rubocop_bait_ac.rb
 
-assert_output "rtk rubocop -A (autocorrect)" \
+assert_output "ptk rubocop -A (autocorrect)" \
     "autocorrected\|rubocop\|ok\|offense\|inspected" \
-    rtk rubocop -A app/models/rubocop_bait_ac.rb
+    ptk rubocop -A app/models/rubocop_bait_ac.rb
 
 # Clean up autocorrect test file
 rm -f app/models/rubocop_bait_ac.rb app/models/rubocop_bait_ac.rb.bak
@@ -364,25 +364,25 @@ rm -f app/models/rubocop_bait_ac.rb app/models/rubocop_bait_ac.rb.bak
 
 section "RSpec pending"
 
-assert_output "rtk rspec with pending example" \
+assert_output "ptk rspec with pending example" \
     "pending" \
-    rtk rspec spec/models/post_pending_spec.rb
+    ptk rspec spec/models/post_pending_spec.rb
 
 # ── 9. RSpec text fallback ───────────────────────────
 
 section "RSpec text fallback"
 
-assert_output "rtk rspec --format documentation (text path)" \
+assert_output "ptk rspec --format documentation (text path)" \
     "valid\|example\|post" \
-    rtk rspec --format documentation spec/models/post_spec.rb
+    ptk rspec --format documentation spec/models/post_spec.rb
 
 # ── 10. RSpec empty suite ────────────────────────────
 
 section "RSpec empty suite"
 
-assert_output "rtk rspec nonexistent tag" \
+assert_output "ptk rspec nonexistent tag" \
     "0 examples\|No examples" \
-    rtk rspec --tag nonexistent spec/models/post_spec.rb
+    ptk rspec --tag nonexistent spec/models/post_spec.rb
 
 # ── 11. Token savings ────────────────────────────────
 
@@ -390,59 +390,59 @@ section "Token savings"
 
 # rspec (passing spec)
 raw_len=$( (bundle exec rspec spec/models/post_spec.rb 2>&1 || true) | wc -c | tr -d ' ')
-rtk_len=$( (rtk rspec spec/models/post_spec.rb 2>&1 || true) | wc -c | tr -d ' ')
-if [[ "$rtk_len" -lt "$raw_len" ]]; then
+ptk_len=$( (ptk rspec spec/models/post_spec.rb 2>&1 || true) | wc -c | tr -d ' ')
+if [[ "$ptk_len" -lt "$raw_len" ]]; then
     PASS=$((PASS + 1))
-    printf "  ${GREEN}PASS${NC}  rspec: rtk (%s bytes) < raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${GREEN}PASS${NC}  rspec: ptk (%s bytes) < raw (%s bytes)\n" "$ptk_len" "$raw_len"
 else
     FAIL=$((FAIL + 1))
     FAILURES+=("token savings: rspec")
-    printf "  ${RED}FAIL${NC}  rspec: rtk (%s bytes) >= raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${RED}FAIL${NC}  rspec: ptk (%s bytes) >= raw (%s bytes)\n" "$ptk_len" "$raw_len"
 fi
 
 # rubocop (exits non-zero on offenses, so || true)
 raw_len=$( (bundle exec rubocop app/ 2>&1 || true) | wc -c | tr -d ' ')
-rtk_len=$( (rtk rubocop app/ 2>&1 || true) | wc -c | tr -d ' ')
-if [[ "$rtk_len" -lt "$raw_len" ]]; then
+ptk_len=$( (ptk rubocop app/ 2>&1 || true) | wc -c | tr -d ' ')
+if [[ "$ptk_len" -lt "$raw_len" ]]; then
     PASS=$((PASS + 1))
-    printf "  ${GREEN}PASS${NC}  rubocop: rtk (%s bytes) < raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${GREEN}PASS${NC}  rubocop: ptk (%s bytes) < raw (%s bytes)\n" "$ptk_len" "$raw_len"
 else
     FAIL=$((FAIL + 1))
     FAILURES+=("token savings: rubocop")
-    printf "  ${RED}FAIL${NC}  rubocop: rtk (%s bytes) >= raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${RED}FAIL${NC}  rubocop: ptk (%s bytes) >= raw (%s bytes)\n" "$ptk_len" "$raw_len"
 fi
 
 # rake test (passing file)
 raw_len=$( (bundle exec rake test TEST=test/models/post_pass_test.rb 2>&1 || true) | wc -c | tr -d ' ')
-rtk_len=$( (rtk rake test test/models/post_pass_test.rb 2>&1 || true) | wc -c | tr -d ' ')
-if [[ "$rtk_len" -lt "$raw_len" ]]; then
+ptk_len=$( (ptk rake test test/models/post_pass_test.rb 2>&1 || true) | wc -c | tr -d ' ')
+if [[ "$ptk_len" -lt "$raw_len" ]]; then
     PASS=$((PASS + 1))
-    printf "  ${GREEN}PASS${NC}  rake test: rtk (%s bytes) < raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${GREEN}PASS${NC}  rake test: ptk (%s bytes) < raw (%s bytes)\n" "$ptk_len" "$raw_len"
 else
     FAIL=$((FAIL + 1))
     FAILURES+=("token savings: rake test")
-    printf "  ${RED}FAIL${NC}  rake test: rtk (%s bytes) >= raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${RED}FAIL${NC}  rake test: ptk (%s bytes) >= raw (%s bytes)\n" "$ptk_len" "$raw_len"
 fi
 
 # bundle install (idempotent)
 raw_len=$( (bundle install 2>&1 || true) | wc -c | tr -d ' ')
-rtk_len=$( (rtk bundle install 2>&1 || true) | wc -c | tr -d ' ')
-if [[ "$rtk_len" -lt "$raw_len" ]]; then
+ptk_len=$( (ptk bundle install 2>&1 || true) | wc -c | tr -d ' ')
+if [[ "$ptk_len" -lt "$raw_len" ]]; then
     PASS=$((PASS + 1))
-    printf "  ${GREEN}PASS${NC}  bundle install: rtk (%s bytes) < raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${GREEN}PASS${NC}  bundle install: ptk (%s bytes) < raw (%s bytes)\n" "$ptk_len" "$raw_len"
 else
     FAIL=$((FAIL + 1))
     FAILURES+=("token savings: bundle install")
-    printf "  ${RED}FAIL${NC}  bundle install: rtk (%s bytes) >= raw (%s bytes)\n" "$rtk_len" "$raw_len"
+    printf "  ${RED}FAIL${NC}  bundle install: ptk (%s bytes) >= raw (%s bytes)\n" "$ptk_len" "$raw_len"
 fi
 
 # ── 12. Verbose flag ─────────────────────────────────
 
 section "Verbose flag (-v)"
 
-assert_output "rtk -v rspec (verbose)" \
+assert_output "ptk -v rspec (verbose)" \
     "RSpec\|passed\|Running\|example" \
-    rtk -v rspec spec/models/post_spec.rb
+    ptk -v rspec spec/models/post_spec.rb
 
 # ══════════════════════════════════════════════════════
 # Report

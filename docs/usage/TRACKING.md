@@ -387,17 +387,6 @@ jobs:
         with:
           name: PTK-metrics
           path: PTK-weekly.json
-
-      - name: Post to Slack
-        if: success()
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        run: |
-          SAVINGS=$(jq -r '.[0].saved_tokens' PTK-weekly.json)
-          PCT=$(jq -r '.[0].savings_pct' PTK-weekly.json)
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"📊 PTK Weekly: ${SAVINGS} tokens saved (${PCT}%)\"}" \
-            $SLACK_WEBHOOK
 ```
 
 ### Custom Dashboard Script

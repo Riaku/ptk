@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🔍 Validating RTK documentation consistency..."
+echo "🔍 Validating PTK documentation consistency..."
 
 # 1. Source file count sanity check
 SRC_FILES=$(find src -name "*.rs" ! -name "mod.rs" ! -name "main.rs" | wc -l | tr -d ' ')
@@ -24,7 +24,7 @@ done
 echo "✅ Python/Go commands: documented in README.md"
 
 # 4. Hooks cohérents avec doc
-HOOK_FILE=".claude/hooks/rtk-rewrite.sh"
+HOOK_FILE=".claude/hooks/ptk-rewrite.sh"
 if [ -f "$HOOK_FILE" ]; then
   echo "🪝 Checking hook rewrites..."
   for cmd in "${PYTHON_GO_CMDS[@]}"; do

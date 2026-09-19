@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 set -e
 
-# Use local release build if available, otherwise fall back to installed rtk
-if [ -f "./target/release/rtk" ]; then
-  RTK="$(cd "$(dirname ./target/release/rtk)" && pwd)/$(basename ./target/release/rtk)"
-elif command -v rtk &> /dev/null; then
-  RTK="$(command -v rtk)"
+# Use local release build if available, otherwise fall back to installed ptk
+if [ -f "./target/release/ptk" ]; then
+  PTK="$(cd "$(dirname ./target/release/ptk)" && pwd)/$(basename ./target/release/ptk)"
+elif command -v ptk &> /dev/null; then
+  PTK="$(command -v ptk)"
 else
-  echo "Error: rtk not found. Run 'cargo build --release' or install rtk."
+  echo "Error: ptk not found. Run 'cargo build --release' or install ptk."
   exit 1
 fi
 BENCH_DIR="$(pwd)/scripts/benchmark"
-RTK_ROOT="$(pwd)"
+PTK_ROOT="$(pwd)"
 
 # Only the gitignored output subdirectories get wiped between local runs.
 # `$BENCH_DIR` itself is tracked — it also holds the TypeScript VM-benchmark
 # harness (run.ts, cleanup.ts, lib/) — so `rm -rf "$BENCH_DIR"` deleted that
 # harness from the working tree on every local run.
 if [ -z "$CI" ]; then
-  for bench_output_dir in unix rtk diff; do
+  for bench_output_dir in unix ptk diff; do
     rm -rf "${BENCH_DIR:?}/$bench_output_dir"
     mkdir -p "$BENCH_DIR/$bench_output_dir"
   done
@@ -35,7 +35,7 @@ count_tokens() {
 }
 
 TOTAL_UNIX=0
-TOTAL_RTK=0
+TOTAL_PTK=0
 TOTAL_TESTS=0
 GOOD_TESTS=0
 FAIL_TESTS=0
@@ -45,39 +45,39 @@ NEGATIVE_TESTS=0
 bench() {
   local name="$1"
   local unix_cmd="$2"
-  local rtk_cmd="$3"
+  local ptk_cmd="$3"
 
   unix_out=$(eval "$unix_cmd" 2>/dev/null || true)
-  rtk_out=$(eval "$rtk_cmd" 2>/dev/null || true)
+  ptk_out=$(eval "$ptk_cmd" 2>/dev/null || true)
 
   unix_tokens=$(count_tokens "$unix_out")
-  rtk_tokens=$(count_tokens "$rtk_out")
+  ptk_tokens=$(count_tokens "$ptk_out")
 
   TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
   local icon=""
   local tag=""
 
-  if [ -z "$rtk_out" ] && [ -n "$unix_out" ]; then
+  if [ -z "$ptk_out" ] && [ -n "$unix_out" ]; then
     icon="❌"
     tag="FAIL"
     FAIL_TESTS=$((FAIL_TESTS + 1))
     TOTAL_UNIX=$((TOTAL_UNIX + unix_tokens))
-    TOTAL_RTK=$((TOTAL_RTK + unix_tokens))
-  elif [ "$rtk_tokens" -gt "$unix_tokens" ] && [ "$unix_tokens" -gt 0 ]; then
+    TOTAL_PTK=$((TOTAL_PTK + unix_tokens))
+  elif [ "$ptk_tokens" -gt "$unix_tokens" ] && [ "$unix_tokens" -gt 0 ]; then
     icon="🔴"
     tag="NEG"
     NEGATIVE_TESTS=$((NEGATIVE_TESTS + 1))
     TOTAL_UNIX=$((TOTAL_UNIX + unix_tokens))
-    TOTAL_RTK=$((TOTAL_RTK + rtk_tokens))
-  elif [ "$unix_tokens" -gt 0 ] && [ "$rtk_tokens" -eq "$unix_tokens" ]; then
+    TOTAL_PTK=$((TOTAL_PTK + ptk_tokens))
+  elif [ "$unix_tokens" -gt 0 ] && [ "$ptk_tokens" -eq "$unix_tokens" ]; then
     icon="⚠️"
     tag="WARN"
     WARN_TESTS=$((WARN_TESTS + 1))
     TOTAL_UNIX=$((TOTAL_UNIX + unix_tokens))
-    TOTAL_RTK=$((TOTAL_RTK + rtk_tokens))
+    TOTAL_PTK=$((TOTAL_PTK + ptk_tokens))
   elif [ "$unix_tokens" -gt 0 ]; then
-    local savings=$(( (unix_tokens - rtk_tokens) * 100 / unix_tokens ))
+    local savings=$(( (unix_tokens - ptk_tokens) * 100 / unix_tokens ))
     if [ "$savings" -lt 60 ]; then
       icon="⚠️"
       tag="WARN"
@@ -88,7 +88,7 @@ bench() {
       GOOD_TESTS=$((GOOD_TESTS + 1))
     fi
     TOTAL_UNIX=$((TOTAL_UNIX + unix_tokens))
-    TOTAL_RTK=$((TOTAL_RTK + rtk_tokens))
+    TOTAL_PTK=$((TOTAL_PTK + ptk_tokens))
   else
     icon="⏭️"
     tag="SKIP"
@@ -97,15 +97,15 @@ bench() {
 
   if [ "$tag" = "FAIL" ]; then
     printf "%s %-24s │ %-40s │ %-40s │ %6d → %6s (--)\n" \
-      "$icon" "$name" "$unix_cmd" "$rtk_cmd" "$unix_tokens" "-"
+      "$icon" "$name" "$unix_cmd" "$ptk_cmd" "$unix_tokens" "-"
   else
     if [ "$unix_tokens" -gt 0 ]; then
-      local pct=$(( (unix_tokens - rtk_tokens) * 100 / unix_tokens ))
+      local pct=$(( (unix_tokens - ptk_tokens) * 100 / unix_tokens ))
     else
       local pct=0
     fi
     printf "%s %-24s │ %-40s │ %-40s │ %6d → %6d (%+d%%)\n" \
-      "$icon" "$name" "$unix_cmd" "$rtk_cmd" "$unix_tokens" "$rtk_tokens" "$pct"
+      "$icon" "$name" "$unix_cmd" "$ptk_cmd" "$unix_tokens" "$ptk_tokens" "$pct"
   fi
 
   if [ -z "$CI" ]; then
@@ -122,24 +122,24 @@ bench() {
       "$name" "$ts" "$unix_cmd" "$unix_out" > "$BENCH_DIR/unix/${filename}.md"
 
     printf "# %s\n> %s\n\n\`\`\`bash\n$ %s\n\`\`\`\n\n\`\`\`\n%s\n\`\`\`\n" \
-      "$name" "$ts" "$rtk_cmd" "$rtk_out" > "$BENCH_DIR/rtk/${filename}.md"
+      "$name" "$ts" "$ptk_cmd" "$ptk_out" > "$BENCH_DIR/ptk/${filename}.md"
 
     {
       echo "# Diff: $name"
       echo "> $ts"
       echo ""
-      echo "| Metric | Unix | RTK |"
+      echo "| Metric | Unix | PTK |"
       echo "|--------|------|-----|"
-      echo "| Tokens | $unix_tokens | $rtk_tokens |"
+      echo "| Tokens | $unix_tokens | $ptk_tokens |"
       echo ""
       echo "## Unix"
       echo "\`\`\`"
       echo "$unix_out"
       echo "\`\`\`"
       echo ""
-      echo "## RTK"
+      echo "## PTK"
       echo "\`\`\`"
-      echo "$rtk_out"
+      echo "$ptk_out"
       echo "\`\`\`"
     } > "$BENCH_DIR/diff/${prefix}-${filename}.md"
   fi
@@ -151,31 +151,31 @@ section() {
 }
 
 # ═══════════════════════════════════════════
-echo "RTK Benchmark"
+echo "PTK Benchmark"
 echo "═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════"
-printf "   %-24s │ %-40s │ %-40s │ %s\n" "TEST" "SHELL" "RTK" "TOKENS"
+printf "   %-24s │ %-40s │ %-40s │ %s\n" "TEST" "SHELL" "PTK" "TOKENS"
 echo "───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────"
 
 # ===================
 # ls
 # ===================
 section "ls"
-bench "ls" "ls -la" "$RTK ls"
-bench "ls src/" "ls -la src/" "$RTK ls src/"
-bench "ls -l src/" "ls -l src/" "$RTK ls -l src/"
-bench "ls -la src/" "ls -la src/" "$RTK ls -la src/"
-bench "ls -lh src/" "ls -lh src/" "$RTK ls -lh src/"
-bench "ls src/ -l" "ls -l src/" "$RTK ls src/ -l"
-bench "ls -a" "ls -la" "$RTK ls -a"
-bench "ls multi" "ls -la src/ scripts/" "$RTK ls src/ scripts/"
+bench "ls" "ls -la" "$PTK ls"
+bench "ls src/" "ls -la src/" "$PTK ls src/"
+bench "ls -l src/" "ls -l src/" "$PTK ls -l src/"
+bench "ls -la src/" "ls -la src/" "$PTK ls -la src/"
+bench "ls -lh src/" "ls -lh src/" "$PTK ls -lh src/"
+bench "ls src/ -l" "ls -l src/" "$PTK ls src/ -l"
+bench "ls -a" "ls -la" "$PTK ls -a"
+bench "ls multi" "ls -la src/ scripts/" "$PTK ls src/ scripts/"
 
 # ===================
 # tree
 # ===================
 if command -v tree &>/dev/null; then
   section "tree"
-  bench "tree" "tree -L 2" "$RTK tree -L 2"
-  bench "tree src/" "tree src/ -L 2" "$RTK tree src/ -L 2"
+  bench "tree" "tree -L 2" "$PTK tree -L 2"
+  bench "tree src/" "tree src/ -L 2" "$PTK tree src/ -L 2"
 else
   echo ""
   echo "⏭️  tree (not installed, skipped)"
@@ -185,27 +185,27 @@ fi
 # read
 # ===================
 section "read"
-bench "read" "cat src/main.rs" "$RTK read src/main.rs"
-bench "read -l minimal" "cat src/main.rs" "$RTK read src/main.rs -l minimal"
-bench "read -l aggressive" "cat src/main.rs" "$RTK read src/main.rs -l aggressive"
-bench "read -n" "cat -n src/main.rs" "$RTK read src/main.rs -n"
+bench "read" "cat src/main.rs" "$PTK read src/main.rs"
+bench "read -l minimal" "cat src/main.rs" "$PTK read src/main.rs -l minimal"
+bench "read -l aggressive" "cat src/main.rs" "$PTK read src/main.rs -l aggressive"
+bench "read -n" "cat -n src/main.rs" "$PTK read src/main.rs -n"
 
 # ===================
 # find
 # ===================
 section "find"
-bench "find *" "find . -type f" "$RTK find '*'"
-bench "find *.rs" "find . -name '*.rs' -type f" "$RTK find '*.rs'"
-# `rtk find --max N` caps how many names are DISPLAYED but still scans and
+bench "find *" "find . -type f" "$PTK find '*'"
+bench "find *.rs" "find . -name '*.rs' -type f" "$PTK find '*.rs'"
+# `ptk find --max N` caps how many names are DISPLAYED but still scans and
 # summarizes the whole tree, so the honest baseline is the full `find` a user
 # would otherwise read, not a `head -N`-truncated slice — that measures a
 # different, early-terminated operation.
 # A single row carries the savings: the baseline is identical for every N, so a
 # second row would only add the same token count to the totals twice.
-bench "find --max 100" "find . -not -path './target/*' -not -path './.git/*' -type f" "$RTK find '*' --max 100"
+bench "find --max 100" "find . -not -path './target/*' -not -path './.git/*' -type f" "$PTK find '*' --max 100"
 
 # That baseline no longer scales with N, so it cannot detect a --max that stops
-# limiting. Assert the cap directly instead: `rtk find --max N` displays exactly
+# limiting. Assert the cap directly instead: `ptk find --max N` displays exactly
 # min(N, total) names, so a --max that is ignored (falling back to the default
 # cap) fails whether N sits below or above that default.
 count_find_names() {
@@ -223,7 +223,7 @@ count_find_names() {
   '
 }
 
-# Total tree size as rtk itself reports it: the "NNNF" header when it groups,
+# Total tree size as ptk itself reports it: the "NNNF" header when it groups,
 # otherwise the displayed names plus whatever "+N more" hides.
 count_find_total() {
   awk '
@@ -244,7 +244,7 @@ bench_find_max() {
   local max="$1"
   local out displayed total expected
 
-  out=$(eval "$RTK find '*' --max $max" 2>/dev/null || true)
+  out=$(eval "$PTK find '*' --max $max" 2>/dev/null || true)
   displayed=$(printf '%s\n' "$out" | count_find_names)
   total=$(printf '%s\n' "$out" | count_find_total)
   expected=$([ "$max" -lt "$total" ] && echo "$max" || echo "$total")
@@ -253,11 +253,11 @@ bench_find_max() {
 
   if [ "$displayed" -eq "$expected" ] && [ "$expected" -gt 0 ]; then
     printf "✅ %-24s │ %-40s │ %s/%s names displayed\n" \
-      "find --max $max cap" "rtk find '*' --max $max" "$displayed" "$total"
+      "find --max $max cap" "ptk find '*' --max $max" "$displayed" "$total"
     GOOD_TESTS=$((GOOD_TESTS + 1))
   else
     printf "❌ %-24s │ %-40s │ %s names displayed (expected %s of %s)\n" \
-      "find --max $max cap" "rtk find '*' --max $max" "$displayed" "$expected" "$total"
+      "find --max $max cap" "ptk find '*' --max $max" "$displayed" "$expected" "$total"
     FAIL_TESTS=$((FAIL_TESTS + 1))
   fi
 }
@@ -269,37 +269,37 @@ bench_find_max 100
 # git
 # ===================
 section "git"
-bench "git status" "git status" "$RTK git status"
-bench "git log -n 10" "git log -10" "$RTK git log -n 10"
-bench "git log -n 5" "git log -5" "$RTK git log -n 5"
-bench "git diff" "git diff HEAD~1 2>/dev/null || echo ''" "$RTK git diff HEAD~1"
-bench "git show" "git show HEAD --stat 2>/dev/null || true" "$RTK git show HEAD --stat"
+bench "git status" "git status" "$PTK git status"
+bench "git log -n 10" "git log -10" "$PTK git log -n 10"
+bench "git log -n 5" "git log -5" "$PTK git log -n 5"
+bench "git diff" "git diff HEAD~1 2>/dev/null || echo ''" "$PTK git diff HEAD~1"
+bench "git show" "git show HEAD --stat 2>/dev/null || true" "$PTK git show HEAD --stat"
 
 # ===================
 # grep
 # ===================
 section "grep"
-bench "grep fn" "grep -rn 'fn ' src/ || true" "$RTK grep -rn 'fn ' src/"
-bench "grep struct" "grep -rn 'struct ' src/ || true" "$RTK grep -rn 'struct ' src/"
-bench "grep --max-len 40" "grep -rn 'fn ' src/ || true" "$RTK grep --max-len 40 -rn 'fn ' src/"
-bench "grep -c" "grep -ron 'fn ' src/ || true" "$RTK grep -rc 'fn ' src/"
+bench "grep fn" "grep -rn 'fn ' src/ || true" "$PTK grep -rn 'fn ' src/"
+bench "grep struct" "grep -rn 'struct ' src/ || true" "$PTK grep -rn 'struct ' src/"
+bench "grep --max-len 40" "grep -rn 'fn ' src/ || true" "$PTK grep --max-len 40 -rn 'fn ' src/"
+bench "grep -c" "grep -ron 'fn ' src/ || true" "$PTK grep -rc 'fn ' src/"
 
 # ===================
 # rg (native ripgrep, recursive by default, same output filter)
 # ===================
 section "rg"
-bench "rg fn" "rg -n 'fn ' src/ || true" "$RTK rg 'fn ' src/"
-bench "rg struct" "rg -n 'struct ' src/ || true" "$RTK rg 'struct ' src/"
-bench "rg -l files" "rg -l 'fn ' src/ || true" "$RTK rg -l 'fn ' src/"
-bench "rg -c count" "rg -c 'fn ' src/ || true" "$RTK rg -c 'fn ' src/"
+bench "rg fn" "rg -n 'fn ' src/ || true" "$PTK rg 'fn ' src/"
+bench "rg struct" "rg -n 'struct ' src/ || true" "$PTK rg 'struct ' src/"
+bench "rg -l files" "rg -l 'fn ' src/ || true" "$PTK rg -l 'fn ' src/"
+bench "rg -c count" "rg -c 'fn ' src/ || true" "$PTK rg -c 'fn ' src/"
 
 # ===================
 # json
 # ===================
 section "json"
-cat > /tmp/rtk_bench.json << 'JSONEOF'
+cat > /tmp/ptk_bench.json << 'JSONEOF'
 {
-  "name": "rtk",
+  "name": "ptk",
   "version": "0.2.1",
   "config": {
     "debug": false,
@@ -313,29 +313,29 @@ cat > /tmp/rtk_bench.json << 'JSONEOF'
   }
 }
 JSONEOF
-bench "json" "cat /tmp/rtk_bench.json" "$RTK json /tmp/rtk_bench.json"
-bench "json -d 2" "cat /tmp/rtk_bench.json" "$RTK json /tmp/rtk_bench.json -d 2"
-rm -f /tmp/rtk_bench.json
+bench "json" "cat /tmp/ptk_bench.json" "$PTK json /tmp/ptk_bench.json"
+bench "json -d 2" "cat /tmp/ptk_bench.json" "$PTK json /tmp/ptk_bench.json -d 2"
+rm -f /tmp/ptk_bench.json
 
 # ===================
 # deps
 # ===================
 section "deps"
-bench "deps" "cat Cargo.toml" "$RTK deps"
+bench "deps" "cat Cargo.toml" "$PTK deps"
 
 # ===================
 # env
 # ===================
 section "env"
-bench "env" "env" "$RTK env"
-bench "env -f PATH" "env | grep PATH" "$RTK env -f PATH"
+bench "env" "env" "$PTK env"
+bench "env -f PATH" "env | grep PATH" "$PTK env -f PATH"
 
 # ===================
 # err
 # ===================
 section "err"
 if command -v cargo &>/dev/null; then
-  bench "err cargo build" "cargo build 2>&1 || true" "$RTK err cargo build 2>&1"
+  bench "err cargo build" "cargo build 2>&1 || true" "$PTK err cargo build 2>&1"
 else
   echo "⏭️  err cargo build (cargo not in PATH, skipped)"
 fi
@@ -345,7 +345,7 @@ fi
 # ===================
 section "test"
 if command -v cargo &>/dev/null; then
-  bench "test cargo test" "cargo test 2>&1 || true" "$RTK test cargo test 2>&1"
+  bench "test cargo test" "cargo test 2>&1 || true" "$PTK test cargo test 2>&1"
 else
   echo "⏭️  test cargo test (cargo not in PATH, skipped)"
 fi
@@ -354,7 +354,7 @@ fi
 # log
 # ===================
 section "log"
-LOG_FILE="/tmp/rtk_bench_sample.log"
+LOG_FILE="/tmp/ptk_bench_sample.log"
 cat > "$LOG_FILE" << 'LOGEOF'
 2024-01-15 10:00:01 INFO  Application started
 2024-01-15 10:00:02 INFO  Loading configuration
@@ -370,7 +370,7 @@ cat > "$LOG_FILE" << 'LOGEOF'
 2024-01-15 10:00:12 INFO  Processing request
 2024-01-15 10:00:13 INFO  Request completed
 LOGEOF
-bench "log" "cat $LOG_FILE" "$RTK log $LOG_FILE"
+bench "log" "cat $LOG_FILE" "$PTK log $LOG_FILE"
 rm -f "$LOG_FILE"
 
 # ===================
@@ -378,12 +378,12 @@ rm -f "$LOG_FILE"
 # ===================
 section "summary"
 if command -v cargo &>/dev/null; then
-  bench "summary cargo --help" "cargo --help" "$RTK summary cargo --help"
+  bench "summary cargo --help" "cargo --help" "$PTK summary cargo --help"
 else
   echo "⏭️  summary cargo --help (cargo not in PATH, skipped)"
 fi
 if command -v rustc &>/dev/null; then
-  bench "summary rustc --help" "rustc --help 2>/dev/null || echo 'rustc not found'" "$RTK summary rustc --help"
+  bench "summary rustc --help" "rustc --help 2>/dev/null || echo 'rustc not found'" "$PTK summary rustc --help"
 else
   echo "⏭️  summary rustc --help (rustc not in PATH, skipped)"
 fi
@@ -393,10 +393,10 @@ fi
 # ===================
 section "cargo"
 if command -v cargo &>/dev/null; then
-  bench "cargo build" "cargo build 2>&1 || true" "$RTK cargo build 2>&1"
-  bench "cargo test" "cargo test 2>&1 || true" "$RTK cargo test 2>&1"
-  bench "cargo clippy" "cargo clippy 2>&1 || true" "$RTK cargo clippy 2>&1"
-  bench "cargo check" "cargo check 2>&1 || true" "$RTK cargo check 2>&1"
+  bench "cargo build" "cargo build 2>&1 || true" "$PTK cargo build 2>&1"
+  bench "cargo test" "cargo test 2>&1 || true" "$PTK cargo test 2>&1"
+  bench "cargo clippy" "cargo clippy 2>&1 || true" "$PTK cargo clippy 2>&1"
+  bench "cargo check" "cargo check 2>&1 || true" "$PTK cargo check 2>&1"
 else
   echo "⏭️  cargo build/test/clippy/check (cargo not in PATH, skipped)"
 fi
@@ -405,19 +405,19 @@ fi
 # smart
 # ===================
 section "smart"
-bench "smart main.rs" "cat src/main.rs" "$RTK smart src/main.rs"
+bench "smart main.rs" "cat src/main.rs" "$PTK smart src/main.rs"
 
 # ===================
 # wc
 # ===================
 section "wc"
-bench "wc" "wc Cargo.toml src/main.rs" "$RTK wc Cargo.toml src/main.rs"
+bench "wc" "wc Cargo.toml src/main.rs" "$PTK wc Cargo.toml src/main.rs"
 
 # ===================
 # curl / wget — fully offline. mockhttp.org was both a network dependency and
 # non-deterministic (its /json output is random), which made the benchmark flaky.
 # Serve fixed fixtures locally instead. The JSON is pretty-printed on purpose so
-# `rtk` actually exercises JSON minification (a pre-minified body leaves nothing
+# `ptk` actually exercises JSON minification (a pre-minified body leaves nothing
 # to compact).
 # ===================
 NET_FIXTURE_DIR="$(mktemp -d)"
@@ -432,7 +432,7 @@ cleanup_net_fixtures() {
     kill "$NET_HTTP_PID" 2>/dev/null || true
   fi
   rm -rf "$NET_FIXTURE_DIR" "$NET_HTTP_LOG" || true
-  # `rtk wget <url>/data.json` saves to ./data.json (default basename); remove
+  # `ptk wget <url>/data.json` saves to ./data.json (default basename); remove
   # that download and any numbered duplicates from repeated runs.
   rm -f data.json data.json.* 2>/dev/null || true
 }
@@ -440,7 +440,7 @@ trap cleanup_net_fixtures EXIT
 
 cat > "$NET_FIXTURE_DIR/data.json" << 'JSONEOF'
 {
-    "message": "Hello from RTK benchmark",
+    "message": "Hello from PTK benchmark",
     "status": "success",
     "code": 200,
     "items": [
@@ -457,7 +457,7 @@ Sitemap: https://example.com/sitemap.xml
 TXTEOF
 
 # Bring up a loopback HTTP server once so both curl and wget get real response
-# headers (`Content-Type: application/json`) — that's what lets rtk detect JSON
+# headers (`Content-Type: application/json`) — that's what lets ptk detect JSON
 # and minify it. file:// carries no headers, so it can't demonstrate that path.
 #
 # Port 0 asks the kernel for a free port, so a busy fixed port can never make the
@@ -486,13 +486,13 @@ fi
 section "curl"
 if command -v curl &> /dev/null; then
   if [ -n "$NET_HTTP_URL" ]; then
-    bench "curl json" "curl -s $NET_HTTP_URL/data.json" "$RTK curl $NET_HTTP_URL/data.json"
-    bench "curl text" "curl -s $NET_HTTP_URL/robots.txt" "$RTK curl $NET_HTTP_URL/robots.txt"
+    bench "curl json" "curl -s $NET_HTTP_URL/data.json" "$PTK curl $NET_HTTP_URL/data.json"
+    bench "curl text" "curl -s $NET_HTTP_URL/robots.txt" "$PTK curl $NET_HTTP_URL/robots.txt"
   else
     # No python3 to host a local server — fall back to file:// (no headers, so
     # no JSON minification, but still fully offline and deterministic).
-    bench "curl json" "curl -s file://$NET_FIXTURE_DIR/data.json" "$RTK curl file://$NET_FIXTURE_DIR/data.json"
-    bench "curl text" "curl -s file://$NET_FIXTURE_DIR/robots.txt" "$RTK curl file://$NET_FIXTURE_DIR/robots.txt"
+    bench "curl json" "curl -s file://$NET_FIXTURE_DIR/data.json" "$PTK curl file://$NET_FIXTURE_DIR/data.json"
+    bench "curl text" "curl -s file://$NET_FIXTURE_DIR/robots.txt" "$PTK curl file://$NET_FIXTURE_DIR/robots.txt"
   fi
 fi
 
@@ -502,7 +502,7 @@ fi
 if command -v wget &> /dev/null; then
   section "wget"
   if [ -n "$NET_HTTP_URL" ]; then
-    bench "wget" "wget -qO- $NET_HTTP_URL/data.json" "$RTK wget $NET_HTTP_URL/data.json"
+    bench "wget" "wget -qO- $NET_HTTP_URL/data.json" "$PTK wget $NET_HTTP_URL/data.json"
   else
     echo "⏭️  wget (no local HTTP server available, skipped)"
   fi
@@ -513,7 +513,7 @@ fi
 # ===================
 if command -v npm &> /dev/null; then
   section "npm"
-  bench "npm list" "npm list -g --depth 0 2>&1 || true" "$RTK npm list -g --depth 0"
+  bench "npm list" "npm list -g --depth 0 2>&1 || true" "$PTK npm list -g --depth 0"
 fi
 
 # ===================
@@ -523,42 +523,42 @@ if [ -f "package.json" ]; then
   section "modern JS stack"
 
   if command -v tsc &> /dev/null || [ -f "node_modules/.bin/tsc" ]; then
-    bench "tsc" "tsc --noEmit 2>&1 || true" "$RTK tsc --noEmit 2>&1"
+    bench "tsc" "tsc --noEmit 2>&1 || true" "$PTK tsc --noEmit 2>&1"
   fi
 
   if command -v prettier &> /dev/null || [ -f "node_modules/.bin/prettier" ]; then
-    bench "prettier --check" "prettier --check . 2>&1 || true" "$RTK prettier --check ."
+    bench "prettier --check" "prettier --check . 2>&1 || true" "$PTK prettier --check ."
   fi
 
   if command -v eslint &> /dev/null || [ -f "node_modules/.bin/eslint" ]; then
-    bench "lint" "eslint . 2>&1 || true" "$RTK lint ."
+    bench "lint" "eslint . 2>&1 || true" "$PTK lint ."
   fi
 
   if [ -f "next.config.js" ] || [ -f "next.config.mjs" ] || [ -f "next.config.ts" ]; then
     if command -v next &> /dev/null || [ -f "node_modules/.bin/next" ]; then
-      bench "next build" "next build 2>&1 || true" "$RTK next build"
+      bench "next build" "next build 2>&1 || true" "$PTK next build"
     fi
   fi
 
   if [ -f "playwright.config.ts" ] || [ -f "playwright.config.js" ]; then
     if command -v playwright &> /dev/null || [ -f "node_modules/.bin/playwright" ]; then
-      bench "playwright test" "playwright test 2>&1 || true" "$RTK playwright test"
+      bench "playwright test" "playwright test 2>&1 || true" "$PTK playwright test"
     fi
   fi
 
   if [ -f "prisma/schema.prisma" ]; then
     if command -v prisma &> /dev/null || [ -f "node_modules/.bin/prisma" ]; then
-      bench "prisma generate" "prisma generate 2>&1 || true" "$RTK prisma generate"
+      bench "prisma generate" "prisma generate 2>&1 || true" "$PTK prisma generate"
     fi
   fi
 
   if command -v vitest &> /dev/null || [ -f "node_modules/.bin/vitest" ]; then
-    bench "vitest" "vitest run --reporter=json 2>&1 || true" "$RTK vitest"
+    bench "vitest" "vitest run --reporter=json 2>&1 || true" "$PTK vitest"
   fi
 
   if command -v pnpm &> /dev/null; then
-    bench "pnpm list" "pnpm list --depth 0 2>&1 || true" "$RTK pnpm list --depth 0"
-    bench "pnpm outdated" "pnpm outdated 2>&1 || true" "$RTK pnpm outdated"
+    bench "pnpm list" "pnpm list --depth 0 2>&1 || true" "$PTK pnpm list --depth 0"
+    bench "pnpm outdated" "pnpm outdated 2>&1 || true" "$PTK pnpm outdated"
   fi
 fi
 
@@ -567,8 +567,8 @@ fi
 # ===================
 if command -v gh &> /dev/null && git rev-parse --git-dir &> /dev/null && gh auth status &> /dev/null; then
   section "gh"
-  bench "gh pr list" "gh pr list 2>&1 || true" "$RTK gh pr list"
-  bench "gh run list" "gh run list 2>&1 || true" "$RTK gh run list"
+  bench "gh pr list" "gh pr list 2>&1 || true" "$PTK gh pr list"
+  bench "gh run list" "gh run list 2>&1 || true" "$PTK gh run list"
 fi
 
 # ===================
@@ -576,8 +576,8 @@ fi
 # ===================
 if command -v glab &> /dev/null; then
   section "glab"
-  bench "glab mr list" "glab mr list 2>&1 || true" "$RTK glab mr list"
-  bench "glab issue list" "glab issue list 2>&1 || true" "$RTK glab issue list"
+  bench "glab mr list" "glab mr list 2>&1 || true" "$PTK glab mr list"
+  bench "glab issue list" "glab issue list 2>&1 || true" "$PTK glab issue list"
 fi
 
 # ===================
@@ -585,7 +585,7 @@ fi
 # ===================
 if command -v gt &> /dev/null; then
   section "gt"
-  bench "gt log" "gt log 2>&1 || true" "$RTK gt log"
+  bench "gt log" "gt log 2>&1 || true" "$PTK gt log"
 fi
 
 # ===================
@@ -593,8 +593,8 @@ fi
 # ===================
 if command -v docker &> /dev/null; then
   section "docker"
-  bench "docker ps" "docker ps 2>/dev/null || true" "$RTK docker ps"
-  bench "docker images" "docker images 2>/dev/null || true" "$RTK docker images"
+  bench "docker ps" "docker ps 2>/dev/null || true" "$PTK docker ps"
+  bench "docker images" "docker images 2>/dev/null || true" "$PTK docker images"
 fi
 
 # ===================
@@ -602,8 +602,8 @@ fi
 # ===================
 if command -v kubectl &> /dev/null; then
   section "kubectl"
-  bench "kubectl pods" "kubectl get pods 2>/dev/null || true" "$RTK kubectl pods"
-  bench "kubectl services" "kubectl get services 2>/dev/null || true" "$RTK kubectl services"
+  bench "kubectl pods" "kubectl get pods 2>/dev/null || true" "$PTK kubectl pods"
+  bench "kubectl services" "kubectl get services 2>/dev/null || true" "$PTK kubectl services"
 fi
 
 # ===================
@@ -617,7 +617,7 @@ if command -v python3 &> /dev/null && command -v ruff &> /dev/null && command -v
 
   cat > pyproject.toml << 'PYEOF'
 [project]
-name = "rtk-bench"
+name = "ptk-bench"
 version = "0.1.0"
 
 [tool.ruff]
@@ -653,18 +653,18 @@ def test_process_data_none():
     assert process_data(None) == []
 PYEOF
 
-  bench "ruff check" "ruff check . 2>&1 || true" "$RTK ruff check ."
-  bench "pytest" "pytest -v 2>&1 || true" "$RTK pytest -v"
+  bench "ruff check" "ruff check . 2>&1 || true" "$PTK ruff check ."
+  bench "pytest" "pytest -v 2>&1 || true" "$PTK pytest -v"
 
   if command -v pip &>/dev/null; then
-    bench "pip list" "pip list 2>&1 || true" "$RTK pip list"
+    bench "pip list" "pip list 2>&1 || true" "$PTK pip list"
   fi
 
   if command -v mypy &>/dev/null; then
-    bench "mypy" "mypy sample.py 2>&1 || true" "$RTK mypy sample.py"
+    bench "mypy" "mypy sample.py 2>&1 || true" "$PTK mypy sample.py"
   fi
 
-  cd "$RTK_ROOT"
+  cd "$PTK_ROOT"
   rm -rf "$PYTHON_FIXTURE"
 fi
 
@@ -758,12 +758,12 @@ func TestMultiply(t *testing.T) {
 }
 GOEOF
 
-  bench "golangci-lint" "golangci-lint run 2>&1 || true" "$RTK golangci-lint run"
-  bench "go test" "go test -v 2>&1 || true" "$RTK go test -v"
-  bench "go build" "go build ./... 2>&1 || true" "$RTK go build ./..."
-  bench "go vet" "go vet ./... 2>&1 || true" "$RTK go vet ./..."
+  bench "golangci-lint" "golangci-lint run 2>&1 || true" "$PTK golangci-lint run"
+  bench "go test" "go test -v 2>&1 || true" "$PTK go test -v"
+  bench "go build" "go build ./... 2>&1 || true" "$PTK go build ./..."
+  bench "go vet" "go vet ./... 2>&1 || true" "$PTK go vet ./..."
 
-  cd "$RTK_ROOT"
+  cd "$PTK_ROOT"
   rm -rf "$GO_FIXTURE"
 fi
 
@@ -773,13 +773,13 @@ fi
 if command -v ruby &> /dev/null; then
   section "ruby"
   if command -v rake &>/dev/null; then
-    bench "rake -T" "rake -T 2>&1 || true" "$RTK rake -T"
+    bench "rake -T" "rake -T 2>&1 || true" "$PTK rake -T"
   fi
   if command -v rubocop &>/dev/null; then
-    bench "rubocop" "rubocop --format simple 2>&1 || true" "$RTK rubocop --format simple"
+    bench "rubocop" "rubocop --format simple 2>&1 || true" "$PTK rubocop --format simple"
   fi
   if command -v rspec &>/dev/null; then
-    bench "rspec --dry-run" "rspec --dry-run 2>&1 || true" "$RTK rspec --dry-run"
+    bench "rspec --dry-run" "rspec --dry-run 2>&1 || true" "$PTK rspec --dry-run"
   fi
 fi
 
@@ -788,7 +788,7 @@ fi
 # ===================
 if command -v dotnet &> /dev/null; then
   section "dotnet"
-  bench "dotnet --info" "dotnet --info 2>&1 || true" "$RTK dotnet --info"
+  bench "dotnet --info" "dotnet --info 2>&1 || true" "$PTK dotnet --info"
 fi
 
 # ===================
@@ -796,7 +796,7 @@ fi
 # ===================
 if command -v aws &> /dev/null; then
   section "aws"
-  bench "aws --version" "aws --version 2>&1 || true" "$RTK aws --version"
+  bench "aws --version" "aws --version 2>&1 || true" "$PTK aws --version"
 fi
 
 # ===================
@@ -804,7 +804,7 @@ fi
 # ===================
 if command -v psql &> /dev/null; then
   section "psql"
-  bench "psql --version" "psql --version 2>&1 || true" "$RTK psql --version"
+  bench "psql --version" "psql --version 2>&1 || true" "$PTK psql --version"
 fi
 
 # ===================
@@ -830,12 +830,12 @@ bench_rewrite() {
   fi
 }
 
-bench_rewrite "rewrite quoted"       "$RTK rewrite 'git status'"     "rtk git status"
-bench_rewrite "rewrite unquoted"     "$RTK rewrite git status"       "rtk git status"
-bench_rewrite "rewrite ls -al"       "$RTK rewrite ls -al"           "rtk ls -al"
-bench_rewrite "rewrite npm exec"     "$RTK rewrite npm exec"         "rtk npm exec"
-bench_rewrite "rewrite cargo test"   "$RTK rewrite cargo test"       "rtk cargo test"
-bench_rewrite "rewrite compound"     "$RTK rewrite 'cargo test && git push'" "rtk cargo test && rtk git push"
+bench_rewrite "rewrite quoted"       "$PTK rewrite 'git status'"     "ptk git status"
+bench_rewrite "rewrite unquoted"     "$PTK rewrite git status"       "ptk git status"
+bench_rewrite "rewrite ls -al"       "$PTK rewrite ls -al"           "ptk ls -al"
+bench_rewrite "rewrite npm exec"     "$PTK rewrite npm exec"         "ptk npm exec"
+bench_rewrite "rewrite cargo test"   "$PTK rewrite cargo test"       "ptk cargo test"
+bench_rewrite "rewrite compound"     "$PTK rewrite 'cargo test && git push'" "ptk cargo test && ptk git push"
 
 # ===================
 # Summary
@@ -846,7 +846,7 @@ echo "════════════════════════�
 if [ "$TOTAL_TESTS" -gt 0 ]; then
   GOOD_PCT=$((GOOD_TESTS * 100 / TOTAL_TESTS))
   if [ "$TOTAL_UNIX" -gt 0 ]; then
-    TOTAL_SAVED=$((TOTAL_UNIX - TOTAL_RTK))
+    TOTAL_SAVED=$((TOTAL_UNIX - TOTAL_PTK))
     TOTAL_SAVE_PCT=$((TOTAL_SAVED * 100 / TOTAL_UNIX))
   else
     TOTAL_SAVED=0
@@ -855,11 +855,11 @@ if [ "$TOTAL_TESTS" -gt 0 ]; then
 
   echo ""
   echo "  ✅ $GOOD_TESTS good  ⚠️ $WARN_TESTS warn  🔴 $NEGATIVE_TESTS negative  ❌ $FAIL_TESTS fail    $GOOD_TESTS/$TOTAL_TESTS ($GOOD_PCT%)"
-  echo "  Tokens: $TOTAL_UNIX → $TOTAL_RTK  (-$TOTAL_SAVE_PCT%)"
+  echo "  Tokens: $TOTAL_UNIX → $TOTAL_PTK  (-$TOTAL_SAVE_PCT%)"
   echo ""
 
   if [ -z "$CI" ]; then
-    echo "  Debug: $BENCH_DIR/{unix,rtk,diff}/"
+    echo "  Debug: $BENCH_DIR/{unix,ptk,diff}/"
   fi
   echo ""
 

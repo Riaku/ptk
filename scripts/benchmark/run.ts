@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * RTK Full Integration Test Suite — Multipass VM
+ * PTK Full Integration Test Suite — Multipass VM
  *
  * Usage:
  *   bun run scripts/benchmark/run.ts           # Full suite
@@ -12,7 +12,7 @@
  */
 
 import { $ } from "bun";
-import { vmEnsureReady, vmBuildRtk, vmExec, RTK_BIN } from "./lib/vm";
+import { vmEnsureReady, vmBuildRtk, vmExec, PTK_BIN } from "./lib/vm";
 import { testCmd, testSavings, testRewrite, skipTest, getCounts } from "./lib/test";
 import { saveReport } from "./lib/report";
 
@@ -31,7 +31,7 @@ const reportPath = args.includes("--report")
   : `${new URL("../../", import.meta.url).pathname.replace(/\/$/, "")}/benchmark-report.txt`;
 
 const PROJECT_ROOT = new URL("../../", import.meta.url).pathname.replace(/\/$/, "");
-const RTK = RTK_BIN;
+const PTK = PTK_BIN;
 
 function shouldRun(phase: number): boolean {
   return phaseOnly === null || phaseOnly === phase;
@@ -45,7 +45,7 @@ function heading(phase: number, title: string) {
 // Phase 0: VM Setup
 // ══════════════════════════════════════════════════════════════
 
-console.log("\x1b[34m[rtk-test] RTK Full Integration Test Suite\x1b[0m");
+console.log("\x1b[34m[ptk-test] PTK Full Integration Test Suite\x1b[0m");
 console.log(`Project: ${PROJECT_ROOT}`);
 
 await vmEnsureReady();
@@ -79,17 +79,17 @@ if (shouldRun(2)) {
 
   await testCmd(
     "quality:cargo fmt",
-    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/rtk && cargo fmt --all --check 2>&1"
+    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/ptk && cargo fmt --all --check 2>&1"
   );
 
   await testCmd(
     "quality:cargo clippy",
-    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/rtk && cargo clippy --all-targets -- -D warnings 2>&1"
+    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/ptk && cargo clippy --all-targets -- -D warnings 2>&1"
   );
 
   await testCmd(
     "quality:cargo test",
-    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/rtk && cargo test --all 2>&1"
+    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/ptk && cargo test --all 2>&1"
   );
 }
 
@@ -101,86 +101,86 @@ if (shouldRun(3)) {
   heading(3, "Rust Built-in Commands");
 
   // Git
-  await testCmd("git:status", `cd /tmp/test-git && ${RTK} git status`);
-  await testCmd("git:log", `cd /tmp/test-git && ${RTK} git log -5`);
-  await testCmd("git:log --oneline", `cd /tmp/test-git && ${RTK} git log --oneline -10`);
-  await testCmd("git:diff", `cd /tmp/test-git && ${RTK} git diff`, "any");
-  await testCmd("git:branch", `cd /tmp/test-git && ${RTK} git branch`);
-  await testCmd("git:add --dry-run", `cd /tmp/test-git && ${RTK} git add --dry-run .`, "any");
+  await testCmd("git:status", `cd /tmp/test-git && ${PTK} git status`);
+  await testCmd("git:log", `cd /tmp/test-git && ${PTK} git log -5`);
+  await testCmd("git:log --oneline", `cd /tmp/test-git && ${PTK} git log --oneline -10`);
+  await testCmd("git:diff", `cd /tmp/test-git && ${PTK} git diff`, "any");
+  await testCmd("git:branch", `cd /tmp/test-git && ${PTK} git branch`);
+  await testCmd("git:add --dry-run", `cd /tmp/test-git && ${PTK} git add --dry-run .`, "any");
 
   // Files
-  await testCmd("files:ls", `${RTK} ls /home/ubuntu/rtk`);
-  await testCmd("files:ls src/", `${RTK} ls /home/ubuntu/rtk/src/`);
-  await testCmd("files:ls -R", `${RTK} ls -R /home/ubuntu/rtk/src/`);
-  await testCmd("files:read", `${RTK} read /home/ubuntu/rtk/src/main.rs`);
-  await testCmd("files:read aggressive", `${RTK} read /home/ubuntu/rtk/src/main.rs -l aggressive`);
-  await testCmd("files:smart", `${RTK} smart /home/ubuntu/rtk/src/main.rs`);
-  await testCmd("files:find *.rs", `${RTK} find '*.rs' /home/ubuntu/rtk/src/`);
-  await testCmd("files:wc", `${RTK} wc /home/ubuntu/rtk/src/main.rs`);
-  await testCmd("files:diff", `${RTK} diff /home/ubuntu/rtk/src/main.rs /home/ubuntu/rtk/src/utils.rs`);
+  await testCmd("files:ls", `${PTK} ls /home/ubuntu/ptk`);
+  await testCmd("files:ls src/", `${PTK} ls /home/ubuntu/ptk/src/`);
+  await testCmd("files:ls -R", `${PTK} ls -R /home/ubuntu/ptk/src/`);
+  await testCmd("files:read", `${PTK} read /home/ubuntu/ptk/src/main.rs`);
+  await testCmd("files:read aggressive", `${PTK} read /home/ubuntu/ptk/src/main.rs -l aggressive`);
+  await testCmd("files:smart", `${PTK} smart /home/ubuntu/ptk/src/main.rs`);
+  await testCmd("files:find *.rs", `${PTK} find '*.rs' /home/ubuntu/ptk/src/`);
+  await testCmd("files:wc", `${PTK} wc /home/ubuntu/ptk/src/main.rs`);
+  await testCmd("files:diff", `${PTK} diff /home/ubuntu/ptk/src/main.rs /home/ubuntu/ptk/src/utils.rs`);
 
   // Search
-  await testCmd("search:grep", `${RTK} grep 'fn main' /home/ubuntu/rtk/src/`);
+  await testCmd("search:grep", `${PTK} grep 'fn main' /home/ubuntu/ptk/src/`);
 
   // Data
-  await testCmd("data:json", `${RTK} json /tmp/test-node/package.json`);
-  await testCmd("data:deps", `cd /home/ubuntu/rtk && ${RTK} deps`);
-  await testCmd("data:env", `${RTK} env`);
+  await testCmd("data:json", `${PTK} json /tmp/test-node/package.json`);
+  await testCmd("data:deps", `cd /home/ubuntu/ptk && ${PTK} deps`);
+  await testCmd("data:env", `${PTK} env`);
 
   // Runners
-  await testCmd("runner:summary", `${RTK} summary 'echo hello world'`);
-  // BUG: rtk err swallows exit code — tracked in #846
-  await testCmd("runner:err", `${RTK} err false`, "any");
-  await testCmd("runner:test", `${RTK} test 'echo ok'`, "any");
+  await testCmd("runner:summary", `${PTK} summary 'echo hello world'`);
+  // BUG: ptk err swallows exit code — tracked in #846
+  await testCmd("runner:err", `${PTK} err false`, "any");
+  await testCmd("runner:test", `${PTK} test 'echo ok'`, "any");
 
   // Logs
-  await testCmd("log:large", `${RTK} log /tmp/large.log`);
+  await testCmd("log:large", `${PTK} log /tmp/large.log`);
 
   // Network
-  await testCmd("net:curl", `${RTK} curl https://mockhttp.org/get`, "any");
+  await testCmd("net:curl", `${PTK} curl https://mockhttp.org/get`, "any");
 
   // GitHub
-  await testCmd("gh:pr list", `cd /home/ubuntu/rtk && ${RTK} gh pr list`, "any");
+  await testCmd("gh:pr list", `cd /home/ubuntu/ptk && ${PTK} gh pr list`, "any");
 
   // Cargo (test project has intentional test failure → exit 101)
-  await testCmd("cargo:build", `export PATH=$HOME/.cargo/bin:$PATH && cd /tmp/test-rust && ${RTK} cargo build`);
-  await testCmd("cargo:test", `export PATH=$HOME/.cargo/bin:$PATH && cd /tmp/test-rust && ${RTK} cargo test`, 101);
-  await testCmd("cargo:clippy", `export PATH=$HOME/.cargo/bin:$PATH && cd /tmp/test-rust && ${RTK} cargo clippy`);
+  await testCmd("cargo:build", `export PATH=$HOME/.cargo/bin:$PATH && cd /tmp/test-rust && ${PTK} cargo build`);
+  await testCmd("cargo:test", `export PATH=$HOME/.cargo/bin:$PATH && cd /tmp/test-rust && ${PTK} cargo test`, 101);
+  await testCmd("cargo:clippy", `export PATH=$HOME/.cargo/bin:$PATH && cd /tmp/test-rust && ${PTK} cargo clippy`);
 
   // Python (test project has intentional failures)
-  await testCmd("python:pytest", `cd /tmp/test-python && ${RTK} pytest`, 1);
-  await testCmd("python:ruff check", `cd /tmp/test-python && ${RTK} ruff check .`, 1);
-  await testCmd("python:mypy", `cd /tmp/test-python && ${RTK} mypy .`, 1);
-  await testCmd("python:pip list", `${RTK} pip list`);
+  await testCmd("python:pytest", `cd /tmp/test-python && ${PTK} pytest`, 1);
+  await testCmd("python:ruff check", `cd /tmp/test-python && ${PTK} ruff check .`, 1);
+  await testCmd("python:mypy", `cd /tmp/test-python && ${PTK} mypy .`, 1);
+  await testCmd("python:pip list", `${PTK} pip list`);
 
   // Go (test project has intentional test failure)
-  await testCmd("go:test", `export PATH=$PATH:/usr/local/go/bin && cd /tmp/test-go && ${RTK} go test ./...`, 1);
-  await testCmd("go:build", `export PATH=$PATH:/usr/local/go/bin && cd /tmp/test-go && ${RTK} go build .`, 1);
-  await testCmd("go:vet", `export PATH=$PATH:/usr/local/go/bin && cd /tmp/test-go && ${RTK} go vet ./...`, 1);
-  await testCmd("go:golangci-lint", `export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin && cd /tmp/test-go && ${RTK} golangci-lint run`, 1);
+  await testCmd("go:test", `export PATH=$PATH:/usr/local/go/bin && cd /tmp/test-go && ${PTK} go test ./...`, 1);
+  await testCmd("go:build", `export PATH=$PATH:/usr/local/go/bin && cd /tmp/test-go && ${PTK} go build .`, 1);
+  await testCmd("go:vet", `export PATH=$PATH:/usr/local/go/bin && cd /tmp/test-go && ${PTK} go vet ./...`, 1);
+  await testCmd("go:golangci-lint", `export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin && cd /tmp/test-go && ${PTK} golangci-lint run`, 1);
 
   // TypeScript
-  await testCmd("ts:tsc", `cd /tmp/test-node && ${RTK} tsc --noEmit`, "any");
+  await testCmd("ts:tsc", `cd /tmp/test-node && ${PTK} tsc --noEmit`, "any");
 
   // Linters
-  await testCmd("lint:eslint", `cd /tmp/test-node && ${RTK} lint 'eslint src/'`, "any");
-  await testCmd("lint:prettier", `cd /tmp/test-node && ${RTK} prettier --check src/`, "any");
+  await testCmd("lint:eslint", `cd /tmp/test-node && ${PTK} lint 'eslint src/'`, "any");
+  await testCmd("lint:prettier", `cd /tmp/test-node && ${PTK} prettier --check src/`, "any");
 
   // Docker
-  await testCmd("docker:ps", `${RTK} docker ps`, "any");
-  await testCmd("docker:images", `${RTK} docker images`, "any");
+  await testCmd("docker:ps", `${PTK} docker ps`, "any");
+  await testCmd("docker:images", `${PTK} docker images`, "any");
 
   // Kubernetes
-  await testCmd("k8s:pods", `${RTK} kubectl pods`, "any");
+  await testCmd("k8s:pods", `${PTK} kubectl pods`, "any");
 
   // .NET
-  await testCmd("dotnet:build", `export DOTNET_ROOT=/usr/local/share/dotnet && export PATH=$PATH:$DOTNET_ROOT && cd /tmp/test-dotnet/TestApp 2>/dev/null && ${RTK} dotnet build || echo 'dotnet skip'`, "any");
+  await testCmd("dotnet:build", `export DOTNET_ROOT=/usr/local/share/dotnet && export PATH=$PATH:$DOTNET_ROOT && cd /tmp/test-dotnet/TestApp 2>/dev/null && ${PTK} dotnet build || echo 'dotnet skip'`, "any");
 
   // Meta
-  await testCmd("meta:gain", `${RTK} gain`);
-  await testCmd("meta:gain --history", `${RTK} gain --history`);
-  await testCmd("meta:proxy", `${RTK} proxy echo 'proxy test'`);
-  await testCmd("meta:verify", `${RTK} verify`, "any");
+  await testCmd("meta:gain", `${PTK} gain`);
+  await testCmd("meta:gain --history", `${PTK} gain --history`);
+  await testCmd("meta:proxy", `${PTK} proxy echo 'proxy test'`);
+  await testCmd("meta:verify", `${PTK} verify`, "any");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -191,40 +191,40 @@ if (shouldRun(4)) {
   heading(4, "TOML Filter Commands");
 
   // System
-  await testCmd("toml:df", `${RTK} df -h`);
-  await testCmd("toml:du", `${RTK} du -sh /tmp`, "any");
-  await testCmd("toml:ps", `${RTK} ps aux`);
-  await testCmd("toml:ping", `${RTK} ping -c 2 127.0.0.1`);
+  await testCmd("toml:df", `${PTK} df -h`);
+  await testCmd("toml:du", `${PTK} du -sh /tmp`, "any");
+  await testCmd("toml:ps", `${PTK} ps aux`);
+  await testCmd("toml:ping", `${PTK} ping -c 2 127.0.0.1`);
 
   // Build tools
-  await testCmd("toml:make", `cd /tmp && ${RTK} make -f Makefile`, "any");
-  await testCmd("toml:rsync", `${RTK} rsync --version`);
+  await testCmd("toml:make", `cd /tmp && ${PTK} make -f Makefile`, "any");
+  await testCmd("toml:rsync", `${PTK} rsync --version`);
 
   // Linters
-  await testCmd("toml:shellcheck", `${RTK} shellcheck /tmp/test.sh`, "any");
-  await testCmd("toml:hadolint", `${RTK} hadolint /tmp/Dockerfile.bad`, "any");
-  await testCmd("toml:yamllint", `${RTK} yamllint /tmp/test.yaml`, "any");
-  await testCmd("toml:markdownlint", `${RTK} markdownlint /tmp/test.md`, "any");
+  await testCmd("toml:shellcheck", `${PTK} shellcheck /tmp/test.sh`, "any");
+  await testCmd("toml:hadolint", `${PTK} hadolint /tmp/Dockerfile.bad`, "any");
+  await testCmd("toml:yamllint", `${PTK} yamllint /tmp/test.yaml`, "any");
+  await testCmd("toml:markdownlint", `${PTK} markdownlint /tmp/test.md`, "any");
 
   // Cloud/Infra
-  await testCmd("toml:terraform", `${RTK} terraform --version`, "any");
-  await testCmd("toml:helm", `${RTK} helm version`, "any");
-  await testCmd("toml:ansible", `${RTK} ansible-playbook --version`, "any");
+  await testCmd("toml:terraform", `${PTK} terraform --version`, "any");
+  await testCmd("toml:helm", `${PTK} helm version`, "any");
+  await testCmd("toml:ansible", `${PTK} ansible-playbook --version`, "any");
 
   // Mocked tools
-  await testCmd("toml:gcloud", `${RTK} gcloud version`);
-  await testCmd("toml:shopify", `${RTK} shopify theme check`, "any");
-  await testCmd("toml:pio", `${RTK} pio run`, "any");
-  await testCmd("toml:quarto", `${RTK} quarto render`, "any");
-  await testCmd("toml:sops", `${RTK} sops --version`);
+  await testCmd("toml:gcloud", `${PTK} gcloud version`);
+  await testCmd("toml:shopify", `${PTK} shopify theme check`, "any");
+  await testCmd("toml:pio", `${PTK} pio run`, "any");
+  await testCmd("toml:quarto", `${PTK} quarto render`, "any");
+  await testCmd("toml:sops", `${PTK} sops --version`);
   // Swift ecosystem
-  await testCmd("toml:swift build", `${RTK} swift build`, "any");
-  await testCmd("toml:swift test", `${RTK} swift test`, "any");
-  await testCmd("toml:swift run", `${RTK} swift run`, "any");
-  await testCmd("toml:swift package", `${RTK} swift package resolve`, "any");
-  await testCmd("toml:swiftlint", `${RTK} swiftlint`, "any");
-  await testCmd("toml:swiftformat", `${RTK} swiftformat`, "any");
-  await testCmd("toml:kubectl", `${RTK} kubectl version --client`, "any");
+  await testCmd("toml:swift build", `${PTK} swift build`, "any");
+  await testCmd("toml:swift test", `${PTK} swift test`, "any");
+  await testCmd("toml:swift run", `${PTK} swift run`, "any");
+  await testCmd("toml:swift package", `${PTK} swift package resolve`, "any");
+  await testCmd("toml:swiftlint", `${PTK} swiftlint`, "any");
+  await testCmd("toml:swiftformat", `${PTK} swiftformat`, "any");
+  await testCmd("toml:kubectl", `${PTK} kubectl version --client`, "any");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -235,30 +235,30 @@ if (shouldRun(5)) {
   heading(5, "Hook Rewrite Engine");
 
   // Basic rewrites
-  await testRewrite("git status", "rtk git status");
-  await testRewrite("git log --oneline -10", "rtk git log --oneline -10");
-  await testRewrite("cargo test", "rtk cargo test");
-  await testRewrite("cargo build --release", "rtk cargo build --release");
-  await testRewrite("docker ps", "rtk docker ps");
-  // NOTE: rtk rewrites "kubectl get pods" to "rtk kubectl get pods" (preserves get)
-  await testRewrite("kubectl get pods", "rtk kubectl get pods");
-  await testRewrite("ruff check", "rtk ruff check");
-  await testRewrite("pytest", "rtk pytest");
-  await testRewrite("go test", "rtk go test");
-  await testRewrite("pnpm list", "rtk pnpm list");
-  await testRewrite("gh pr list", "rtk gh pr list");
-  await testRewrite("df -h", "rtk df -h");
-  await testRewrite("ps aux", "rtk ps aux");
+  await testRewrite("git status", "ptk git status");
+  await testRewrite("git log --oneline -10", "ptk git log --oneline -10");
+  await testRewrite("cargo test", "ptk cargo test");
+  await testRewrite("cargo build --release", "ptk cargo build --release");
+  await testRewrite("docker ps", "ptk docker ps");
+  // NOTE: ptk rewrites "kubectl get pods" to "ptk kubectl get pods" (preserves get)
+  await testRewrite("kubectl get pods", "ptk kubectl get pods");
+  await testRewrite("ruff check", "ptk ruff check");
+  await testRewrite("pytest", "ptk pytest");
+  await testRewrite("go test", "ptk go test");
+  await testRewrite("pnpm list", "ptk pnpm list");
+  await testRewrite("gh pr list", "ptk gh pr list");
+  await testRewrite("df -h", "ptk df -h");
+  await testRewrite("ps aux", "ptk ps aux");
 
   // Compound
-  await testRewrite("cargo test && git status", "rtk cargo test && rtk git status");
+  await testRewrite("cargo test && git status", "ptk cargo test && ptk git status");
   // NOTE: shell strips single quotes in vmExec, so 'msg' becomes msg
-  await testRewrite("git add . && git commit -m msg", "rtk git add . && rtk git commit -m msg");
+  await testRewrite("git add . && git commit -m msg", "ptk git add . && ptk git commit -m msg");
 
-  // No rewrite (shell builtins) — rtk rewrite returns empty string + exit 1
+  // No rewrite (shell builtins) — ptk rewrite returns empty string + exit 1
   // We test via testCmd since testRewrite expects non-empty output
-  await testCmd("rewrite:cd (no rewrite)", `${RTK} rewrite 'cd /tmp'`, 1);
-  await testCmd("rewrite:export (no rewrite)", `${RTK} rewrite 'export FOO=bar'`, 1);
+  await testCmd("rewrite:cd (no rewrite)", `${PTK} rewrite 'cd /tmp'`, 1);
+  await testCmd("rewrite:export (no rewrite)", `${PTK} rewrite 'export FOO=bar'`, 1);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -269,13 +269,13 @@ if (shouldRun(6)) {
   heading(6, "Exit Code Preservation");
 
   // Success
-  await testCmd("exit:git status=0", `cd /tmp/test-git && ${RTK} git status`, 0);
-  await testCmd("exit:ls=0", `${RTK} ls /tmp`, 0);
-  await testCmd("exit:gain=0", `${RTK} gain`, 0);
+  await testCmd("exit:git status=0", `cd /tmp/test-git && ${PTK} git status`, 0);
+  await testCmd("exit:ls=0", `${PTK} ls /tmp`, 0);
+  await testCmd("exit:gain=0", `${PTK} gain`, 0);
 
   // Failures
   // rg returns exit 1 (no match) or 2 (error) — accept both
-  await testCmd("exit:grep NOTFOUND", `${RTK} grep NOTFOUND_XYZ_123 /tmp`, "any");
+  await testCmd("exit:grep NOTFOUND", `${PTK} grep NOTFOUND_XYZ_123 /tmp`, "any");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -288,37 +288,37 @@ if (shouldRun(7)) {
   await testSavings(
     "savings:git log",
     "cd /tmp/test-git && git log -20",
-    `cd /tmp/test-git && ${RTK} git log -20`,
+    `cd /tmp/test-git && ${PTK} git log -20`,
     60
   );
   await testSavings(
     "savings:ls",
-    "ls -la /home/ubuntu/rtk/src/",
-    `${RTK} ls /home/ubuntu/rtk/src/`,
+    "ls -la /home/ubuntu/ptk/src/",
+    `${PTK} ls /home/ubuntu/ptk/src/`,
     60
   );
   await testSavings(
     "savings:log dedup",
     "cat /tmp/large.log",
-    `${RTK} log /tmp/large.log`,
+    `${PTK} log /tmp/large.log`,
     80
   );
   await testSavings(
     "savings:read aggressive",
-    "cat /home/ubuntu/rtk/src/main.rs",
-    `${RTK} read /home/ubuntu/rtk/src/main.rs -l aggressive`,
+    "cat /home/ubuntu/ptk/src/main.rs",
+    `${PTK} read /home/ubuntu/ptk/src/main.rs -l aggressive`,
     50
   );
   await testSavings(
     "savings:swift test",
     "swift test",
-    `${RTK} swift test`,
+    `${PTK} swift test`,
     60
   );
   await testSavings(
     "savings:swiftlint",
     "swiftlint",
-    `${RTK} swiftlint`,
+    `${PTK} swiftlint`,
     20
   );
 }
@@ -330,9 +330,9 @@ if (shouldRun(7)) {
 if (shouldRun(8)) {
   heading(8, "Pipe Compatibility");
 
-  await testCmd("pipe:git status|wc", `cd /tmp/test-git && ${RTK} git status | wc -l`);
-  await testCmd("pipe:ls|wc", `${RTK} ls /home/ubuntu/rtk/src/ | wc -l`);
-  await testCmd("pipe:grep|head", `${RTK} grep 'fn' /home/ubuntu/rtk/src/ | head -5`);
+  await testCmd("pipe:git status|wc", `cd /tmp/test-git && ${PTK} git status | wc -l`);
+  await testCmd("pipe:ls|wc", `${PTK} ls /home/ubuntu/ptk/src/ | wc -l`);
+  await testCmd("pipe:grep|head", `${PTK} grep 'fn' /home/ubuntu/ptk/src/ | head -5`);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -342,9 +342,9 @@ if (shouldRun(8)) {
 if (shouldRun(9)) {
   heading(9, "Edge Cases");
 
-  await testCmd("edge:summary true", `${RTK} summary 'true'`, "any");
-  await testCmd("edge:grep NOTFOUND", `${RTK} grep NOTFOUND_XYZ /home/ubuntu/rtk/src/`, 1);
-  await testCmd("edge:unicode", `echo 'hello world' > /tmp/uni.txt && ${RTK} grep 'hello' /tmp`, "any");
+  await testCmd("edge:summary true", `${PTK} summary 'true'`, "any");
+  await testCmd("edge:grep NOTFOUND", `${PTK} grep NOTFOUND_XYZ /home/ubuntu/ptk/src/`, 1);
+  await testCmd("edge:unicode", `echo 'hello world' > /tmp/uni.txt && ${PTK} grep 'hello' /tmp`, "any");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -358,13 +358,13 @@ if (shouldRun(10) && !quick) {
   const { exitCode: hfExist } = await vmExec("command -v hyperfine");
   if (hfExist === 0) {
     const { stdout: hfOut } = await vmExec(
-      `cd /tmp/test-git && hyperfine --warmup 3 --min-runs 5 '${RTK} git status' 'git status' --export-json /dev/stdout 2>/dev/null`
+      `cd /tmp/test-git && hyperfine --warmup 3 --min-runs 5 '${PTK} git status' 'git status' --export-json /dev/stdout 2>/dev/null`
     );
     try {
       const hf = JSON.parse(hfOut);
-      const rtkMean = (hf.results?.[0]?.mean * 1000).toFixed(1);
+      const ptkMean = (hf.results?.[0]?.mean * 1000).toFixed(1);
       const rawMean = (hf.results?.[1]?.mean * 1000).toFixed(1);
-      console.log(`  Startup: rtk=${rtkMean}ms raw=${rawMean}ms`);
+      console.log(`  Startup: ptk=${ptkMean}ms raw=${rawMean}ms`);
     } catch {
       console.log("  hyperfine output parse failed");
     }
@@ -374,7 +374,7 @@ if (shouldRun(10) && !quick) {
 
   // Memory
   const { stdout: memOut } = await vmExec(
-    `cd /tmp/test-git && /usr/bin/time -v ${RTK} git status 2>&1 | grep 'Maximum resident'`
+    `cd /tmp/test-git && /usr/bin/time -v ${PTK} git status 2>&1 | grep 'Maximum resident'`
   );
   const memKb = parseInt(memOut.match(/(\d+)/)?.[1] ?? "0", 10);
   if (memKb > 0 && memKb < 20000) {
@@ -396,7 +396,7 @@ if (shouldRun(11) && !quick) {
 
   await testCmd(
     "concurrency:10x git status",
-    `cd /tmp/test-git && for i in $(seq 1 10); do ${RTK} git status >/dev/null & done; wait`
+    `cd /tmp/test-git && for i in $(seq 1 10); do ${PTK} git status >/dev/null & done; wait`
   );
 } else if (quick && shouldRun(11)) {
   skipTest("concurrency:10x", "--quick mode");

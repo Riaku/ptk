@@ -1,5 +1,5 @@
 /**
- * Report generation for RTK integration test results.
+ * Report generation for PTK integration test results.
  */
 
 import type { TestResult } from "./test";
@@ -21,7 +21,7 @@ export function generateReport(buildInfo: BuildInfo): string {
   const lines: string[] = [];
 
   lines.push("======================================================");
-  lines.push("        RTK INTEGRATION TEST REPORT");
+  lines.push("        PTK INTEGRATION TEST REPORT");
   lines.push("======================================================");
   lines.push("");
   lines.push(`Date:    ${new Date().toISOString()}`);

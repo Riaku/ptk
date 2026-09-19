@@ -18,7 +18,7 @@ Comprehensive security analysis for RTK CLI tool, focusing on **command injectio
 RTK faces unique security challenges as a CLI proxy that:
 1. **Executes shell commands** based on user input
 2. **Parses untrusted command output** (git, cargo, gh, etc.)
-3. **Integrates with Claude Code hooks** (rtk-rewrite.sh, rtk-suggest.sh)
+3. **Integrates with Claude Code hooks** (ptk-rewrite.sh, rtk-suggest.sh)
 4. **Routes commands transparently** (command injection vectors)
 
 ### Threat Categories
@@ -130,14 +130,14 @@ fn filter_git_log(input: &str) -> Result<String> {
 ```bash
 # 🔴 CRITICAL: Hook not checking source
 #!/bin/bash
-# rtk-rewrite.sh
+# ptk-rewrite.sh
 
 # Execute command without validation
 eval "$CLAUDE_CODE_HOOK_BASH_TEMPLATE" # DANGEROUS!
 
 # ✅ SAFE: Validate hook environment
 #!/bin/bash
-# rtk-rewrite.sh
+# ptk-rewrite.sh
 
 # Verify running in Claude Code context
 if [ -z "$CLAUDE_CODE_HOOK_BASH_TEMPLATE" ]; then
@@ -271,7 +271,7 @@ rg "\.join\(\" \"\)" --type rust src/
 **Hook security checklist**:
 ```bash
 #!/bin/bash
-# rtk-rewrite.sh
+# ptk-rewrite.sh
 
 # 1. Verify Claude Code context
 if [ -z "$CLAUDE_CODE_HOOK_BASH_TEMPLATE" ]; then

@@ -14,7 +14,7 @@ from .manifest import (
     TbTaskEntry,
     write_manifest,
 )
-from .session import run_all_sessions, setup_codebase, setup_rtk
+from .session import run_all_sessions, setup_codebase, setup_ptk
 from .terminal_bench import run_terminal_bench
 from .vm import create_vm_pool, destroy_vm_pool
 
@@ -45,7 +45,7 @@ def _session_to_entry(r) -> SessionEntry:
         group=r.group,
         stdout_json=f"{r.vm_name}-stdout.json",
         otel_log=f"{r.vm_name}-otel.log",
-        rtk_db=f"{r.vm_name}-tracking.db" if r.rtk_db_path else None,
+        ptk_db=f"{r.vm_name}-tracking.db" if r.ptk_db_path else None,
         exit_code=r.exit_code,
         error=r.error or None,
     )
@@ -88,7 +88,7 @@ async def run_benchmark(
     )
 
     try:
-        _print_step(1, total_steps, f"Creating {vms * 2} VMs ({vms} RTK ON + {vms} RTK OFF)")
+        _print_step(1, total_steps, f"Creating {vms * 2} VMs ({vms} PTK ON + {vms} PTK OFF)")
         vm_names = await create_vm_pool(vms, cloud_init)
         print(f"  VMs ready: {', '.join(vm_names)}")
 
@@ -102,12 +102,12 @@ async def run_benchmark(
         ))
         print("  Codebases deployed")
 
-        _print_step(3, total_steps, "Configuring RTK on ON VMs")
-        setup_script = ROOT_DIR / "setup-rtk.sh"
+        _print_step(3, total_steps, "Configuring PTK on ON VMs")
+        setup_script = ROOT_DIR / "setup-ptk.sh"
         on_vms = [n for n in vm_names if "-on-" in n]
         off_vms = [n for n in vm_names if "-off-" in n]
-        await asyncio.gather(*(setup_rtk(vm, setup_script) for vm in on_vms))
-        print(f"  RTK configured on {len(on_vms)} VMs")
+        await asyncio.gather(*(setup_ptk(vm, setup_script) for vm in on_vms))
+        print(f"  PTK configured on {len(on_vms)} VMs")
 
         _print_step(4, total_steps, f"Running Claude sessions (timeout: {task.timeout_minutes}min)")
         results = await run_all_sessions(vm_names, task, api_key, output_dir)

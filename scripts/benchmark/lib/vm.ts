@@ -1,10 +1,10 @@
 /**
- * Multipass VM management for RTK integration testing.
+ * Multipass VM management for PTK integration testing.
  */
 
 import { $ } from "bun";
 
-const VM_NAME = "rtk-test";
+const VM_NAME = "ptk-test";
 const CLOUD_INIT = "scripts/benchmark/cloud-init.yaml";
 
 export interface VmInfo {
@@ -93,25 +93,25 @@ export async function vmWaitReady(maxWaitSec = 2400): Promise<boolean> {
   return false;
 }
 
-/** Transfer RTK source and build in release mode */
+/** Transfer PTK source and build in release mode */
 export async function vmBuildRtk(projectRoot: string): Promise<{
   buildTime: number;
   binarySize: number;
   version: string;
 }> {
-  console.log("[vm] Transferring RTK source...");
+  console.log("[vm] Transferring PTK source...");
 
   // Create tarball excluding heavy dirs and macOS resource forks (._*)
-  await $`COPYFILE_DISABLE=1 tar czf /tmp/rtk-src.tar.gz --exclude target --exclude .git --exclude node_modules --exclude "index.html*" --exclude "._*" -C ${projectRoot} .`;
-  await vmTransfer("/tmp/rtk-src.tar.gz", "/tmp/rtk-src.tar.gz");
+  await $`COPYFILE_DISABLE=1 tar czf /tmp/ptk-src.tar.gz --exclude target --exclude .git --exclude node_modules --exclude "index.html*" --exclude "._*" -C ${projectRoot} .`;
+  await vmTransfer("/tmp/ptk-src.tar.gz", "/tmp/ptk-src.tar.gz");
   await vmExec(
-    "mkdir -p /home/ubuntu/rtk && cd /home/ubuntu/rtk && tar xzf /tmp/rtk-src.tar.gz"
+    "mkdir -p /home/ubuntu/ptk && cd /home/ubuntu/ptk && tar xzf /tmp/ptk-src.tar.gz"
   );
 
-  console.log("[vm] Building RTK (release)...");
+  console.log("[vm] Building PTK (release)...");
   const start = Date.now();
   const { stdout, exitCode } = await vmExec(
-    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/rtk && cargo build --release 2>&1 | tail -5"
+    "export PATH=$HOME/.cargo/bin:$PATH && cd /home/ubuntu/ptk && cargo build --release 2>&1 | tail -5"
   );
   const buildTime = Math.round((Date.now() - start) / 1000);
 
@@ -120,12 +120,12 @@ export async function vmBuildRtk(projectRoot: string): Promise<{
   }
 
   const { stdout: sizeStr } = await vmExec(
-    "stat -c%s /home/ubuntu/rtk/target/release/rtk"
+    "stat -c%s /home/ubuntu/ptk/target/release/ptk"
   );
   const binarySize = parseInt(sizeStr.trim(), 10);
 
   const { stdout: version } = await vmExec(
-    "/home/ubuntu/rtk/target/release/rtk --version"
+    "/home/ubuntu/ptk/target/release/ptk --version"
   );
 
   console.log(
@@ -157,7 +157,7 @@ export async function vmEnsureReady(): Promise<void> {
       const ready = await vmWaitReady();
       if (!ready) {
         throw new Error(
-          "Cloud-init timed out. Check: multipass exec rtk-test -- cat /var/log/cloud-init-output.log"
+          "Cloud-init timed out. Check: multipass exec ptk-test -- cat /var/log/cloud-init-output.log"
         );
       }
     }
@@ -171,11 +171,11 @@ export async function vmEnsureReady(): Promise<void> {
       const ready = await vmWaitReady();
       if (!ready) {
         throw new Error(
-          "Cloud-init timed out. Check: multipass exec rtk-test -- cat /var/log/cloud-init-output.log"
+          "Cloud-init timed out. Check: multipass exec ptk-test -- cat /var/log/cloud-init-output.log"
         );
       }
     }
   }
 }
 
-export const RTK_BIN = "/home/ubuntu/rtk/target/release/rtk";
+export const PTK_BIN = "/home/ubuntu/ptk/target/release/ptk";

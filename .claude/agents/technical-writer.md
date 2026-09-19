@@ -185,14 +185,14 @@ PTK integrates with Claude Code via bash hooks for transparent command rewriting
 ## How It Works
 
 1. User types command in Claude Code: `git status`
-2. Hook (`rtk-rewrite.sh`) intercepts command
+2. Hook (`ptk-rewrite.sh`) intercepts command
 3. Rewrites to: `ptk git status`
 4. PTK applies filter, returns condensed output
 5. Claude sees token-optimized result (80% savings)
 
 ## Hook Files
 
-- `.claude/hooks/rtk-rewrite.sh` - Command rewriting (DO NOT MODIFY)
+- `.claude/hooks/ptk-rewrite.sh` - Command rewriting (DO NOT MODIFY)
 - `.claude/hooks/PTK-suggest.sh` - Suggestion when filter available
 
 ## Verification

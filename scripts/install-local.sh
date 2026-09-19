@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Install RTK from a local release build (builds from source, no network download).
+# Install PTK from a local release build (builds from source, no network download).
 
 set -euo pipefail
 
 INSTALL_DIR="${1:-$HOME/.cargo/bin}"
-INSTALL_PATH="${INSTALL_DIR}/rtk"
-BINARY_PATH="./target/release/rtk"
+INSTALL_PATH="${INSTALL_DIR}/ptk"
+BINARY_PATH="./target/release/ptk"
 
 if ! command -v cargo &>/dev/null; then
     echo "error: cargo not found"
@@ -17,7 +17,7 @@ echo "installing to: $INSTALL_DIR"
 if [ -f "$BINARY_PATH" ] && [ -z "$(find src/ Cargo.toml Cargo.lock -newer "$BINARY_PATH" -print -quit 2>/dev/null)" ]; then
     echo "binary is up to date"
 else
-    echo "building rtk (release)..."
+    echo "building ptk (release)..."
     cargo build --release
 fi
 
