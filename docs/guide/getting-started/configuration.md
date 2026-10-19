@@ -171,7 +171,7 @@ that.
 The arguments are kept when peeling, so an anchored pattern still narrows the way you wrote it:
 `"^ls$"` excludes a bare `ls` without swallowing `ls -la`. Matching stays exact — `"go"` never
 excludes `golangci-lint`, subcommand patterns stay literal (`"git push"` does not widen to all of
-`git`), and an entry never leaks to a different tool that happens to share an PTK filter: `"read"`
+`git`), and an entry never leaks to a different tool that happens to share a PTK filter: `"read"`
 does not exclude `cat`, and `"eslint"` does not exclude `biome`.
 
 Patterns starting with `^` are treated as regex:
@@ -209,7 +209,7 @@ Add your own filters (or override built-ins) in either location:
 - **Project-local** — `.ptk/filters.toml` in your project root (committed with the repo)
 - **User-global** — `~/.config/ptk/filters.toml` (applies to every project)
 
-See [`src/filters/README.md`](https://github.com/rtk-ai/ptk/blob/master/src/filters/README.md) for the full TOML DSL reference.
+See [`src/filters/README.md`](https://github.com/riaku/ptk/blob/master/src/filters/README.md) for the full TOML DSL reference.
 
 ### Trusting custom filters
 

@@ -676,7 +676,7 @@ pub fn before_tool_decision(
                     .message
                     .as_deref()
                     .filter(|m| !m.trim().is_empty())
-                    .unwrap_or("blocked by an ptk pipeline rule"),
+                    .unwrap_or("blocked by a ptk pipeline rule"),
                 facts,
             ),
             rule: first.rule.name.clone(),
@@ -787,7 +787,7 @@ pub fn before_read_decision(path: &std::path::Path, whole_file: bool) -> Option<
                     .message
                     .as_deref()
                     .filter(|m| !m.trim().is_empty())
-                    .unwrap_or("blocked by an ptk pipeline rule"),
+                    .unwrap_or("blocked by a ptk pipeline rule"),
                 &facts,
             ),
             rule,
@@ -1057,7 +1057,7 @@ mod tests {
         );
         match decision {
             ShellHookDecision::Deny { message, .. } => {
-                assert_eq!(message, "blocked by an ptk pipeline rule")
+                assert_eq!(message, "blocked by a ptk pipeline rule")
             }
             _ => panic!("expected a deny"),
         }

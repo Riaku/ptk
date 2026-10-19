@@ -25,7 +25,7 @@ ptk pipeline bench <file>      # before/after tokens over a local file
 ptk pipeline share             # paste-ready markdown card of a pipeline
 ptk pipeline share publish     # publish it: GitHub repo (recommended) or gist
 ptk pipeline add <source>      # adopt a shared pipeline: validate, install, report what it needs
-ptk pipeline search [query]    # find shared pipelines on GitHub (topic ptk-pipeline)
+ptk pipeline search [query]    # find shared pipelines on GitHub (topic rtk-pipeline)
 ptk pipeline promote <name>    # move a shadow install live (--discard to drop it)
 ptk pipeline eval <name>       # shadow-evaluate an installed pipeline on your live sessions
 ptk pipeline log tail          # the opt-in decision log
@@ -160,7 +160,7 @@ The card has two panels. **What it does** is derived from the resolved rules, ne
 
 `ptk pipeline share publish` is the interactive publisher. It offers two channels and walks you through validate → secret scan → preview of what leaves your machine → one confirmation:
 
-- **GitHub repository** (recommended) — one public repo per pipeline, in **your** account: `pipeline.toml` plus a README card. The repo description carries the one-line install command, the repo gets the `ptk-pipeline` topic so `ptk pipeline search` finds it, and stars on [github.com/topics/ptk-pipeline](https://github.com/topics/ptk-pipeline) are the leaderboard.
+- **GitHub repository** (recommended) — one public repo per pipeline, in **your** account: `pipeline.toml` plus a README card. The repo description carries the one-line install command, the repo gets the `rtk-pipeline` topic so `ptk pipeline search` finds it, and stars on [github.com/topics/rtk-pipeline](https://github.com/topics/rtk-pipeline) are the leaderboard.
 - **GitHub repository (private)** — same repo, visible only to accounts you grant access. For a team or your own machines: anyone with access installs it with the same `ptk pipeline add github:you/repo` line (their `gh` login provides the access). No topic, no search listing — and private is one visibility toggle away from public, so the secret scan and the warnings apply unchanged.
 - **GitHub gist** — a single public link with no discovery. Also available non-interactively as `ptk pipeline share --gist`.
 
@@ -233,7 +233,7 @@ ptk pipeline search              # shared pipelines, most-starred first
 ptk pipeline search rust         # filtered by a free-text query
 ```
 
-Discovery is GitHub's own index of the `ptk-pipeline` topic. Each result shows the repo, its stars, and its description (which carries the author's headline number and the install line). The leaderboard is simply [github.com/topics/ptk-pipeline](https://github.com/topics/ptk-pipeline) sorted by stars. Descriptions and numbers are **self-reported by their authors** — ptk verifies nothing; `ptk pipeline add` shows every rule before anything installs, and `--shadow` lets you measure a pipeline on your own traffic before it touches anything.
+Discovery is GitHub's own index of the `rtk-pipeline` topic. Each result shows the repo, its stars, and its description (which carries the author's headline number and the install line). The leaderboard is simply [github.com/topics/rtk-pipeline](https://github.com/topics/rtk-pipeline) sorted by stars. Descriptions and numbers are **self-reported by their authors** — ptk verifies nothing; `ptk pipeline add` shows every rule before anything installs, and `--shadow` lets you measure a pipeline on your own traffic before it touches anything.
 
 ## Evaluating a pipeline on your own usage
 

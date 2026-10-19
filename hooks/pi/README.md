@@ -18,7 +18,7 @@ with other Pi extensions.
 - Subscribes to `tool_call` event, narrows to `bash` tool
 - Calls `ptk rewrite` via `pi.exec`; mutates `event.input.command` in-place if rewrite differs
 - All error paths return `undefined` (pass through); PTK never blocks execution on its own
-- If an ptk pipeline rule blocks the command, the extension returns `{ block: true, reason }` with the rule's message
+- If a ptk pipeline rule blocks the command, the extension returns `{ block: true, reason }` with the rule's message
 - Version guard at load time: checks `ptk >= 0.23.0`; warns and registers no-op if too old or missing
 - Install updates only current or known historical stock content. For modified or unrelated content it asks before overwriting; `--auto-patch` approves and `--no-patch` leaves the file unchanged. A declined protected update, including `--no-patch`, exits nonzero; in `--dry-run` mode it reports the prompt without changing files or creating directories. LF and CRLF line endings are treated as the same stock content.
 - Installed to `.pi/extensions/ptk.ts` by `ptk init --agent pi` (project-local) or `~/.pi/agent/extensions/ptk.ts` by `ptk init --agent pi --global`

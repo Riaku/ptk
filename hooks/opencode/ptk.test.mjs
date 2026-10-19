@@ -168,13 +168,13 @@ test("argv is exact and shell-free, and the agent is forwarded", async () => {
   }
 })
 
-test("an ptk without `hook opencode` registers nothing", async () => {
+test("a ptk without `hook opencode` registers nothing", async () => {
   const warnings = []
   const realWarn = console.warn
   console.warn = (message) => warnings.push(String(message))
   try {
     // (a) nothing named ptk on PATH. OpenCode's shell tool runs with OpenCode's
-    // PATH, so an ptk found elsewhere cannot be spawned as a bare `ptk …` —
+    // PATH, so a ptk found elsewhere cannot be spawned as a bare `ptk …` —
     // reporting one would rewrite commands that come back `command not found`
     // (#4462).
     process.env.PATH = emptyDir
@@ -183,7 +183,7 @@ test("an ptk without `hook opencode` registers nothing", async () => {
     assert.deepEqual(await captureSetup().then((c) => c.names), [])
     assert.deepEqual((await captureServer()).names, [])
 
-    // (b) an ptk too old for the subcommand: `hook opencode --help` exits 2.
+    // (b) a ptk too old for the subcommand: `hook opencode --help` exits 2.
     process.env.PATH = `${mockDir}${delimiter}${savedPath}`
     process.env.MOCK_NO_SUB = "1"
     _resetCachedPtkPath()

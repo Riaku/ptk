@@ -41,7 +41,7 @@ pub(crate) enum HookDecision {
 /// The environment variable a delegate sets to say which agent it speaks for.
 ///
 /// Deliberately not a CLI flag. `Commands::Rewrite`'s positional is
-/// `trailing_var_arg = true, allow_hyphen_values = true`, so an ptk that does
+/// `trailing_var_arg = true, allow_hyphen_values = true`, so a ptk that does
 /// not know a flag folds it into the command text it is asked to judge — and
 /// the permission gate then sees `--host openclaw git push` where the user
 /// wrote `git push`, which no `Bash(git push *)` deny rule matches. A delegate

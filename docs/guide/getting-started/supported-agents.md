@@ -194,13 +194,13 @@ openclaw plugins install ./openclaw
 
 Plugin in the `openclaw/` directory. Uses the `before_tool_call` hook, delegates to `ptk rewrite`.
 
-**Permissions.** PTK keeps the deny gate; OpenClaw owns approval. The plugin runs `ptk rewrite` with `PTK_REWRITE_HOST=openclaw`, which tells PTK that this host applies its own exec policy (`tools.exec.mode`, `security`, `ask`) to whatever the hook returns. PTK therefore does not prompt for a command that matched **no** rule, instead of raising a second approval derived from Claude Code's `settings.json` on a runtime that never opted into it ([#3908](https://github.com/rtk-ai/ptk/issues/3908)).
+**Permissions.** PTK keeps the deny gate; OpenClaw owns approval. The plugin runs `ptk rewrite` with `PTK_REWRITE_HOST=openclaw`, which tells PTK that this host applies its own exec policy (`tools.exec.mode`, `security`, `ask`) to whatever the hook returns. PTK therefore does not prompt for a command that matched **no** rule, instead of raising a second approval derived from Claude Code's `settings.json` on a runtime that never opted into it ([#3908](https://github.com/riaku/ptk/issues/3908)).
 
 A command matching a `permissions.deny` rule in those same Claude Code settings files is still refused, and the plugin blocks the tool call — naming the host only relaxes a *default* ask. As in Claude Code, a deny or ask rule matches the command as written and the command behind any leading assignment or wrapper (`HUSKY=0`, `timeout 30`, `nohup`, `command`, ...), each layer in turn, but not every way of invoking the program (`Bash(git push *)` does not stop `git -C . push` or `env -i git push`), so a deny rule is not a security boundary. Allow rules match the command as written. A command matching a `permissions.ask` rule you wrote still prompts when PTK rewrites it, because PTK keeps returning exit 3 for it. Commands containing a command substitution or a redirect to a file are never rewritten, on any host.
 
 The exec tool's own checks see the rewritten command. OpenClaw carries hook adjustments forward into the parameters passed to the exec tool, so `tools.exec.mode`, `tools.exec.security`, `tools.exec.ask` and the exec-approvals allowlist are all matched against `ptk git push`, not `git push`; write those rules against the `ptk` form. That was already true before the permission change. A trusted tool policy (`api.registerTrustedToolPolicy(...)`) is the exception: OpenClaw runs trusted policies before ordinary `before_tool_call` hooks, so one of those still sees the original command.
 
-No minimum ptk version: an ptk that predates `PTK_REWRITE_HOST` ignores it and keeps its previous behaviour, which is a prompt rather than a missing gate — an older ptk prompts for more commands, since it cannot collapse the default ask.
+No minimum ptk version: a ptk that predates `PTK_REWRITE_HOST` ignores it and keeps its previous behaviour, which is a prompt rather than a missing gate — an older ptk prompts for more commands, since it cannot collapse the default ask.
 
 ### Hermes
 

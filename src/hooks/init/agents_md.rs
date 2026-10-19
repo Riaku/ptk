@@ -64,7 +64,7 @@ fn upsert_ptk_block(content: &str, block: &str) -> (String, PtkBlockUpsert) {
     }
 }
 
-/// Idempotently write an PTK-owned marker block into `path`, preserving user content.
+/// Idempotently write a PTK-owned marker block into `path`, preserving user content.
 ///
 /// Reads the file (if any), passes it through [`upsert_ptk_block`], and writes the
 /// result back via [`atomic_write`]. Refuses to modify files containing an opening

@@ -78,4 +78,4 @@ Two optional layers sit on top of the hooks. Neither changes anything until you 
 - [Telemetry & Privacy](./resources/telemetry.md) — what PTK collects and how to opt out
 - [Agent Coverage](./resources/agent-coverage.md) — what each agent's hook API lets PTK do
 - [Editions and Licensing](./resources/editions.md) — the three downloads, what each contains, where the licence boundary falls
-- [ARCHITECTURE.md](https://github.com/rtk-ai/ptk/blob/master/ARCHITECTURE.md) — system design for contributors
+- [ARCHITECTURE.md](https://github.com/riaku/ptk/blob/master/ARCHITECTURE.md) — system design for contributors

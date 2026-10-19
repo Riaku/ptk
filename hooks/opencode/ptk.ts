@@ -33,7 +33,7 @@ export function _resetCachedPtkPath(): void {
  *
  * PATH only, deliberately. OpenCode's bash/shell tool runs commands with
  * OpenCode's own PATH and never sources `.profile`, `.bashrc` or
- * `.bash_profile`, so an ptk found outside PATH cannot be spawned as a bare
+ * `.bash_profile`, so a ptk found outside PATH cannot be spawned as a bare
  * `ptk …` — the tool comes back `ptk: command not found`. Finding one anyway
  * is worse than not rewriting (#4462 carries that case). A directory on PATH
  * named `ptk` is skipped rather than frozen as the answer: it disables the
@@ -172,7 +172,7 @@ async function handleToolHook(tool: unknown, container: any, agent?: string) {
 }
 
 /**
- * Registers hooks only against an ptk that carries `ptk hook opencode`.
+ * Registers hooks only against a ptk that carries `ptk hook opencode`.
  */
 async function ensurePtkUsable(): Promise<boolean> {
   const ptkBin = resolvePtkPath()

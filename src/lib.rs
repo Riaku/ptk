@@ -1249,7 +1249,7 @@ enum Commands {
     /// inside a shell wrapper's script): run the command unchanged.
     ///
     /// 2 - a deny matched (checked before anything else). Nothing printed: a
-    /// deny rule, defer to the agent's own deny. A message printed: an ptk
+    /// deny rule, defer to the agent's own deny. A message printed: a ptk
     /// pipeline rule denied or routed the command, block it with that message.
     ///
     /// 3 - rewrite printed, an ask rule matched or allow rules do not cover

@@ -42,7 +42,7 @@ pub fn scratch_dir() -> &'static std::path::Path {
 }
 
 /// Build a `Command` for a native tool whose output a test compares with
-/// ptk's, in the environment an ptk child gets, so a setting only the
+/// ptk's, in the environment a ptk child gets, so a setting only the
 /// developer's shell exports, such as `RIPGREP_CONFIG_PATH`, reaches neither
 /// side rather than one. It starts in the test's directory, not the child's,
 /// so give both the same `current_dir` or absolute paths.

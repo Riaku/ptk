@@ -15,8 +15,6 @@ All rewrite logic lives in PTK itself (`ptk rewrite`). This plugin is a thin del
 PTK must be installed and available in `$PATH`:
 
 ```bash
-brew install ptk
-# or
 curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
 ```
 
@@ -88,7 +86,7 @@ prompt. Nothing else changes on upgrade.
 
 ### ptk version
 
-No minimum. `PTK_REWRITE_HOST` travels in the environment rather than in argv precisely so that an ptk which does not know it simply ignores it: you get the previous behaviour, a prompt on exit 3, rather than a gate that silently stops matching. The exit-code table in `src/hooks/README.md` lists what each exit means for a delegate.
+No minimum. `PTK_REWRITE_HOST` travels in the environment rather than in argv precisely so that a ptk which does not know it simply ignores it: you get the previous behaviour, a prompt on exit 3, rather than a gate that silently stops matching. The exit-code table in `src/hooks/README.md` lists what each exit means for a delegate.
 
 ## What gets rewritten
 
@@ -100,7 +98,7 @@ Handled by `ptk rewrite` guards:
 - Commands already using `ptk`
 - Piped commands (`|`, `&&`, `;`)
 - Heredocs (`<<`)
-- Commands without an PTK filter
+- Commands without a PTK filter
 
 ## License
 

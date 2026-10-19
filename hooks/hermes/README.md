@@ -31,5 +31,5 @@ If ptk is not available in PATH when Hermes loads the plugin, the plugin prints 
 ## Limitations
 
 - Only Hermes `terminal` tool calls are rewritten.
-- Commands skipped by `ptk rewrite` stay unchanged, including commands already prefixed with `ptk`, compound shell commands, heredocs, and commands without an PTK filter.
+- Commands skipped by `ptk rewrite` stay unchanged, including commands already prefixed with `ptk`, compound shell commands, heredocs, and commands without a PTK filter.
 - Shell hooks are not used for Hermes command rewriting. The integration depends on Hermes loading Python plugins and passing a mutable terminal tool payload.

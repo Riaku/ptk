@@ -184,7 +184,7 @@ fn run_kilocode_mode_at(base_dir: &Path, ctx: InitContext) -> Result<()> {
 // (docs: kimi.com/help/kimi-code/cli-customization). Its PreToolUse hooks are
 // gate-only (allow/deny + feedback string) and cannot rewrite a command, so
 // `git status` -> `ptk git status` is impossible via a hook. We therefore
-// inject an PTK instructions block into AGENTS.md — same mechanism as Codex.
+// inject a PTK instructions block into AGENTS.md — same mechanism as Codex.
 
 pub fn run_kimi_mode(ctx: InitContext) -> Result<()> {
     run_kimi_mode_at(&user_dirs::current_dir()?, ctx)

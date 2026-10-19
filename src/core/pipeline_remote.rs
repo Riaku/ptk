@@ -1,6 +1,6 @@
 //! Remote pipeline sharing over GitHub: one public repo per pipeline in the
 //! author's own account, installs pinned to a commit, provenance recorded in
-//! a local ledger, discovery through the `ptk-pipeline` topic. PTK hosts
+//! a local ledger, discovery through the `rtk-pipeline` topic. PTK hosts
 //! nothing, reviews nothing, and never holds a token — everything goes
 //! through the user's own `gh`.
 
@@ -92,7 +92,7 @@ pub fn fetch_github_pipeline(src: &GithubSource) -> Result<PinnedFetch> {
         ]))
         .map_err(|_| {
             raw_err.context(format!(
-                "no readable pipeline.toml at the root of {} — is this an ptk pipeline repo? \
+                "no readable pipeline.toml at the root of {} — is this a ptk pipeline repo? \
                  (a private repo needs `gh auth login` with access to it)",
                 src.canonical()
             ))
@@ -325,10 +325,10 @@ pub fn repo_slug(name: &str) -> String {
         })
         .collect();
     let safe = safe.trim_matches('-').to_string();
-    if safe.starts_with("ptk-pipeline") {
+    if safe.starts_with("rtk-pipeline") {
         safe
     } else {
-        format!("ptk-pipeline-{safe}")
+        format!("rtk-pipeline-{safe}")
     }
 }
 
@@ -763,7 +763,7 @@ fn publish_repo(
         println!(
             "  2. add pipeline.toml (your pipeline file) and README.md (ptk pipeline share --md)"
         );
-        println!("  3. add the repo topic `ptk-pipeline` so `ptk pipeline search` finds it");
+        println!("  3. add the repo topic `rtk-pipeline` so `ptk pipeline search` finds it");
         println!(
             "  4. share: ptk pipeline add github:<you>/{}",
             repo_slug(&card.display)
@@ -871,10 +871,10 @@ fn publish_repo(
             "edit",
             &full,
             "--add-topic",
-            "ptk-pipeline",
+            "rtk-pipeline",
         ]))
     {
-        eprintln!("ptk: could not add the ptk-pipeline topic (search/leaderboard listing): {e}");
+        eprintln!("ptk: could not add the rtk-pipeline topic (search/leaderboard listing): {e}");
     }
     let message = if exists {
         "update pipeline"
@@ -921,7 +921,7 @@ fn publish_repo(
         ),
     }
     println!("  Install: ptk pipeline add github:{full}");
-    println!("  https://github.com/{full}  #ptk-pipeline");
+    println!("  https://github.com/{full}  #rtk-pipeline");
     Ok(0)
 }
 
@@ -940,12 +940,12 @@ fn urlencode(s: &str) -> String {
 }
 
 /// `ptk pipeline search` — discovery is GitHub's own index of the
-/// `ptk-pipeline` topic; the stars page is the leaderboard. PTK runs no
+/// `rtk-pipeline` topic; the stars page is the leaderboard. PTK runs no
 /// directory service and every description is the author's own claim.
 pub fn run_search(query: Option<&str>) -> Result<i32> {
     let q = match query {
-        Some(q) if !q.trim().is_empty() => format!("topic:ptk-pipeline {}", q.trim()),
-        _ => "topic:ptk-pipeline".to_string(),
+        Some(q) if !q.trim().is_empty() => format!("topic:rtk-pipeline {}", q.trim()),
+        _ => "topic:rtk-pipeline".to_string(),
     };
     let path = format!(
         "search/repositories?q={}&sort=stars&order=desc&per_page=20",
@@ -954,13 +954,13 @@ pub fn run_search(query: Option<&str>) -> Result<i32> {
     let body = http_get(&format!("https://api.github.com/{path}"))
         .or_else(|_| gh(&gh_args(&["api", &path])))
         .context(
-            "GitHub search is unreachable — browse https://github.com/topics/ptk-pipeline instead",
+            "GitHub search is unreachable — browse https://github.com/topics/rtk-pipeline instead",
         )?;
     let v: serde_json::Value = serde_json::from_str(&body).context("parse search results")?;
     let items = v.get("items").and_then(|i| i.as_array());
     let Some(items) = items.filter(|i| !i.is_empty()) else {
         println!("no shared pipelines found for `{q}`");
-        println!("browse: https://github.com/topics/ptk-pipeline");
+        println!("browse: https://github.com/topics/rtk-pipeline");
         return Ok(0);
     };
     for item in items {
@@ -984,7 +984,7 @@ pub fn run_search(query: Option<&str>) -> Result<i32> {
         "install one:  ptk pipeline add github:<owner>/<repo>   (rules shown before anything installs)"
     );
     println!("descriptions and numbers are self-reported by their authors — ptk verifies nothing");
-    println!("leaderboard:  https://github.com/topics/ptk-pipeline");
+    println!("leaderboard:  https://github.com/topics/rtk-pipeline");
     Ok(0)
 }
 
@@ -994,9 +994,9 @@ mod tests {
 
     #[test]
     fn parse_github_source_accepts_scheme_url_and_ref() {
-        let s = parse_github_source("github:alice/ptk-pipeline-fast").unwrap();
+        let s = parse_github_source("github:alice/rtk-pipeline-fast").unwrap();
         assert_eq!(s.owner, "alice");
-        assert_eq!(s.repo, "ptk-pipeline-fast");
+        assert_eq!(s.repo, "rtk-pipeline-fast");
         assert_eq!(s.reference, None);
 
         let s = parse_github_source("github:alice/repo@abc123").unwrap();
@@ -1046,21 +1046,21 @@ mod tests {
 
     #[test]
     fn repo_slug_prefixes_and_sanitizes() {
-        assert_eq!(repo_slug("fast-git"), "ptk-pipeline-fast-git");
-        assert_eq!(repo_slug("ptk-pipeline-x"), "ptk-pipeline-x");
-        assert_eq!(repo_slug("My Pipe!"), "ptk-pipeline-my-pipe");
-        assert_eq!(repo_slug("ptk:proxy"), "ptk-pipeline-ptk-proxy");
+        assert_eq!(repo_slug("fast-git"), "rtk-pipeline-fast-git");
+        assert_eq!(repo_slug("rtk-pipeline-x"), "rtk-pipeline-x");
+        assert_eq!(repo_slug("My Pipe!"), "rtk-pipeline-my-pipe");
+        assert_eq!(repo_slug("ptk:proxy"), "rtk-pipeline-ptk-proxy");
     }
 
     #[test]
     fn description_carries_the_install_line_and_self_reported_label() {
         let d = description(
             "alice",
-            "ptk-pipeline-x",
+            "rtk-pipeline-x",
             Some("68% of command output removed"),
         );
         assert!(d.contains("self-reported"));
-        assert!(d.contains("ptk pipeline add github:alice/ptk-pipeline-x"));
+        assert!(d.contains("ptk pipeline add github:alice/rtk-pipeline-x"));
         let d = description("alice", "r", None);
         assert!(d.starts_with("PTK pipeline · ptk pipeline add"));
     }
@@ -1068,9 +1068,9 @@ mod tests {
     #[test]
     fn repo_readme_leads_with_install_and_responsibility() {
         let card = "# ptk pipeline · demo\n\n## What it does\n\n- stuff\n";
-        let readme = repo_readme(card, "alice/ptk-pipeline-demo", Some("68% cut"));
+        let readme = repo_readme(card, "alice/rtk-pipeline-demo", Some("68% cut"));
         assert!(readme.starts_with("# ptk pipeline · demo\n"));
-        assert!(readme.contains("ptk pipeline add github:alice/ptk-pipeline-demo"));
+        assert!(readme.contains("ptk pipeline add github:alice/rtk-pipeline-demo"));
         assert!(readme.contains("self-reported"));
         assert!(readme.contains("does not review or endorse"));
         assert!(readme.contains("## What it does"));
@@ -1162,7 +1162,7 @@ use  = ["dedup"]
         ledger_upsert(
             &mut table,
             "demo",
-            &[("published", "github:me/ptk-pipeline-demo".to_string())],
+            &[("published", "github:me/rtk-pipeline-demo".to_string())],
         );
         ledger_upsert(&mut table, "demo", &[("sha", "y".to_string())]);
         let entry = table.get("demo").unwrap().as_table().unwrap();
@@ -1170,15 +1170,15 @@ use  = ["dedup"]
         assert_eq!(entry.get("sha").unwrap().as_str(), Some("y"));
         assert_eq!(
             entry.get("published").unwrap().as_str(),
-            Some("github:me/ptk-pipeline-demo")
+            Some("github:me/rtk-pipeline-demo")
         );
     }
 
     #[test]
     fn urlencode_escapes_query_metacharacters() {
         assert_eq!(
-            urlencode("topic:ptk-pipeline fast & lean"),
-            "topic:ptk-pipeline%20fast%20%26%20lean"
+            urlencode("topic:rtk-pipeline fast & lean"),
+            "topic:rtk-pipeline%20fast%20%26%20lean"
         );
     }
 }

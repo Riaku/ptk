@@ -258,7 +258,7 @@ fn inherited() -> std::env::VarsOs {
 }
 
 /// Run git as nothing on the developer's machine configures it, in the
-/// environment an ptk child's git gets: no global or system configuration, no
+/// environment a ptk child's git gets: no global or system configuration, no
 /// `~/.config/git/ignore` or `attributes`, an empty template for `git init`, no
 /// repository above the temporary directory, and nothing their shell exports
 /// but what `kept` names, so none of the `GIT_` variables that point git at

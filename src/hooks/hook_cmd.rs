@@ -1002,7 +1002,7 @@ fn process_codex_payload_from_decision(
 
     // Both AllowRewrite and AskRewrite require protocol-level allow: Codex
     // cannot accept updatedInput with ask or an omitted permissionDecision.
-    // The internal outcome remains Ask for Default, not an PTK auto-approval.
+    // The internal outcome remains Ask for Default, not a PTK auto-approval.
     // Its runtime applies the replacement before native approval and sandbox
     // checks, so this is a protocol-level allow rather than PTK approving the
     // command. Those checks inspect the rewritten argv, however, and Codex's
@@ -3213,7 +3213,7 @@ mod tests {
         let v: Value = serde_json::from_str(&droid_input("Execute", "git push --force")).unwrap();
         assert!(
             droid_response_from_decision(&v, "git push --force", HookDecision::Deny).is_none(),
-            "deny must step aside (no output), not emit an PTK block"
+            "deny must step aside (no output), not emit a PTK block"
         );
     }
 

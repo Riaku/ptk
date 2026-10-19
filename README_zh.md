@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rtk-ai/ptk/actions"><img src="https://github.com/rtk-ai/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
-  <a href="https://github.com/rtk-ai/ptk/releases"><img src="https://img.shields.io/github/v/release/rtk-ai/ptk" alt="Release"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#许可证"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
 </p>
@@ -65,30 +65,16 @@ PTK 报告的 token 数量按 `字节数 / 4` 估算：PTK 不内置分词器，
 
 ## 安装
 
-### Homebrew（推荐）
-
-```bash
-brew install ptk
-```
-
-### winget（Windows）
-
-Windows 上最简单的安装方式 — 一条命令，无需配置 PATH：
-
-```powershell
-winget install rtk-ai.ptk
-```
-
 ### 快速安装（Linux/macOS）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
 ```
 
 ### Cargo
 
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk ptk
+cargo install --git https://github.com/riaku/ptk ptk
 ```
 
 ### Apache-2.0 版本（仅开源，允许商业使用）
@@ -96,9 +82,8 @@ cargo install --git https://github.com/rtk-ai/ptk ptk
 同一个 `ptk` 二进制文件，构建时不包含 BUSL-1.1 压缩引擎：钩子重写系统和所有命令过滤器，仅遵循 Apache-2.0。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
-brew install rtk-ai/tap/ptk-oss
-cargo install --git https://github.com/rtk-ai/ptk ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### 验证
@@ -197,7 +182,7 @@ ptk discover                    # 发现遗漏的节省机会
 
 ## 贡献
 
-欢迎贡献！请在 [GitHub](https://github.com/rtk-ai/ptk) 上提交 issue 或 PR。
+欢迎贡献！请在 [GitHub](https://github.com/riaku/ptk) 上提交 issue 或 PR。
 
 加入 [Discord](https://discord.gg/RySmvNF5kF) 社区。
 

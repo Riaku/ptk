@@ -272,7 +272,7 @@ pub struct UsageRecord {
     /// Estimated cost saved by the downgrade, in micro-USD.
     #[serde(default)]
     pub cost_saved_micro_usd: i64,
-    /// tool_result blocks in this request whose output already carries an ptk
+    /// tool_result blocks in this request whose output already carries a ptk
     /// truncation marker (`… +N more`), i.e. command output the ptk CLI filtered
     /// before the client sent it back.
     #[serde(default)]

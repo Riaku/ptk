@@ -76,7 +76,7 @@ Declining leaves everything alone: *"Skipped — enable later with `ptk init -g`
 
 If you already have the base URL set but nothing restarting the daemon, re-running `ptk init -g` asks only the persistence question.
 
-The question is only asked when the daemon can actually run: the `ptk-proxy` binary is installed (next to `ptk` or on `PATH`) or an ptk-proxy already answers on `127.0.0.1:8080`. Otherwise init says the proxy was not offered and leaves `settings.json` alone. `ptk init -g --uninstall` removes the `env.ANTHROPIC_BASE_URL` this flow wrote, when it still points at the PTK daemon; a base URL aimed anywhere else is kept.
+The question is only asked when the daemon can actually run: the `ptk-proxy` binary is installed (next to `ptk` or on `PATH`) or a ptk-proxy already answers on `127.0.0.1:8080`. Otherwise init says the proxy was not offered and leaves `settings.json` alone. `ptk init -g --uninstall` removes the `env.ANTHROPIC_BASE_URL` this flow wrote, when it still points at the PTK daemon; a base URL aimed anywhere else is kept.
 
 #### What the SessionStart hook actually does
 

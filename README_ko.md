@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rtk-ai/ptk/actions"><img src="https://github.com/rtk-ai/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
-  <a href="https://github.com/rtk-ai/ptk/releases"><img src="https://img.shields.io/github/v/release/rtk-ai/ptk" alt="Release"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#라이선스"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
 </p>
@@ -65,30 +65,16 @@ PTK가 보고하는 토큰 수는 `바이트 / 4`로 추정됩니다. PTK에는 
 
 ## 설치
 
-### Homebrew (권장)
-
-```bash
-brew install ptk
-```
-
-### winget (Windows)
-
-Windows에서 가장 쉬운 설치 방법 — 명령어 하나로 끝, PATH 설정 불필요:
-
-```powershell
-winget install rtk-ai.ptk
-```
-
 ### 빠른 설치 (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
 ```
 
 ### Cargo
 
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk ptk
+cargo install --git https://github.com/riaku/ptk ptk
 ```
 
 ### Apache-2.0 에디션 (오픈 소스 전용, 상업적 사용 허용)
@@ -96,9 +82,8 @@ cargo install --git https://github.com/rtk-ai/ptk ptk
 BUSL-1.1 압축 엔진 없이 빌드한 동일한 `ptk` 바이너리입니다. 훅 재작성 시스템과 모든 명령 필터를 Apache-2.0 으로만 제공합니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
-brew install rtk-ai/tap/ptk-oss
-cargo install --git https://github.com/rtk-ai/ptk ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### 확인
@@ -190,7 +175,7 @@ ptk discover                    # 놓친 절약 기회 발견
 
 ## 기여
 
-기여를 환영합니다! [GitHub](https://github.com/rtk-ai/ptk)에서 issue 또는 PR을 생성해 주세요.
+기여를 환영합니다! [GitHub](https://github.com/riaku/ptk)에서 issue 또는 PR을 생성해 주세요.
 
 [Discord](https://discord.gg/RySmvNF5kF) 커뮤니티에 참여하세요.
 

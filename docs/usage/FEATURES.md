@@ -1274,7 +1274,7 @@ Internal command used by the hooks. The exit code carries the permission decisio
 
 - `0`: prints the rewritten command; allow rules cover every command, so the hook may allow it without asking
 - `1`: no output, no rewrite (no PTK equivalent, nothing to rewrite, a command excluded in config, a construct PTK does not rewrite such as `$(...)` or a file redirect, or a deny rule matched inside a shell wrapper's script); the command runs unchanged
-- `2`: a deny matched (checked before anything else). With no output, a deny rule matched and the hook defers to the agent's own deny. With output, an ptk pipeline rule denied or routed the command, and the hook blocks it with that message
+- `2`: a deny matched (checked before anything else). With no output, a deny rule matched and the hook defers to the agent's own deny. With output, a ptk pipeline rule denied or routed the command, and the hook blocks it with that message
 - `3`: prints the rewritten command; an ask rule matched, or allow rules do not cover every command, including when there are no rules at all; the agent asks for confirmation
 
 An integration therefore reads stdout on `0` and `3` (and on `2`, for the block message), and keeps the confirmation prompt on `3`. With `PTK_REWRITE_HOST=openclaw`, an integration that handles approval itself gets `0` in place of every `3` that does not come from an ask rule; an integration that allows without asking on `0` therefore runs `ptk rewrite` without that variable.

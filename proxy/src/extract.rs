@@ -255,7 +255,7 @@ fn has_ptk_marker(text: &str) -> bool {
 
 /// Count ptk-filtered tool_result blocks in the latest user message. Returns
 /// `(rewritten, total)` where `total` is the number of tool_result blocks in
-/// the current turn and `rewritten` is how many carry an ptk truncation marker
+/// the current turn and `rewritten` is how many carry a ptk truncation marker
 /// (see [`has_ptk_marker`]). `rewritten / total` is ptk's command-output
 /// coverage for the turn. Mirrors [`tool_results_from_request`]'s traversal.
 pub fn count_ptk_rewrites(body: &serde_json::Value) -> (i64, i64) {

@@ -636,7 +636,7 @@ pub fn strip_disabled_prefix_for_analytics(cmd: &str) -> (&str, &str) {
         }
         if !is_analytics_env_wrapper_token(&token.value) {
             // A real command word before PTK_DISABLED= (e.g. `docker run -e
-            // PTK_DISABLED=1 …`) — not an PTK bypass prefix.
+            // PTK_DISABLED=1 …`) — not a PTK bypass prefix.
             return strip_disabled_prefix(trimmed);
         }
     }

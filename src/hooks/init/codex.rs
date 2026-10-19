@@ -55,11 +55,11 @@ fn ptk_md_payload_digest(content: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-/// Whether `content` is an PTK.md that PTK itself wrote.
+/// Whether `content` is a PTK.md that PTK itself wrote.
 ///
 /// The ownership line and the legacy heading are read on the first non-blank line only: PTK
 /// writes its claim at the top of a file it wrote whole, and a user who pasted either -- or
-/// an PTK-written block -- somewhere inside their own notes has not handed the rest of the
+/// a PTK-written block -- somewhere inside their own notes has not handed the rest of the
 /// file over with it. A payload from the releases that claimed nothing is matched whole.
 fn is_ptk_authored_md(content: &str) -> bool {
     // A BOM is what an editor adds, not a change of authorship, and Windows editors add one.

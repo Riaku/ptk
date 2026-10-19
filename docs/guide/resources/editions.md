@@ -49,15 +49,9 @@ Set `PTK_EDITION=oss` for the install script:
 curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
 ```
 
-Homebrew ships it as a separate formula:
+There is no separate package for it: GitHub Releases carries the `ptk-oss-<target>` archives beside the main ones.
 
-```bash
-brew install rtk-ai/tap/ptk-oss
-```
-
-Debian and RPM packages are published as `ptk-oss`.
-
-The two editions cannot coexist — both install `/usr/bin/ptk`. Homebrew declares this explicitly (`conflicts_with`), so `brew` refuses the second install with a clear message. The deb and rpm packages carry no declared `Conflicts:`, so `dpkg`/`rpm` stop on the file collision instead. **Uninstall one edition before installing the other.**
+The two editions cannot coexist — both install `/usr/bin/ptk`. The install script refuses to overwrite the other edition's binary; removing the old one first is the supported path. **Uninstall one edition before installing the other.**
 
 From a source checkout:
 

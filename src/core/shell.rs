@@ -27,7 +27,7 @@ pub const SHELL_ARITY_MESSAGE: &str = "--shell takes the complete command as one
 
 /// A command ready to spawn, or the reason it can never run.
 ///
-/// A program that cannot be run is an execution outcome, not an PTK error: the
+/// A program that cannot be run is an execution outcome, not a PTK error: the
 /// runners render it through their own failure path and exit with the code the
 /// shell they replaced would have returned.
 pub enum Launch {

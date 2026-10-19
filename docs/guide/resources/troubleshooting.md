@@ -15,12 +15,12 @@ $ ptk gain
 ptk: 'gain' is not a ptk command. See 'ptk --help'.
 ```
 
-**Cause:** You installed **Rust Type Kit** (`reachingforthejack/ptk`) instead of **Rust Token Killer** (`rtk-ai/ptk`). They share the same binary name.
+**Cause:** You installed **Rust Type Kit** (`reachingforthejack/ptk`) instead of **Rust Token Killer** (`riaku/ptk`). They share the same binary name.
 
 **Fix:**
 ```bash
 cargo uninstall ptk
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
 ptk gain    # should now show token savings stats
 ```
 
@@ -140,7 +140,7 @@ Error: program not found
 
 **Fix:** Update to PTK v0.23.1+:
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk --branch master ptk
+cargo install --git https://github.com/riaku/ptk --branch master ptk
 ptk --version    # should be 0.23.1+
 ```
 
@@ -182,7 +182,7 @@ If Rust Type Kit is published to crates.io under the name `ptk`, `cargo install 
 Always use the explicit URL, pinned to the release branch:
 
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk --branch master ptk
+cargo install --git https://github.com/riaku/ptk --branch master ptk
 ```
 
 ## Does PTK break Claude's prompt cache?
@@ -219,4 +219,4 @@ Checks:
 
 ## Still stuck?
 
-Open an issue: https://github.com/rtk-ai/ptk/issues
+Open an issue: https://github.com/riaku/ptk/issues

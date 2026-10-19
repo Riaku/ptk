@@ -94,7 +94,7 @@ mod unix {
             .expect("run ptk");
 
         // A shell that is not there answers like a program that is not there:
-        // the shell's own line and exit 127, not an PTK error chain.
+        // the shell's own line and exit 127, not a PTK error chain.
         assert_eq!(output.status.code(), Some(127));
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
@@ -263,7 +263,7 @@ mod unix {
 
         // An `+x` file the kernel cannot exec: on Linux `execvp` reports
         // ENOEXEC, while on macOS it falls back to `sh`, which answers 127
-        // itself. Either way the outcome is a shell's, never an PTK error.
+        // itself. Either way the outcome is a shell's, never a PTK error.
         let binary = dir.path().join("not-an-executable");
         std::fs::write(&binary, b"\x7fELF-but-not-really").expect("write file");
         std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755))

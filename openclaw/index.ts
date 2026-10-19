@@ -28,9 +28,9 @@
  *   1           No PTK equivalent → pass through unchanged
  *   2           Deny rule matched → block the call
  *   3 + stdout  Rewrite it, but require approval — an explicit `ask` rule, or
- *               any ask/default on an ptk that predates PTK_REWRITE_HOST
+ *               any ask/default on a ptk that predates PTK_REWRITE_HOST
  *
- * The host travels in the environment rather than in argv on purpose: an ptk
+ * The host travels in the environment rather than in argv on purpose: a ptk
  * that does not know a `--host` flag folds it into the command text it judges,
  * so a deny rule written against the user's command stops matching. An ptk
  * that does not know the variable ignores it and behaves exactly as it does
@@ -93,7 +93,7 @@ function tryRewrite(
     if (e?.status === 2) {
       return [null, "deny"];
     }
-    // Exit 3 — `Ask`: an explicit `ask` rule the user wrote, or (on an ptk
+    // Exit 3 — `Ask`: an explicit `ask` rule the user wrote, or (on a ptk
     // that predates PTK_REWRITE_HOST) any ask/default. Require approval rather
     // than applying the rewrite silently.
     if (e?.status === 3 && e.stdout) {
@@ -162,7 +162,7 @@ export default function register(api: any) {
         params: { ...event.params, command: rewritten },
       };
 
-      // Exit 3 — `Ask`: an explicit `ask` rule the user wrote, or (on an ptk
+      // Exit 3 — `Ask`: an explicit `ask` rule the user wrote, or (on a ptk
       // that predates PTK_REWRITE_HOST) any ask/default. PTK does not relax it,
       // so keep the prompt that existed before #3908 for the commands that
       // would previously have reached one.

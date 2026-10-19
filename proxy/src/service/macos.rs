@@ -10,7 +10,7 @@ use std::process::Command;
 
 pub const MECHANISM: &str = "launchd (user agent)";
 
-const LABEL: &str = "app.rtk-ai.ptk-proxy";
+const LABEL: &str = "app.riaku.ptk-proxy";
 
 fn plist_path() -> Result<PathBuf> {
     let home = dirs::home_dir().context("could not resolve the home directory")?;

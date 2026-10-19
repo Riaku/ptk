@@ -46,7 +46,14 @@ jobs:
           echo "Latest release: $LATEST_TAG"
 
           # ── Analyse conventional commits since that tag ──
-          COMMITS=$(git log "${LATEST_TAG}..HEAD" --format="%s")
+          if git rev-parse --verify --quiet "${LATEST_TAG}" >/dev/null; then
+            COMMITS=$(git log "${LATEST_TAG}..HEAD" --format="%s")
+          else
+            # The fallback tag above is fabricated from Cargo.toml, so there is
+            # no such ref to diff against: git exits 128 and `set -eo pipefail`
+            # fails the job. Measure from the whole history instead.
+            COMMITS=$(git log --format="%s")
+          fi
           HAS_BREAKING=$(echo "$COMMITS" | grep -cE '^[a-z]+(\(.+\))?!:' || true)
           HAS_FEAT=$(echo "$COMMITS"    | grep -cE '^feat(\(.+\))?:'     || true)
           HAS_FIX=$(echo "$COMMITS"     | grep -cE '^fix(\(.+\))?:'      || true)

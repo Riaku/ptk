@@ -4,7 +4,7 @@
 # shell tool's output IS; each kind gets a different treatment, mixing the
 # custom `squeeze-blank` plugin method with built-in chains.
 #
-# Requires: an ptk build with `--features example-plugins` (the default build
+# Requires: a ptk build with `--features example-plugins` (the default build
 # does not register `squeeze-blank`, and this pipeline will not validate
 # without it), and $TYPESAFE_API_KEY. Without the key, classification yields
 # no fact and everything passes through.

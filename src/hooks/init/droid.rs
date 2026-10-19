@@ -359,7 +359,7 @@ fn uninstall_droid_at(droid_dir: &Path, ctx: InitContext) -> Result<Vec<String>>
 }
 
 /// Strip the PTK entry from one Droid hook file. Returns true if the file
-/// held an PTK entry (and was rewritten, unless dry-run).
+/// held a PTK entry (and was rewritten, unless dry-run).
 fn remove_droid_hook_from_file(file: &DroidHookFile, ctx: InitContext) -> Result<bool> {
     let path = &file.path;
 

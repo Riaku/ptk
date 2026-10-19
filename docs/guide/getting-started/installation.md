@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install PTK via curl, Homebrew, winget, Cargo, or from source, and verify the correct version
+description: Install PTK from GitHub Releases or Cargo, and verify the correct version
 sidebar:
   order: 1
 ---
@@ -11,8 +11,8 @@ sidebar:
 
 Two unrelated projects share the name `ptk`. Make sure you install the right one:
 
-- **Rust Token Killer** (`rtk-ai/ptk`) — this project, a token-saving CLI proxy
-- **Rust Type Kit** (`reachingforthejack/ptk`) — a different tool for generating Rust types
+- **Rust Token Killer** (`riaku/ptk`) — this project, a token-saving CLI proxy
+- **Rust Type Kit** (`reachingforthejack/rtk`, crate `rtk`) — a different tool for generating Rust types
 
 The easiest way to verify you have the correct one: run `ptk gain`. It should display the savings dashboard. If it returns "command not found", you either have the wrong package or PTK is not installed.
 
@@ -28,25 +28,13 @@ If both commands work, PTK is already installed. Skip to [Project initialization
 ## Quick install (Linux and macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
 ```
 
 Installs to `~/.local/bin`. Add it to your PATH if it is not there already:
 
 ```bash
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # or ~/.zshrc
-```
-
-## Homebrew (macOS and Linux)
-
-```bash
-brew install rtk-ai/tap/ptk
-```
-
-## winget (Windows)
-
-```powershell
-winget install rtk-ai.ptk
 ```
 
 ## Cargo
@@ -56,12 +44,12 @@ winget install rtk-ai.ptk
 :::
 
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk --branch master ptk
+cargo install --git https://github.com/riaku/ptk --branch master ptk
 ```
 
 ## Pre-built binaries (Windows, Linux, macOS)
 
-Download from [GitHub releases](https://github.com/rtk-ai/ptk/releases):
+Download from [GitHub releases](https://github.com/riaku/ptk/releases):
 
 - macOS: `ptk-x86_64-apple-darwin.tar.gz` / `ptk-aarch64-apple-darwin.tar.gz`
 - Linux: `ptk-x86_64-unknown-linux-musl.tar.gz` / `ptk-aarch64-unknown-linux-gnu.tar.gz`
@@ -74,12 +62,11 @@ Download from [GitHub releases](https://github.com/rtk-ai/ptk/releases):
 The same `ptk` binary built without the BUSL-1.1 compression engine — the hook rewrite system and every command filter, under Apache-2.0 alone. Pick this if your policy does not allow a source-available licence in the build.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/master/install.sh | PTK_EDITION=oss sh
-brew install rtk-ai/tap/ptk-oss
-cargo install --git https://github.com/rtk-ai/ptk --branch master ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk --branch master ptk --no-default-features
 ```
 
-Release assets are named `ptk-oss-<target>`, with `ptk-oss` Debian and RPM packages alongside. The binary is still called `ptk`, so hooks and scripts are unchanged — but the two editions conflict and cannot be installed together.
+Release assets are named `ptk-oss-<target>`. This fork publishes no Debian or RPM package, and no Homebrew or winget package, for either edition — GitHub Releases is the only channel. The binary is still called `ptk`, so hooks and scripts are unchanged, but the two editions conflict and cannot be installed together.
 
 See [Editions and Licensing](../resources/editions.md) for what the edition omits and where the licence boundary falls.
 
@@ -88,8 +75,6 @@ See [Editions and Licensing](../resources/editions.md) for what the edition omit
 PTK works fully on native Windows. Since **v0.37.2** the auto-rewrite hook runs as a native binary command (`ptk hook claude`) — no Unix shell, bash, or jq required — so commands are rewritten transparently in Command Prompt, PowerShell, and Windows Terminal, exactly as on Linux and macOS.
 
 ### Native Windows (manual install)
-
-Prefer [winget](#winget-windows) if you can — it handles PATH for you.
 
 ```powershell
 # 1. Download and extract ptk-x86_64-pc-windows-msvc.zip from releases
@@ -111,7 +96,7 @@ winget install BurntSushi.ripgrep.MSVC
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) also works and behaves exactly like Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
 ptk init -g
 ```
 
@@ -156,6 +141,5 @@ ptk init --global
 ```bash
 ptk init -g --uninstall    # remove hook, PTK.md, and settings.json entry
 cargo uninstall ptk         # remove binary (if installed via Cargo)
-brew uninstall ptk          # remove binary (if installed via Homebrew)
-winget uninstall rtk-ai.ptk # remove binary (if installed via winget)
+rm "$(command -v ptk)"   # remove the binary (GitHub Releases install)
 ```

@@ -62,9 +62,11 @@ cargo fmt --manifest-path proxy/Cargo.toml --all   # proxy/ is its own workspace
 ```
 
 ### Package Building
-GitHub Releases is the only channel: `publish.yml` builds and attaches the
-binaries on a `v*` tag. There is no crates.io, Homebrew, winget or DEB/RPM
-packaging in this fork, so those jobs and their metadata are absent.
+GitHub Releases is the only channel: `cd.yml` drives release-please and calls
+`release.yml`, which builds the full matrix (Linux/macOS/Windows archives plus
+the `ptk-oss` archives) and writes `checksums.txt` — the names `install.sh`
+downloads. There is no crates.io, Homebrew, winget or DEB/RPM packaging in this
+fork, so those jobs and their metadata are absent.
 
 ## Architecture
 

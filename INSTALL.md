@@ -62,7 +62,7 @@ winget or Homebrew package.
 ### Alternative: Manual Installation
 
 ```bash
-# From rtk-ai repository (NOT reachingforthejack!)
+# From this fork's repository (NOT reachingforthejack's rtk!)
 cargo install --git https://github.com/riaku/ptk ptk
 
 # ALWAYS VERIFY after installation

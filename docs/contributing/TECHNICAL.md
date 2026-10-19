@@ -255,7 +255,7 @@ Each filter module follows the same pattern:
 
 When Clap parsing fails (unknown command):
 
-1. Guard: check if the command is an PTK meta-command (`gain`, `init`, etc.) -- if so, show Clap error
+1. Guard: check if the command is a PTK meta-command (`gain`, `init`, etc.) -- if so, show Clap error
 2. Look up TOML DSL filters via `toml_filter::find_matching_filter()`
 3. If TOML match: capture stdout, apply filter pipeline, track savings
 4. If no match: pure passthrough with `Stdio::inherit`, track as 0% output reduction

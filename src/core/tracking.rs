@@ -650,7 +650,7 @@ fn key_word(key: String) -> String {
 }
 
 /// Where the program word sits in a stored row: after `ptk:toml` or `ptk:passthrough`,
-/// after `ptk` and an ptk command that runs a program the user named (`fallback:`,
+/// after `ptk` and a ptk command that runs a program the user named (`fallback:`,
 /// `proxy`, `err`, `test`, `lint`), after `ptk` alone, and first in any other row.
 fn program_index(words: &[String]) -> usize {
     match words.first().map(String::as_str) {

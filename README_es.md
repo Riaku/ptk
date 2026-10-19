@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rtk-ai/ptk/actions"><img src="https://github.com/rtk-ai/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
-  <a href="https://github.com/rtk-ai/ptk/releases"><img src="https://img.shields.io/github/v/release/rtk-ai/ptk" alt="Release"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#licencia"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
 </p>
@@ -65,30 +65,16 @@ Los recuentos de tokens que reporta PTK se estiman como `bytes / 4`: PTK no incl
 
 ## Instalacion
 
-### Homebrew (recomendado)
-
-```bash
-brew install ptk
-```
-
-### winget (Windows)
-
-La forma mas facil de instalar en Windows — un solo comando, sin configuracion de PATH:
-
-```powershell
-winget install rtk-ai.ptk
-```
-
 ### Instalacion rapida (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
 ```
 
 ### Cargo
 
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk ptk
+cargo install --git https://github.com/riaku/ptk ptk
 ```
 
 ### Edición Apache-2.0 (solo código abierto, uso comercial permitido)
@@ -96,9 +82,8 @@ cargo install --git https://github.com/rtk-ai/ptk ptk
 El mismo binario `ptk` compilado sin el motor de compresión BUSL-1.1: el sistema de reescritura de hooks y todos los filtros de comandos, solo bajo Apache-2.0.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
-brew install rtk-ai/tap/ptk-oss
-cargo install --git https://github.com/rtk-ai/ptk ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### Verificacion
@@ -191,7 +176,7 @@ ptk discover                    # Descubrir ahorros perdidos
 
 ## Contribuir
 
-Las contribuciones son bienvenidas. Abre un issue o PR en [GitHub](https://github.com/rtk-ai/ptk).
+Las contribuciones son bienvenidas. Abre un issue o PR en [GitHub](https://github.com/riaku/ptk).
 
 Unete a la comunidad en [Discord](https://discord.gg/RySmvNF5kF).
 

@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rtk-ai/ptk/actions"><img src="https://github.com/rtk-ai/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
-  <a href="https://github.com/rtk-ai/ptk/releases"><img src="https://img.shields.io/github/v/release/rtk-ai/ptk" alt="Release"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#ライセンス"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
 </p>
@@ -65,30 +65,16 @@ PTK が報告するトークン数は `バイト数 / 4` で見積もられて�
 
 ## インストール
 
-### Homebrew（推奨）
-
-```bash
-brew install ptk
-```
-
-### winget（Windows）
-
-Windowsで最も簡単なインストール方法 — コマンド1つ、PATHの設定不要：
-
-```powershell
-winget install rtk-ai.ptk
-```
-
 ### クイックインストール（Linux/macOS）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
 ```
 
 ### Cargo
 
 ```bash
-cargo install --git https://github.com/rtk-ai/ptk ptk
+cargo install --git https://github.com/riaku/ptk ptk
 ```
 
 ### Apache-2.0 エディション（オープンソースのみ、商用利用可）
@@ -96,9 +82,8 @@ cargo install --git https://github.com/rtk-ai/ptk ptk
 BUSL-1.1 圧縮エンジンを含めずにビルドした同じ `ptk` バイナリです。フック書き換えシステムとすべてのコマンドフィルタを Apache-2.0 のみで提供します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
-brew install rtk-ai/tap/ptk-oss
-cargo install --git https://github.com/rtk-ai/ptk ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### 確認
@@ -190,7 +175,7 @@ ptk discover                    # 見逃した節約機会を発見
 
 ## コントリビュート
 
-コントリビューション歓迎！[GitHub](https://github.com/rtk-ai/ptk) で issue または PR を作成してください。
+コントリビューション歓迎！[GitHub](https://github.com/riaku/ptk) で issue または PR を作成してください。
 
 [Discord](https://discord.gg/RySmvNF5kF) コミュニティに参加。
 
