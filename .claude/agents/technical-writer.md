@@ -167,11 +167,12 @@ ptk --version
   ```
 
 **Issue: `ptk gain` fails**
-- **Cause**: Wrong PTK installed (reachingforthejack/PTK name collision)
-- **Fix**: Uninstall and reinstall correct PTK
+- **Cause**: the `ptk` on PATH is a stale build of this fork. It is not a name collision --
+  the unrelated Rust Type Kit (`reachingforthejack/rtk`) installs `rtk`, not `ptk`.
+- **Fix**: Reinstall from this fork
   ```bash
-  cargo uninstall PTK
-  cargo install --git https://github.com/riaku/ptk  # From the PTK repo
+  cargo uninstall ptk
+  cargo install --git https://github.com/riaku/ptk  # From this fork
   ptk gain --help  # Should work
   ```
 ```

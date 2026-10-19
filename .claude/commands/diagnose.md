@@ -283,15 +283,18 @@ export PATH="$HOME/.cargo/bin:$PATH"
 source ~/.zshrc  # or source ~/.bashrc
 ```
 
-### Issue : Multiple PTK binaries (name collision)
+### Issue : a stale `ptk` binary shadowing the current one
 
 **Symptom**: `ptk gain` fails with "command not found" even though `ptk --version` works
 
 **Diagnosis**:
 ```bash
-# Check if wrong PTK installed (reachingforthejack/PTK)
+# The Rust Type Kit (reachingforthejack/rtk) installs `rtk`, so it cannot be the cause:
+# a missing `gain` means an older build of this fork is first on PATH.
 ptk --version
-# Should show "ptk X.Y.Z", NOT "Rust Type Kit"
+# Should show "ptk X.Y.Z"
+which -a ptk
+# More than one path means an old install is shadowing the new one
 
 ptk --help | grep gain
 # Should show "gain" command - if missing, wrong binary

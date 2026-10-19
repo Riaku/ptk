@@ -10,17 +10,18 @@ This repository is the **riaku/ptk fork of [rtk-ai/rtk](https://github.com/rtk-a
 
 ### Name Collision Warning
 
-**Two different "ptk" projects exist:**
-- This project: Rust Token Killer (riaku/ptk)
-- reachingforthejack/ptk: Rust Type Kit (DIFFERENT - generates Rust types)
+Upstream Rust Token Killer (`rtk-ai/rtk`, crate `rtk`) and the unrelated Rust Type Kit
+(`reachingforthejack/rtk`, crate `rtk`) both install a binary called `rtk`, so `rtk gain`
+can land on the wrong tool. This fork installs `ptk` and is not affected.
 
-**Verify correct installation:**
+**Verify the right tool:**
 ```bash
 ptk --version  # Any current version; the check that matters is the next line
 ptk gain       # Should show token savings stats (NOT "command not found")
 ```
 
-If `ptk gain` fails, you have the wrong package installed.
+If `ptk` is missing entirely you have one of those two installed, not this fork; if `ptk`
+exists but `gain` is unknown, the build is stale.
 
 ## Development Commands
 

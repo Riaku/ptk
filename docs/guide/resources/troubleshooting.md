@@ -15,7 +15,9 @@ $ ptk gain
 ptk: 'gain' is not a ptk command. See 'ptk --help'.
 ```
 
-**Cause:** You installed **Rust Type Kit** (`reachingforthejack/ptk`) instead of **Rust Token Killer** (`riaku/ptk`). They share the same binary name.
+**Cause:** the `ptk` on your PATH is a stale build of this fork. It is not a name collision --
+the unrelated **Rust Type Kit** (`reachingforthejack/rtk`) installs a binary called `rtk`, not
+`ptk`.
 
 **Fix:**
 ```bash

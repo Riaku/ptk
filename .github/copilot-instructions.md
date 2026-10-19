@@ -29,7 +29,10 @@ ptk --version   # Should print: ptk X.Y.Z
 ptk gain        # Should show a dashboard (not "command not found")
 ```
 
-> Name collision: `ptk gain` failing means you have `reachingforthejack/ptk` (Rust Type Kit) installed instead. Run `which ptk` to check.
+> Name collision: upstream Rust Token Killer (`rtk-ai/rtk`) and the unrelated Rust Type Kit
+> (`reachingforthejack/rtk`) both install a binary called `rtk`. This fork installs `ptk`, so
+> it is not affected -- a failing `ptk gain` means the `ptk` on PATH is a stale build. Run
+> `which -a ptk` and reinstall from `riaku/ptk`.
 
 ## Build, Test & Lint
 

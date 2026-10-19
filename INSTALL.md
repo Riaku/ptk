@@ -2,14 +2,15 @@
 
 ## ⚠️ Name Collision Warning
 
-**There are TWO completely different projects named "ptk":**
+**Two projects get confused with this one — only the first is a token optimizer:**
 
 1. ✅ **Rust Token Killer** (this project) - LLM token optimizer
    - Repos: `riaku/ptk`
    - Has `ptk gain` command showing the savings dashboard
 
-2. ❌ **Rust Type Kit** (reachingforthejack/ptk) - DIFFERENT PROJECT
+2. ℹ️ **Rust Type Kit** (`reachingforthejack/rtk`) - DIFFERENT PROJECT
    - Rust codebase query tool and type generator
+   - Installs a binary called `rtk`, so it cannot be mistaken for this fork's `ptk`
    - **DO NOT install if you want token optimization**
 
 ## Pre-Installation Check (REQUIRED)
