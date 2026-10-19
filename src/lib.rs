@@ -2677,6 +2677,18 @@ fn pings_telemetry(parsed: &Result<Cli, clap::Error>) -> bool {
     )
 }
 
+/// Whether the Windows dispatcher owns this `ptk run` invocation: a command
+/// string, on Windows, with no explicit `--shell`.
+///
+/// The fork's Windows filters hang off this decision. On Windows upstream's
+/// shell path resolves to `cmd.exe`, which cannot run a PowerShell cmdlet, so
+/// `ptk run 'Get-ChildItem'` would fail outright without this branch -- while
+/// a Linux build stays green either way, because `cfg!(windows)` is false
+/// there. An explicit `--shell` wins: the user already said how to run it.
+fn windows_owns_run_command(command: Option<&str>, shell: Option<&str>) -> bool {
+    cfg!(windows) && command.is_some() && shell.is_none()
+}
+
 fn run_cli() -> Result<i32> {
     let parsed = try_parse_cli_from(std::env::args_os());
 
@@ -3941,6 +3953,14 @@ fn run_cli() -> Result<i32> {
                 && args.is_empty()
             {
                 0
+            } else if windows_owns_run_command(command.as_deref(), shell.as_deref()) {
+                // Fork-only: a command string on Windows goes through the
+                // Windows dispatcher, which filters a PowerShell cmdlet or CMD
+                // built-in and hands anything else to the shell it belongs to.
+                cmds::windows::run_smart_command(
+                    command.as_deref().unwrap_or_default(),
+                    cli.verbose,
+                )?
             } else {
                 let (launch, description, program) = match command {
                     Some(script) => (
@@ -6195,5 +6215,29 @@ mod tests {
             } => assert_eq!(args, vec!["main.ts"]),
             _ => panic!("Expected Deno Compile command"),
         }
+    }
+
+    /// Fork-only contract: on Windows a command *string* handed to `ptk run`
+    /// belongs to the Windows dispatcher, which recognises a PowerShell cmdlet
+    /// or a CMD built-in and filters it. Upstream's shell path cannot run a
+    /// PowerShell cmdlet -- on Windows it resolves to cmd.exe -- so if this
+    /// branch is ever dropped again, `ptk run 'Get-ChildItem'` breaks on
+    /// Windows while this machine (Linux) stays green. That is how it was lost
+    /// once already, so the decision is a function under test.
+    #[test]
+    fn a_bare_command_string_belongs_to_the_windows_dispatcher() {
+        assert_eq!(
+            windows_owns_run_command(Some("Get-ChildItem | Select-Object Name"), None),
+            cfg!(windows),
+            "a bare command string is the Windows dispatcher's job on Windows"
+        );
+        assert!(
+            !windows_owns_run_command(Some("Get-ChildItem"), Some("pwsh")),
+            "an explicit --shell means the user already chose how to run it"
+        );
+        assert!(
+            !windows_owns_run_command(None, None),
+            "argv form is a direct exec, never a shell command"
+        );
     }
 }

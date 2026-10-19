@@ -17,9 +17,11 @@
 name: Publish PTK
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Tag-driven releases belong to release-please (cd.yml) -> release.yml, which
+  # build the full matrix. This workflow used to fire on the same `v*` tag and
+  # publish a second, differently-named asset set to the same release whenever
+  # release-please pushed the tag with App credentials -- so it is now the
+  # manual re-publish path for an existing tag.
   workflow_dispatch:
     inputs:
       tag:

@@ -188,7 +188,6 @@ flowchart TD
 
 ```bash
 curl -fsSL .../install.sh | PTK_EDITION=oss sh    # Apache-2.0 edition
-brew install rtk-ai/tap/ptk-oss
 ```
 
 > What the Apache-2.0 edition omits and where the licence boundary falls: **[Editions and Licensing](docs/guide/resources/editions.md)**
@@ -361,7 +360,7 @@ PTK collects **no command content and no file contents**. Telemetry is anonymous
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=rtk-ai%2Fptk&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=riaku%2Fptk&type=date&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=riaku/ptk&type=date&theme=dark&legend=top-left" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=riaku/ptk&type=date&legend=top-left" />
