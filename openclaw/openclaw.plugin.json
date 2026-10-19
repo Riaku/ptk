@@ -3,7 +3,7 @@
   "name": "PTK Token Optimizer",
   "version": "1.0.0",
   "description": "Transparently rewrites shell commands to their PTK equivalents, cutting up to 90% of the bash output reaching the LLM context",
-  "homepage": "https://github.com/Riaku/ptk",
+  "homepage": "https://github.com/riaku/ptk",
   "license": "Apache-2.0",
   "configSchema": {
     "type": "object",

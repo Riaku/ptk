@@ -5,7 +5,7 @@ PTK collects anonymous, aggregate usage metrics once per day to help improve the
 ## Data Collector
 
 **Entity**: `the PTK fork maintainers`
-**Contact**: the GitHub issue tracker (https://github.com/Riaku/ptk/issues)
+**Contact**: the GitHub issue tracker (https://github.com/riaku/ptk/issues)
 
 ## Why we collect telemetry
 
@@ -146,7 +146,7 @@ Under the EU General Data Protection Regulation, you have the right to:
 
 - **Access** your data: `ptk telemetry status` shows your device hash; the telemetry payload is fully documented above.
 - **Rectification**: since data is anonymous and aggregate, rectification is not applicable.
-- **Erasure** (Art. 17): run `ptk telemetry forget` to delete local data and send an erasure request to the server. Alternatively, email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) with your device hash.
+- **Erasure** (Art. 17): run `ptk telemetry forget` to delete local data and send an erasure request to the server. Alternatively, email the GitHub issue tracker (https://github.com/riaku/ptk/issues) with your device hash.
 - **Restriction of processing**: `ptk telemetry disable` stops all data collection immediately.
 - **Portability**: the local SQLite database at `~/.local/share/ptk/tracking.db` contains all locally stored data.
 - **Objection**: `ptk telemetry disable` or `export PTK_TELEMETRY_DISABLED=1`.
@@ -154,8 +154,8 @@ Under the EU General Data Protection Regulation, you have the right to:
 ## Erasure Procedure
 
 1. Run `ptk telemetry forget` — this disables telemetry, deletes your device salt, ping marker, and local tracking database (`history.db`), then sends an erasure request to the server.
-2. If the server is unreachable, the CLI prints your full device hash and fallback instructions to email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) for manual erasure.
-3. You can also email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) directly to request manual erasure.
+2. If the server is unreachable, the CLI prints your full device hash and fallback instructions to email the GitHub issue tracker (https://github.com/riaku/ptk/issues) for manual erasure.
+3. You can also email the GitHub issue tracker (https://github.com/riaku/ptk/issues) directly to request manual erasure.
 
 ## Data Handling
 

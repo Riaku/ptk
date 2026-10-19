@@ -109,7 +109,7 @@ cargo test test_token_savings
 
 **Option 1: Pre-built Binary**
 Download the macOS tarball (`ptk-x86_64-apple-darwin.tar.gz` / `ptk-aarch64-apple-darwin.tar.gz`) from
-https://github.com/Riaku/ptk/releases, extract, and place `ptk` on your PATH.
+https://github.com/riaku/ptk/releases, extract, and place `ptk` on your PATH.
 
 ```bash
 ptk --version  # Should show ptk X.Y.Z
@@ -117,7 +117,7 @@ ptk --version  # Should show ptk X.Y.Z
 
 **Option 2: From Source**
 ```bash
-cargo install --git https://github.com/Riaku/ptk
+cargo install --git https://github.com/riaku/ptk
 ptk --version  # Verify installation
 ```
 
@@ -130,7 +130,7 @@ ptk gain  # Should show token savings analytics
 
 **From Source** (Cargo required):
 ```bash
-cargo install --git https://github.com/Riaku/ptk
+cargo install --git https://github.com/riaku/ptk
 
 # Verify installation
 which ptk
@@ -140,7 +140,7 @@ ptk --version
 **Binary Download** (faster):
 ```bash
 # Download ptk-x86_64-unknown-linux-musl.tar.gz from
-# https://github.com/Riaku/ptk/releases, extract, then:
+# https://github.com/riaku/ptk/releases, extract, then:
 chmod +x ptk
 sudo mv ptk /usr/local/bin/
 ptk --version
@@ -171,7 +171,7 @@ ptk --version
 - **Fix**: Uninstall and reinstall correct PTK
   ```bash
   cargo uninstall PTK
-  cargo install --git https://github.com/Riaku/ptk  # From the PTK repo
+  cargo install --git https://github.com/riaku/ptk  # From the PTK repo
   ptk gain --help  # Should work
   ```
 ```

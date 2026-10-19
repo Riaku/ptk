@@ -171,10 +171,10 @@ options:
 options:
   - label: "cargo install --path ."
     description: "Installer PTK localement (si dans le repo)"
-  - label: "cargo install --git https://github.com/Riaku/ptk"
+  - label: "cargo install --git https://github.com/riaku/ptk"
     description: "Installer PTK depuis le repo GitHub (dernière release)"
   - label: "Télécharger un binaire précompilé"
-    description: "Depuis https://github.com/Riaku/ptk/releases (Windows/macOS/Linux)"
+    description: "Depuis https://github.com/riaku/ptk/releases (Windows/macOS/Linux)"
 ```
 
 ### Si hooks manquants/non exécutables
