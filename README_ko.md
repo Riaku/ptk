@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#라이선스"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
@@ -68,7 +68,7 @@ PTK가 보고하는 토큰 수는 `바이트 / 4`로 추정됩니다. PTK에는 
 ### 빠른 설치 (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 ### Cargo
@@ -82,14 +82,14 @@ cargo install --git https://github.com/riaku/ptk ptk
 BUSL-1.1 압축 엔진 없이 빌드한 동일한 `ptk` 바이너리입니다. 훅 재작성 시스템과 모든 명령 필터를 Apache-2.0 으로만 제공합니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### 확인
 
 ```bash
-ptk --version   # "ptk 0.27.x" 표시되어야 함
+ptk --version   # "ptk 0.49.x" 표시되어야 함
 ptk gain        # 토큰 절약 통계 표시되어야 함
 ```
 

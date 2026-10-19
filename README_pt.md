@@ -7,10 +7,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#licença"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
-  <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1470188214710046894?label=Discord&logo=discord" alt="Discord"></a>
+  <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
 </p>
 
 <p align="center">
@@ -69,7 +69,7 @@ As contagens de tokens que o PTK reporta são estimadas como `bytes / 4`: o PTK 
 ### Instalação rápida (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 ### Cargo
@@ -83,7 +83,7 @@ cargo install --git https://github.com/riaku/ptk ptk
 O mesmo binário `ptk` compilado sem o motor de compressão BUSL-1.1: o sistema de reescrita de hooks e todos os filtros de comandos, apenas sob Apache-2.0.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

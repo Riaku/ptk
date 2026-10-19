@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cargo install --git https://github.com/riaku/ptk --branch master ptk
+      - run: cargo install --git https://github.com/riaku/ptk --branch develop ptk
       - run: ptk gain --weekly --format json > stats/week-$(date +%Y-%W).json
       - run: git add stats/ && git commit -m "Weekly ptk stats" && git push
 ```

@@ -45,7 +45,7 @@ cargo uninstall ptk
 ### Quick Install (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
 ```
 
 After installation, **verify you have the correct ptk**:
@@ -70,7 +70,7 @@ cargo install --git https://github.com/riaku/ptk ptk
 ptk gain  # MUST show the savings dashboard, not "command not found"
 ```
 
-⚠️ **WARNING**: `cargo install ptk` from crates.io might install the wrong package (Rust Type Kit). Use the Git URL above and verify with `ptk gain`.
+⚠️ **WARNING**: `cargo install ptk` installs nothing — this fork is not published to crates.io and no crate named `ptk` exists. Use the Git URL above and verify with `ptk gain`.
 
 ## Apache-2.0 edition (open source only, commercial use allowed)
 
@@ -79,7 +79,7 @@ rewrite system and every command filter, under Apache-2.0 alone. Pick this if
 your policy does not allow a source-available licence in the build.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

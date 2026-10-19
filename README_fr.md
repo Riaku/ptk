@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#licence"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
@@ -68,7 +68,7 @@ Les nombres de tokens rapportes par PTK sont estimes avec `octets / 4` : PTK n'e
 ### Installation rapide (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 ### Cargo
@@ -82,18 +82,18 @@ cargo install --git https://github.com/riaku/ptk ptk
 Le même binaire `ptk` compilé sans le moteur de compression BUSL-1.1 : le système de réécriture de hooks et tous les filtres de commandes, sous Apache-2.0 seul.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### Verification
 
 ```bash
-ptk --version   # Doit afficher "ptk 0.27.x"
+ptk --version   # Doit afficher "ptk 0.49.x"
 ptk gain        # Doit afficher les statistiques d'economies
 ```
 
-> **Attention** : Un autre projet "ptk" (Rust Type Kit) existe sur crates.io. Si `ptk gain` echoue, vous avez le mauvais package.
+> **Attention** : ce fork n'est pas publie sur crates.io (aucun crate `ptk` n'existe). Installez depuis l'URL Git ci-dessus ; si `ptk gain` echoue, votre build est obsolete.
 
 ## Demarrage rapide
 

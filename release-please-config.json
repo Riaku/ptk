@@ -7,7 +7,26 @@
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "extra-files": [
-        { "type": "toml", "path": "proxy/Cargo.toml", "jsonpath": "$.package.version" }
+        {
+          "type": "toml",
+          "path": "proxy/Cargo.toml",
+          "jsonpath": "$.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "engine/Cargo.toml",
+          "jsonpath": "$.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "text/Cargo.toml",
+          "jsonpath": "$.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "plugin/Cargo.toml",
+          "jsonpath": "$.package.version"
+        }
       ]
     }
   }

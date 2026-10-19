@@ -28,7 +28,7 @@ If both commands work, PTK is already installed. Skip to [Project initialization
 ## Quick install (Linux and macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
 ```
 
 Installs to `~/.local/bin`. Add it to your PATH if it is not there already:
@@ -39,12 +39,12 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # or ~/.zshrc
 
 ## Cargo
 
-:::caution[Name collision risk]
-`cargo install ptk` may install **Rust Type Kit** instead of Rust Token Killer — two unrelated projects share the same crate name. Use the explicit Git URL to guarantee the correct package:
+:::caution[Not on crates.io]
+`cargo install ptk` fails: this fork is not published to crates.io, and no crate named `ptk` exists. (The unrelated **Rust Type Kit** is crate `rtk`, so there is no name to collide with.) Use the explicit Git URL:
 :::
 
 ```bash
-cargo install --git https://github.com/riaku/ptk --branch master ptk
+cargo install --git https://github.com/riaku/ptk --branch develop ptk
 ```
 
 ## Pre-built binaries (Windows, Linux, macOS)
@@ -62,8 +62,8 @@ Download from [GitHub releases](https://github.com/riaku/ptk/releases):
 The same `ptk` binary built without the BUSL-1.1 compression engine — the hook rewrite system and every command filter, under Apache-2.0 alone. Pick this if your policy does not allow a source-available licence in the build.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | PTK_EDITION=oss sh
-cargo install --git https://github.com/riaku/ptk --branch master ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk --branch develop ptk --no-default-features
 ```
 
 Release assets are named `ptk-oss-<target>`. This fork publishes no Debian or RPM package, and no Homebrew or winget package, for either edition — GitHub Releases is the only channel. The binary is still called `ptk`, so hooks and scripts are unchanged, but the two editions conflict and cannot be installed together.
@@ -96,7 +96,7 @@ winget install BurntSushi.ripgrep.MSVC
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) also works and behaves exactly like Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
 ptk init -g
 ```
 
@@ -114,13 +114,12 @@ ptk --version   # ptk x.y.z
 ptk gain        # savings dashboard
 ```
 
-If `ptk gain` fails but `ptk --version` succeeds, you installed Rust Type Kit by mistake. Uninstall it first:
+If `ptk gain` fails but `ptk --version` succeeds, the `ptk` on your PATH is a stale build — the Rust Type Kit installs `rtk`, so it cannot be the cause. Check for a shadowing copy, then reinstall:
 
 ```bash
+which -a ptk          # more than one path means an old install is first
 cargo uninstall ptk
 ```
-
-Then reinstall using one of the methods above.
 
 ## Project initialization
 

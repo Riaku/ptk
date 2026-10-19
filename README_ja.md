@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#ライセンス"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
@@ -68,7 +68,7 @@ PTK が報告するトークン数は `バイト数 / 4` で見積もられて�
 ### クイックインストール（Linux/macOS）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 ### Cargo
@@ -82,14 +82,14 @@ cargo install --git https://github.com/riaku/ptk ptk
 BUSL-1.1 圧縮エンジンを含めずにビルドした同じ `ptk` バイナリです。フック書き換えシステムとすべてのコマンドフィルタを Apache-2.0 のみで提供します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### 確認
 
 ```bash
-ptk --version   # "ptk 0.27.x" と表示されるはず
+ptk --version   # "ptk 0.49.x" と表示されるはず
 ptk gain        # トークン節約統計が表示されるはず
 ```
 
