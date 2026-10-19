@@ -1,0 +1,18 @@
+# ptk:terse — terse prose from the agent
+#
+# A directive, nothing else: it changes what the agent *writes*, never what it
+# reads, so it composes with any pipeline. Code, paths, commands, identifiers
+# and error text are never abbreviated, and warnings before destructive or
+# irreversible actions stay in full sentences.
+#
+# Benchmark: not published. `ptk gain` measures the input side, so it does
+#            not show what a directive does.
+
+schema_version = 1
+
+[pipeline]
+name    = "ptk:terse"
+extends = "ptk:default"
+
+[[directive]]
+use = "terse-output"

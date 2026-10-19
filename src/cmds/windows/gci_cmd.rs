@@ -4,6 +4,7 @@
 //! producing a dense, token-saving list of directory entries.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -146,7 +147,7 @@ pub fn is_gci_passthrough(args: &[String]) -> bool {
 /// Run `Get-ChildItem` via PowerShell and filter output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Get-ChildItem", args);
-    let cmd_label = format!("Get-ChildItem {}", args.join(" "));
+    let cmd_label = format!("Get-ChildItem {}", display_args(args));
 
     if is_gci_passthrough(args) {
         return runner::run(
@@ -162,7 +163,7 @@ pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
         cmd,
         "Get-ChildItem",
         cmd_label.trim(),
-        |raw| filter_gci_output(raw),
+        filter_gci_output,
         RunOptions::default(),
     )
 }

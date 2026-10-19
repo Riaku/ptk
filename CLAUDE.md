@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**PTK (Proxy Token Killer)** is a high-performance CLI proxy that minimizes LLM token consumption by filtering and compressing command outputs. It reduces bash output by 60-90% on common development operations through smart filtering, grouping, truncation, and deduplication. All percentages in this repo measure bash output, not your bill. PTK ships no tokenizer (`src/core/tracking.rs` estimates tokens as `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
+**ptk (Rust Token Killer)** is a high-performance CLI proxy that minimizes LLM token consumption by filtering and compressing command outputs.
 
-This is a fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk) (Rust Token Killer) with native Windows support: PowerShell cmdlets (`Get-ChildItem`, `Get-Content`, `Select-String`, ...), CMD built-ins (`dir`, `type`, `findstr`, `where`), console code page decoding, plus fixes for git argument parsing and modern JavaScript stack support (pnpm, vitest, Next.js, TypeScript, Playwright, Prisma).
+This repository is the **riaku/ptk fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk)**, synced to upstream `develop`. It keeps the upstream CLI intact and adds native Windows support: CMD built-ins, PowerShell cmdlets, and console code-page decoding. That code lives in `src/cmds/windows/` (one module per cmdlet) and `src/core/windows_shell.rs` (spawning, arg splitting, cmdlet detection); the CLI routes to it from `src/lib.rs`. The Windows entry points are reachable only from the `#[cfg(windows)]` interception in `run_fallback` plus their own subcommands, which is why both module trees carry `#![cfg_attr(not(windows), allow(dead_code))]`. It reduces bash output on common development operations (each filter must cut at least 20%; most cut far more) through smart filtering, grouping, truncation, and deduplication. All percentages in this repo measure bash output, not your bill. PTK ships no tokenizer (`src/core/tracking.rs` estimates tokens as `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
 
 ### Name Collision Warning
 
-**Two different "PTK" projects exist:**
-- This project: PTK (Proxy Token Killer) — fork of rtk-ai/rtk (Rust Token Killer)
-- reachingforthejack/PTK: Rust Type Kit (DIFFERENT - generates Rust types)
+**Two different "ptk" projects exist:**
+- This project: Rust Token Killer (riaku/ptk)
+- reachingforthejack/ptk: Rust Type Kit (DIFFERENT - generates Rust types)
 
 **Verify correct installation:**
 ```bash
-ptk --version  # Should show "ptk 0.48.0" (or newer)
+ptk --version  # Any current version; the check that matters is the next line
 ptk gain       # Should show token savings stats (NOT "command not found")
 ```
 
@@ -24,8 +24,8 @@ If `ptk gain` fails, you have the wrong package installed.
 
 ## Development Commands
 
-> **Note**: If PTK is installed, prefer `ptk <cmd>` over raw commands for token-optimized output.
-> All commands work with passthrough support even for subcommands PTK doesn't specifically handle.
+> **Note**: If ptk is installed, prefer `ptk <cmd>` over raw commands for token-optimized output.
+> All commands work with passthrough support even for subcommands ptk doesn't specifically handle.
 
 ### Build & Run
 ```bash
@@ -56,12 +56,19 @@ ptk cargo clippy --all-targets # preferred
 
 ### Pre-commit Gate
 ```bash
-cargo fmt --all && cargo clippy --all-targets && cargo test --all
+cargo fmt --all && cargo clippy --workspace --all-targets && cargo test --workspace
+cargo check --target x86_64-pc-windows-gnu --workspace   # Windows-only code is dead on Linux; this type-checks it
+cargo fmt --manifest-path proxy/Cargo.toml --all   # proxy/ is its own workspace — root fmt does not cover it
 ```
+
+### Package Building
+GitHub Releases is the only channel: `publish.yml` builds and attaches the
+binaries on a `v*` tag. There is no crates.io, Homebrew, winget or DEB/RPM
+packaging in this fork, so those jobs and their metadata are absent.
 
 ## Architecture
 
-PTK uses a **command proxy architecture**: `main.rs` routes CLI commands via a Clap `Commands` enum to specialized filter modules in `src/cmds/*/`, each of which executes the underlying command and compresses its output. Token savings are tracked in SQLite via `src/core/tracking.rs`.
+ptk uses a **command proxy architecture**: `main.rs` routes CLI commands via a Clap `Commands` enum to specialized filter modules in `src/cmds/*/`, each of which executes the underlying command and compresses its output. Token savings are tracked in SQLite via `src/core/tracking.rs`.
 
 For the full architecture, component details, and module development patterns, see:
 - [ARCHITECTURE.md](docs/contributing/ARCHITECTURE.md) — System design, module organization, filtering strategies, error handling
@@ -71,11 +78,11 @@ Module responsibilities are documented in each folder's `README.md` and each fil
 
 Supported ecosystems: git/gh/gt, cargo, go/golangci-lint, npm/pnpm/npx, ruff/pytest/pip/mypy, rspec/rubocop/rake, dotnet, playwright/vitest/jest, docker/kubectl/aws, gradlew/mvn, php/artisan/phpunit/phpstan/pest.
 
-### Proxy Mode
+### Bypass Mode
 
 **Purpose**: Execute commands without filtering but track usage for metrics.
 
-**Usage**: `ptk proxy <command> [args...]`
+**Usage**: `ptk bypass <command> [args...]`
 
 **Benefits**:
 - **Bypass PTK filtering**: Workaround bugs or get full unfiltered output
@@ -84,12 +91,43 @@ Supported ecosystems: git/gh/gt, cargo, go/golangci-lint, npm/pnpm/npx, ruff/pyt
 
 **Examples**:
 ```bash
-ptk proxy git log --oneline -20    # Full git log output (no truncation)
-ptk proxy npm install express      # Raw npm output (no filtering)
-ptk proxy curl https://api.example.com/data  # Any command works
+ptk bypass git log --oneline -20    # Full git log output (no truncation)
+ptk bypass npm install express      # Raw npm output (no filtering)
+ptk bypass curl https://api.example.com/data  # Any command works
 ```
 
-All proxy commands appear in `ptk gain --history` with 0% bash output reduction (input = output).
+All bypassed commands appear in `ptk gain --history` with 0% bash output reduction (input = output).
+
+> **Not the same thing as `ptk llm-proxy`.** `ptk bypass <cmd>` runs one local
+> command unfiltered (`ptk proxy` is a deprecated alias for it). `ptk llm-proxy` manages the `ptk-proxy` daemon in
+> [`proxy/`](proxy/README.md), which intercepts your agent's *provider API*
+> traffic and strips bytes no reader sees (ANSI, progress redraws, duplicate
+> lines). CCR compression is implemented but off by default.
+
+### LLM Proxy (`proxy/`)
+
+Its own workspace root, **not** a member of the `ptk` workspace and **not** a
+dependency of the `ptk` crate: the CLI locates and spawns the `ptk-proxy` binary
+and reads its SQLite usage DB for `ptk gain`. This
+keeps tokio/axum out of a CLI with a <10ms startup budget, and keeps the two
+licenses (ptk is Apache-2.0, `proxy/` is BUSL-1.1) in separate artifacts.
+
+```bash
+# `proxy/` is NOT a workspace member (keeps tokio/axum out of the CLI's
+# graph). Cargo still scans every manifest in the repo, so installs must
+# name the package: `cargo install --git <url> ptk`. Build and test the
+# daemon from its own manifest:
+cargo build --release                                   # ptk (+ engine)
+cargo build --release --manifest-path proxy/Cargo.toml   # the daemon
+cargo test --workspace                                  # ptk + engine
+cargo test  --manifest-path proxy/Cargo.toml            # the daemon
+cargo clippy --workspace --all-targets
+cargo clippy --manifest-path proxy/Cargo.toml --all-targets
+```
+
+`proxy/` pins `rusqlite 0.34` to match what `icm-store` links — `libsqlite3-sys`
+declares `links = "sqlite3"`, so two versions cannot coexist in one graph. That
+pin is why the root crate tracks the same version; do not bump one alone.
 
 ## Coding Rules
 
@@ -102,7 +140,7 @@ Rust patterns, error handling, and anti-patterns are defined in `.claude/rules/r
 - **No async**: single-threaded by design (startup <10ms)
 - **Exit code propagation**: `std::process::exit(code)` on child failure
 
-Testing strategy and performance targets are defined in `.claude/rules/cli-testing.md` (auto-loaded). Key targets: <10ms startup, <5MB memory, 60-90% reduction in bash output bytes.
+Testing strategy and performance targets are defined in `.claude/rules/cli-testing.md` (auto-loaded). Key targets: <10ms on the hook path, ≥20% reduction in bash output bytes per filter (the CONTRIBUTING.md floor). Binary size is tracked there against a measured breakdown rather than a fixed ceiling.
 
 For contribution workflow and design philosophy, see [CONTRIBUTING.md](CONTRIBUTING.md). For the step-by-step filter implementation checklist, see [src/cmds/README.md](src/cmds/README.md#adding-a-new-command-filter).
 
@@ -111,7 +149,9 @@ For contribution workflow and design philosophy, see [CONTRIBUTING.md](CONTRIBUT
 **CRITICAL**: After ANY Rust file edits, ALWAYS run the full quality check pipeline before committing:
 
 ```bash
-cargo fmt --all && cargo clippy --all-targets && cargo test --all
+cargo fmt --all && cargo clippy --workspace --all-targets && cargo test --workspace
+cargo check --target x86_64-pc-windows-gnu --workspace   # Windows-only code is dead on Linux; this type-checks it
+cargo fmt --manifest-path proxy/Cargo.toml --all   # proxy/ is its own workspace — root fmt does not cover it
 ```
 
 **Rules**:
@@ -131,7 +171,7 @@ hyperfine 'target/release/ptk git log -10' --warmup 3  # after (should be <10ms)
 **ALWAYS confirm working directory before starting any work**:
 
 ```bash
-pwd  # Verify you're in the PTK project root
+pwd  # Verify you're in the ptk project root
 git branch  # Verify correct branch (main, feature/*, etc.)
 ```
 

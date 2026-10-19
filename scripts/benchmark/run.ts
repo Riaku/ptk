@@ -12,7 +12,7 @@
  */
 
 import { $ } from "bun";
-import { vmEnsureReady, vmBuildRtk, vmExec, PTK_BIN } from "./lib/vm";
+import { vmEnsureReady, vmBuildPtk, vmExec, PTK_BIN } from "./lib/vm";
 import { testCmd, testSavings, testRewrite, skipTest, getCounts } from "./lib/test";
 import { saveReport } from "./lib/report";
 
@@ -57,7 +57,7 @@ await vmEnsureReady();
 heading(1, "Transfer & Build");
 const branch = (await $`git -C ${PROJECT_ROOT} branch --show-current`.text()).trim();
 const commit = (await $`git -C ${PROJECT_ROOT} log --oneline -1`.text()).trim();
-const buildInfo = await vmBuildRtk(PROJECT_ROOT);
+const buildInfo = await vmBuildPtk(PROJECT_ROOT);
 
 // Binary size check
 // ARM Linux release binaries are ~6.5MB (vs ~4MB x86 stripped).

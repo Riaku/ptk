@@ -1,6 +1,6 @@
-# Search Strategy — RTK Codebase Navigation
+# Search Strategy — PTK Codebase Navigation
 
-Efficient search patterns for RTK's Rust codebase.
+Efficient search patterns for PTK's Rust codebase.
 
 ## Priority Order
 
@@ -11,13 +11,13 @@ Efficient search patterns for RTK's Rust codebase.
 
 Never use Bash for search (`find`, `grep`, `rg`) — use dedicated tools.
 
-## RTK Module Map
+## PTK Module Map
 
 ```
 src/
 ├── main.rs                    ← Commands enum + routing (start here for any command)
 ├── core/                      ← Shared infrastructure
-│   ├── config.rs              ← ~/.config/rtk/config.toml
+│   ├── config.rs              ← ~/.config/ptk/config.toml
 │   ├── tracking.rs            ← SQLite token metrics
 │   ├── tee.rs                 ← Raw output recovery on failure
 │   ├── utils.rs               ← strip_ansi, truncate, execute_command
@@ -25,25 +25,25 @@ src/
 │   ├── toml_filter.rs         ← TOML DSL filter engine
 │   ├── display_helpers.rs     ← Terminal formatting helpers
 │   ├── telemetry.rs           ← Analytics ping
-│   ├── telemetry_cmd.rs       ← rtk telemetry command
+│   ├── telemetry_cmd.rs       ← ptk telemetry command
 │   ├── args_utils.rs          ← Shared CLI arg parsing helpers
 │   ├── constants.rs           ← Shared constants
 │   ├── guard.rs                ← Guard-rail checks
 │   ├── runner.rs              ← Command execution runner
 │   └── stream.rs              ← Streaming output handling
 ├── hooks/                     ← Hook system
-│   ├── init.rs                ← rtk init command
-│   ├── rewrite_cmd.rs         ← rtk rewrite command
+│   ├── init/                  ← ptk init command
+│   ├── rewrite_cmd.rs         ← ptk rewrite command
 │   ├── hook_cmd.rs            ← Gemini/Copilot hook processors
 │   ├── hook_check.rs          ← Hook status detection
-│   ├── hook_audit_cmd.rs      ← rtk hook audit command
-│   ├── verify_cmd.rs          ← rtk verify command
+│   ├── hook_audit_cmd.rs      ← ptk hook audit command
+│   ├── verify_cmd.rs          ← ptk verify command
 │   ├── trust.rs               ← Project trust/untrust
 │   ├── permissions.rs         ← Hook permission handling
 │   ├── constants.rs           ← Shared hook constants
 │   └── integrity.rs           ← SHA-256 hook verification
 ├── analytics/                 ← Token savings analytics
-│   ├── gain.rs                ← rtk gain command
+│   ├── gain.rs                ← ptk gain command
 │   ├── cc_economics.rs        ← Claude Code economics
 │   ├── ccusage.rs             ← ccusage data parsing
 │   └── session_cmd.rs         ← Session adoption reporting
@@ -62,7 +62,7 @@ src/
 ├── discover/                  ← Claude Code history analysis
 ├── learn/                     ← CLI correction detection
 ├── parser/                    ← Parser infrastructure
-└── filters/                   ← 63 TOML filter configs
+└── filters/                   ← 62 TOML filter configs
 ```
 
 ## Common Search Patterns
@@ -121,7 +121,7 @@ Grep pattern="count_tokens\|savings" type="rust" output_mode="content"
 Glob pattern="tests/fixtures/*.txt"
 ```
 
-## RTK-Specific Navigation Rules
+## PTK-Specific Navigation Rules
 
 ### Adding a new filter
 
@@ -141,19 +141,19 @@ Glob pattern="tests/fixtures/*.txt"
 
 1. `src/core/tracking.rs` → `track_command()` function
 2. `src/core/config.rs` → `tracking.database_path` field
-3. `RTK_DB_PATH` env var overrides config
+3. `PTK_DB_PATH` env var overrides config
 
 ### Configuration issues
 
-1. `src/core/config.rs` → `RtkConfig` struct
-2. `src/hooks/init.rs` → `rtk init` command
-3. Config file: `~/.config/rtk/config.toml`
-4. Filter files: `~/.config/rtk/filters/` (global) or `.rtk/filters/` (project)
+1. `src/core/config.rs` → `PtkConfig` struct
+2. `src/hooks/init/` → `ptk init` command
+3. Config file: `~/.config/ptk/config.toml`
+4. Filter files: `~/.config/ptk/filters/` (global) or `.ptk/filters/` (project)
 
 ## TOML Filter DSL Navigation
 
 ```
-Glob pattern=".rtk/filters/*.toml"         # Project-local filters
+Glob pattern=".ptk/filters/*.toml"         # Project-local filters
 Glob pattern="src/core/toml_filter.rs"     # TOML filter engine
 Grep pattern="FilterRule\|FilterConfig" type="rust"
 ```

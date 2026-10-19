@@ -1,6 +1,6 @@
 ---
 description: >
-  Batch review des PRs RTK par ordre de complexité croissante (XS → S → M → L).
+  Batch review des PRs PTK par ordre de complexité croissante (XS → S → M → L).
   Pour chaque PR : vérifie l'état (conflits, CLA, reviews), lit le diff complet,
   analyse le code en contexte, présente un résumé avec lien + taille + recommandation.
   Attend validation explicite avant tout merge. Poste des commentaires boldguy-adapt
@@ -18,13 +18,13 @@ allowed-tools:
 
 # /pr-review
 
-Batch review des PRs RTK — du plus simple au plus complexe, une par une, avec validation utilisateur avant chaque merge.
+Batch review des PRs PTK — du plus simple au plus complexe, une par une, avec validation utilisateur avant chaque merge.
 
 ---
 
 ## Quand utiliser
 
-- Après un `/rtk-triage` pour agir sur les résultats
+- Après un `/ptk-triage` pour agir sur les résultats
 - Régulièrement pour dégraisser le backlog
 - Avant une release pour vider la file quick wins
 
@@ -40,7 +40,7 @@ gh auth status
 date +%Y-%m-%d
 ```
 
-Si l'argument `triage` est passé, exécuter `/rtk-triage` d'abord et utiliser sa liste de quick wins comme séquence. Sinon, construire la liste soi-même.
+Si l'argument `triage` est passé, exécuter `/ptk-triage` d'abord et utiliser sa liste de quick wins comme séquence. Sinon, construire la liste soi-même.
 
 ---
 
@@ -78,11 +78,11 @@ gh pr list --state open --limit 200 \
 gh pr view <num> --json mergeable,mergeStateStatus,statusCheckRollup,reviewDecision
 
 # 2. Reviews existantes (CHANGES_REQUESTED ?)
-gh api repos/rtk-ai/rtk/pulls/<num>/reviews \
+gh api repos/riaku/ptk/pulls/<num>/reviews \
   --jq '.[] | {author: .user.login, state: .state, body: .body}'
 
 # 3. Commentaires inline (si CHANGES_REQUESTED)
-gh api repos/rtk-ai/rtk/pulls/<num>/comments \
+gh api repos/riaku/ptk/pulls/<num>/comments \
   --jq '.[] | {author: .user.login, body: .body, path: .path, line: .line}'
 ```
 
@@ -109,7 +109,7 @@ Si le diff touche une logique complexe (filter functions, regex, routing) → li
 Format de présentation **obligatoire** pour chaque PR :
 
 ```
-**PR #<num>** — https://github.com/rtk-ai/rtk/pull/<num>
+**PR #<num>** — https://github.com/riaku/ptk/pull/<num>
 
 **Author**: <login> | **Size**: <XS/S/M/L> (+<add> -<del>, <N> fichiers) | **CLA**: <ok/non signé> | **Mergeable**: <clean/conflit>
 

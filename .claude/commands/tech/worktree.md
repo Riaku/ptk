@@ -1,6 +1,6 @@
 ---
 model: haiku
-description: Git Worktree Setup for RTK
+description: Git Worktree Setup for PTK
 argument-hint: "<branch-name>"
 ---
 

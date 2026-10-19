@@ -1,11 +1,11 @@
 ---
-description: CLI security expert for RTK - command injection, shell escaping, hook security
+description: CLI security expert for PTK - command injection, shell escaping, hook security
 allowed-tools: Read Grep Glob Bash
 ---
 
 # Security Guardian
 
-Comprehensive security analysis for RTK CLI tool, focusing on **command injection**, **shell escaping**, **hook security**, and **malicious input handling**.
+Comprehensive security analysis for PTK CLI tool, focusing on **command injection**, **shell escaping**, **hook security**, and **malicious input handling**.
 
 ## When to Use
 
@@ -13,12 +13,12 @@ Comprehensive security analysis for RTK CLI tool, focusing on **command injectio
 - **Manual invocation**: Before release, after security-sensitive code changes
 - **Proactive**: When handling user input, executing shell commands, or parsing untrusted output
 
-## RTK Security Threat Model
+## PTK Security Threat Model
 
-RTK faces unique security challenges as a CLI proxy that:
+PTK faces unique security challenges as a CLI proxy that:
 1. **Executes shell commands** based on user input
 2. **Parses untrusted command output** (git, cargo, gh, etc.)
-3. **Integrates with Claude Code hooks** (ptk-rewrite.sh, rtk-suggest.sh)
+3. **Integrates with Claude Code hooks** (ptk-rewrite.sh, ptk-suggest.sh)
 4. **Routes commands transparently** (command injection vectors)
 
 ### Threat Categories
@@ -28,7 +28,7 @@ RTK faces unique security challenges as a CLI proxy that:
 | **Command Injection** | 🔴 CRITICAL | Remote code execution | Input validation, shell escaping |
 | **Shell Escaping** | 🔴 CRITICAL | Arbitrary command execution | Platform-specific escaping |
 | **Hook Injection** | 🟡 HIGH | Hook hijacking, command interception | Permission checks, signature validation |
-| **Malicious Output** | 🟡 MEDIUM | RTK crash, DoS | Robust parsing, error handling |
+| **Malicious Output** | 🟡 MEDIUM | PTK crash, DoS | Robust parsing, error handling |
 | **Path Traversal** | 🟢 LOW | File access outside filters/ | Path sanitization |
 
 ## Security Analysis Workflow
@@ -145,14 +145,14 @@ if [ -z "$CLAUDE_CODE_HOOK_BASH_TEMPLATE" ]; then
     exit 1
 fi
 
-# Validate RTK binary exists and is executable
-if ! command -v rtk >/dev/null 2>&1; then
-    echo "Error: rtk binary not found"
+# Validate PTK binary exists and is executable
+if ! command -v ptk >/dev/null 2>&1; then
+    echo "Error: ptk binary not found"
     exit 1
 fi
 
 # Execute with explicit path (no PATH hijacking)
-/usr/local/bin/rtk "$@"
+/usr/local/bin/ptk "$@"
 ```
 
 ### 3. Security Testing
@@ -209,7 +209,7 @@ mod security_tests {
 ```rust
 #[test]
 fn test_malicious_output_handling() {
-    // Malformed outputs that could crash RTK
+    // Malformed outputs that could crash PTK
     let malicious_outputs = vec![
         "", // Empty
         "\n\n\n", // Only newlines
@@ -278,21 +278,21 @@ if [ -z "$CLAUDE_CODE_HOOK_BASH_TEMPLATE" ]; then
     exit 1
 fi
 
-# 2. Verify RTK binary exists
-if ! command -v rtk >/dev/null 2>&1; then
+# 2. Verify PTK binary exists
+if ! command -v ptk >/dev/null 2>&1; then
     exit 1
 fi
 
 # 3. Use absolute path (prevent PATH hijacking)
-RTK_BIN=$(which rtk)
+PTK_BIN=$(which ptk)
 
-# 4. Validate RTK version (prevent downgrade attacks)
-if ! "$RTK_BIN" --version | grep -q "rtk 0.16"; then
-    echo "Warning: RTK version mismatch"
+# 4. Validate PTK version (prevent downgrade attacks)
+if ! "$PTK_BIN" --version | grep -q "ptk 0.16"; then
+    echo "Warning: PTK version mismatch"
 fi
 
 # 5. Execute with explicit path
-"$RTK_BIN" "$@"
+"$PTK_BIN" "$@"
 ```
 
 ### Malicious Output (🟡 Medium)
@@ -458,14 +458,14 @@ rg "eval|source" --type bash .claude/hooks/
 **Example advisory template**:
 
 ```markdown
-## Security Advisory: Command Injection in rtk v0.16.0
+## Security Advisory: Command Injection in ptk v0.16.0
 
 **Severity**: CRITICAL (CVSS 9.8)
 **Affected versions**: v0.15.0 - v0.16.0
 **Fixed in**: v0.16.1
 
 **Description**:
-RTK versions 0.15.0 through 0.16.0 are vulnerable to command injection
+PTK versions 0.15.0 through 0.16.0 are vulnerable to command injection
 via malicious git repository names. An attacker can execute arbitrary
 shell commands by creating a repository with special characters in the name.
 
@@ -473,7 +473,7 @@ shell commands by creating a repository with special characters in the name.
 Remote code execution with user privileges.
 
 **Mitigation**:
-Upgrade to v0.16.1 immediately. As a workaround, avoid using RTK in
+Upgrade to v0.16.1 immediately. As a workaround, avoid using PTK in
 directories with untrusted repository names.
 
 **Credits**:

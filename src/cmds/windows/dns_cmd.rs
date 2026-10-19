@@ -4,6 +4,7 @@
 //! a compact, token-saving DNS answer table: `NAME  TYPE  IP/TARGET  (TTL)`.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -133,13 +134,13 @@ pub fn filter_dns_output(raw: &str) -> String {
 /// Run `Resolve-DnsName` via PowerShell and filter output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Resolve-DnsName", args);
-    let cmd_label = format!("Resolve-DnsName {}", args.join(" "));
+    let cmd_label = format!("Resolve-DnsName {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Resolve-DnsName",
         cmd_label.trim(),
-        |raw| filter_dns_output(raw),
+        filter_dns_output,
         RunOptions::default(),
     )
 }

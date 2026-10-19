@@ -1,8 +1,8 @@
-# Rust Patterns — RTK Development Rules
+# Rust Patterns — PTK Development Rules
 
-RTK-specific Rust idioms and constraints. Applied to all code in this repository.
+PTK-specific Rust idioms and constraints. Applied to all code in this repository.
 
-## Non-Negotiable RTK Rules
+## Non-Negotiable PTK Rules
 
 These override general Rust conventions:
 
@@ -12,7 +12,7 @@ These override general Rust conventions:
 4. **Fallback pattern** — If filter fails, execute raw command unchanged. Never block the user.
 5. **Exit code propagation** — `std::process::exit(code)` if underlying command fails.
 6. **Parse args with `arg_tokenizer`** — every new command, flag, or arg-handling fix classifies
-   arguments through `tokenize`/`tokenize_with_options`, never a `starts_with('-')` or
+   arguments through `tokenize`/`tokenize_grammar`, never a `starts_with('-')` or
    `arg == "--flag"` scan. See [`src/core/README.md`](../../src/core/README.md#argument-tokenizer-arg_tokenizerrs)
    for the four rules that go with it.
 
@@ -53,7 +53,7 @@ pub fn run(args: MyArgs) -> Result<()> {
 
     let filtered = filter_output(&output.stdout)
         .unwrap_or_else(|e| {
-            eprintln!("rtk: filter warning: {}", e);
+            eprintln!("ptk: filter warning: {}", e);
             output.stdout.clone()  // Passthrough on failure
         });
 
@@ -90,7 +90,7 @@ fn is_error_line(line: &str) -> bool {
 }
 ```
 
-Note: `LazyLock<Regex>` with `.unwrap()` in its initializer is an **established RTK pattern** — it's acceptable because a bad regex literal is a programming error caught at first use.
+Note: `LazyLock<Regex>` with `.unwrap()` in its initializer is an **established PTK pattern** — it's acceptable because a bad regex literal is a programming error caught at first use.
 
 ## Ownership — Borrow Over Clone
 
@@ -201,12 +201,12 @@ fn process(input: &String) -> String {  // ❌ Unnecessary &String
 match result {
     Ok(output) => process(output),
     Err(e) => {
-        eprintln!("rtk: filter warning: {}", e);
+        eprintln!("ptk: filter warning: {}", e);
         fallback()
     }
 }
 
-// ❌ Silent swallow — catastrophic in RTK (user gets no output)
+// ❌ Silent swallow — catastrophic in PTK (user gets no output)
 match result {
     Ok(output) => process(output),
     Err(_) => {}
@@ -244,7 +244,7 @@ mod tests {
 }
 ```
 
-## Anti-Patterns (RTK-Specific)
+## Anti-Patterns (PTK-Specific)
 
 | Pattern | Problem | Fix |
 |---------|---------|-----|

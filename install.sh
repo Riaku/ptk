@@ -1,12 +1,21 @@
 #!/usr/bin/env sh
-# ptk installer - https://github.com/Riaku/ptk
-# Usage: curl -fsSL https://raw.githubusercontent.com/Riaku/ptk/develop/install.sh | sh
+# ptk installer - https://github.com/riaku/ptk
+# Usage: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
 
 set -e
 
-REPO="Riaku/ptk"
+REPO="riaku/ptk"
 BINARY_NAME="ptk"
-INSTALL_DIR="${RTK_INSTALL_DIR:-$HOME/.local/bin}"
+# PTK_EDITION=oss installs the Apache-2.0 edition: the same `ptk` binary built
+# without the BUSL-1.1 engine. Only the asset name changes -- the installed
+# binary is always `ptk`, so hook commands already in an agent's settings keep
+# working across editions.
+if [ "${PTK_EDITION:-}" = "oss" ]; then
+    ASSET_PREFIX="ptk-oss"
+else
+    ASSET_PREFIX="ptk"
+fi
+INSTALL_DIR="${PTK_INSTALL_DIR:-$HOME/.local/bin}"
 
 # Colors
 RED='\033[0;31m'
@@ -64,7 +73,7 @@ get_latest_version() {
     fi
 
     if [ -z "$VERSION" ]; then
-        error "Failed to get latest version (GitHub API may be rate-limited; set RTK_VERSION=vX.Y.Z to pin)"
+        error "Failed to get latest version (GitHub API may be rate-limited; set PTK_VERSION=vX.Y.Z to pin)"
     fi
 }
 
@@ -89,12 +98,12 @@ install() {
     info "Target: $TARGET"
     info "Version: $VERSION"
 
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${BINARY_NAME}-${TARGET}.tar.gz"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET_PREFIX}-${TARGET}.tar.gz"
     CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
     TEMP_DIR=$(mktemp -d)
     ARCHIVE="${TEMP_DIR}/${BINARY_NAME}.tar.gz"
     CHECKSUMS="${TEMP_DIR}/checksums.txt"
-    ASSET_NAME="${BINARY_NAME}-${TARGET}.tar.gz"
+    ASSET_NAME="${ASSET_PREFIX}-${TARGET}.tar.gz"
 
     info "Downloading from: $DOWNLOAD_URL"
     if ! curl -fsSL "$DOWNLOAD_URL" -o "$ARCHIVE"; then
@@ -103,11 +112,11 @@ install() {
 
     info "Downloading checksums..."
     if ! curl -fsSL "$CHECKSUMS_URL" -o "$CHECKSUMS"; then
-        error "Failed to download checksums.txt — refusing to install unverified binary (set RTK_SKIP_CHECKSUM=1 to bypass at your own risk)"
+        error "Failed to download checksums.txt — refusing to install unverified binary (set PTK_SKIP_CHECKSUM=1 to bypass at your own risk)"
     fi
 
-    if [ "${RTK_SKIP_CHECKSUM:-0}" = "1" ]; then
-        warn "RTK_SKIP_CHECKSUM=1 set — SKIPPING checksum verification (NOT RECOMMENDED)"
+    if [ "${PTK_SKIP_CHECKSUM:-0}" = "1" ]; then
+        warn "PTK_SKIP_CHECKSUM=1 set — SKIPPING checksum verification (NOT RECOMMENDED)"
     else
         info "Verifying SHA-256 checksum..."
         EXPECTED=$(grep "[[:space:]]${ASSET_NAME}\$" "$CHECKSUMS" | awk '{print $1}')
@@ -164,14 +173,14 @@ verify() {
 }
 
 main() {
-    info "Installing $BINARY_NAME..."
+    info "Installing $ASSET_PREFIX..."
 
     detect_os
     detect_arch
     get_target
-    if [ -n "$RTK_VERSION" ]; then
-        VERSION="$RTK_VERSION"
-        info "Using pinned version from RTK_VERSION: $VERSION"
+    if [ -n "$PTK_VERSION" ]; then
+        VERSION="$PTK_VERSION"
+        info "Using pinned version from PTK_VERSION: $VERSION"
     else
         get_latest_version
     fi

@@ -1,6 +1,6 @@
 # PTK Token Savings Audit Guide
 
-Complete guide to analyzing your PTK token savings with temporal breakdowns and data exports.
+Complete guide to analyzing your ptk token savings with temporal breakdowns and data exports.
 
 ## Overview
 
@@ -74,6 +74,8 @@ ptk gain --reset --yes    # skip prompt (CI/scripts)
 
 ## Output Examples
 
+All values below are illustrative.
+
 ### Daily Breakdown
 
 ```
@@ -81,17 +83,17 @@ ptk gain --reset --yes    # skip prompt (CI/scripts)
 ════════════════════════════════════════════════════════════════
 Date            Cmds      Input     Output      Saved   Save%
 ────────────────────────────────────────────────────────────────
-2026-01-28        89     380.9K      26.7K     355.8K   93.4%
-2026-01-29       102     894.5K      32.4K     863.7K   96.6%
-2026-01-30         5        749         55        694   92.7%
+2026-01-01       100     500.0K     100.0K     400.0K   80.0%
+2026-01-02       100     500.0K     100.0K     400.0K   80.0%
+2026-01-03       100     500.0K     100.0K     400.0K   80.0%
 ────────────────────────────────────────────────────────────────
-TOTAL            196       1.3M      59.2K       1.2M   95.6%
+TOTAL            300       1.5M     300.0K       1.2M   80.0%
 ```
 
 **Metrics explained:**
-- **Cmds**: Number of PTK commands executed
+- **Cmds**: Number of ptk commands executed
 - **Input**: Estimated tokens from raw command output
-- **Output**: Actual tokens after PTK filtering
+- **Output**: Estimated tokens after ptk filtering
 - **Saved**: Input - Output (tokens prevented from reaching LLM)
 - **Save%**: Percentage reduction (Saved / Input × 100)
 
@@ -102,9 +104,9 @@ TOTAL            196       1.3M      59.2K       1.2M   95.6%
 ════════════════════════════════════════════════════════════════════════
 Week                      Cmds      Input     Output      Saved   Save%
 ────────────────────────────────────────────────────────────────────────
-01-26 → 02-01              196       1.3M      59.2K       1.2M   95.6%
+12-28 → 01-03              300       1.5M     300.0K       1.2M   80.0%
 ────────────────────────────────────────────────────────────────────────
-TOTAL                      196       1.3M      59.2K       1.2M   95.6%
+TOTAL                      300       1.5M     300.0K       1.2M   80.0%
 ```
 
 **Week definition**: Sunday to Saturday (ISO week starting Sunday at 00:00)
@@ -116,9 +118,9 @@ TOTAL                      196       1.3M      59.2K       1.2M   95.6%
 ════════════════════════════════════════════════════════════════
 Month         Cmds      Input     Output      Saved   Save%
 ────────────────────────────────────────────────────────────────
-2026-01        196       1.3M      59.2K       1.2M   95.6%
+2026-01        300       1.5M     300.0K       1.2M   80.0%
 ────────────────────────────────────────────────────────────────
-TOTAL          196       1.3M      59.2K       1.2M   95.6%
+TOTAL          300       1.5M     300.0K       1.2M   80.0%
 ```
 
 **Month format**: YYYY-MM (calendar month)
@@ -128,20 +130,20 @@ TOTAL          196       1.3M      59.2K       1.2M   95.6%
 ```json
 {
   "summary": {
-    "total_commands": 196,
-    "total_input": 1276098,
-    "total_output": 59244,
-    "total_saved": 1220217,
-    "avg_savings_pct": 95.62
+    "total_commands": 300,
+    "total_input": 1500000,
+    "total_output": 300000,
+    "total_saved": 1200000,
+    "avg_savings_pct": 80.0
   },
   "daily": [
     {
-      "date": "2026-01-28",
-      "commands": 89,
-      "input_tokens": 380894,
-      "output_tokens": 26744,
-      "saved_tokens": 355779,
-      "savings_pct": 93.41
+      "date": "2026-01-01",
+      "commands": 100,
+      "input_tokens": 500000,
+      "output_tokens": 100000,
+      "saved_tokens": 400000,
+      "savings_pct": 80.0
     }
   ],
   "weekly": [...],
@@ -160,16 +162,16 @@ TOTAL          196       1.3M      59.2K       1.2M   95.6%
 ```csv
 # Daily Data
 date,commands,input_tokens,output_tokens,saved_tokens,savings_pct
-2026-01-28,89,380894,26744,355779,93.41
-2026-01-29,102,894455,32445,863744,96.57
+2026-01-01,100,500000,100000,400000,80.0
+2026-01-02,100,500000,100000,400000,80.0
 
 # Weekly Data
 week_start,week_end,commands,input_tokens,output_tokens,saved_tokens,savings_pct
-2026-01-26,2026-02-01,196,1276098,59244,1220217,95.62
+2025-12-28,2026-01-03,300,1500000,300000,1200000,80.0
 
 # Monthly Data
 month,commands,input_tokens,output_tokens,saved_tokens,savings_pct
-2026-01,196,1276098,59244,1220217,95.62
+2026-01,300,1500000,300000,1200000,80.0
 ```
 
 **Use cases:**
@@ -205,7 +207,7 @@ import pandas as pd
 import subprocess
 
 # Get CSV data
-result = subprocess.run(['PTK', 'gain', '--all', '--format', 'csv'],
+result = subprocess.run(['ptk', 'gain', '--all', '--format', 'csv'],
                        capture_output=True, text=True)
 
 # Parse daily data
@@ -221,7 +223,7 @@ daily_df.plot(x='date', y='savings_pct', kind='line')
 
 ### Excel Analysis
 
-1. Export CSV: `ptk gain --all --format csv > PTK-data.csv`
+1. Export CSV: `ptk gain --all --format csv > ptk-data.csv`
 2. Open in Excel
 3. Create pivot tables:
    - Daily trends (line chart)
@@ -232,14 +234,14 @@ daily_df.plot(x='date', y='savings_pct', kind='line')
 
 ```bash
 # Generate dashboard data daily via cron
-0 0 * * * ptk gain --all --format json > /var/www/dashboard/PTK-stats.json
+0 0 * * * ptk gain --all --format json > /var/www/dashboard/ptk-stats.json
 
 # Serve with static site
 cat > index.html <<'EOF'
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <canvas id="savings"></canvas>
 <script>
-fetch('PTK-stats.json')
+fetch('ptk-stats.json')
   .then(r => r.json())
   .then(data => {
     new Chart(document.getElementById('savings'), {
@@ -261,30 +263,18 @@ EOF
 
 ### Token Estimation
 
-`ptk gain` estimates tokens as `bytes / 4` (`src/core/tracking.rs:1284`). PTK ships no real tokenizer by design: embedding one would cost startup time and would require a tokenizer per model, or a per-session model lookup, which PTK does not implement. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
+`ptk gain` estimates tokens as `bytes / 4`; PTK ships no tokenizer. The same estimator is applied to raw and filtered output, so the percentage is reliable; the absolute token counts are approximate and will not match your provider's billing.
 
 ### Savings Calculation
 
 ```
 Input Tokens    = estimate_tokens(raw_command_output)
-Output Tokens   = estimate_tokens(RTK_filtered_output)
+Output Tokens   = estimate_tokens(ptk_filtered_output)
 Saved Tokens    = Input - Output
 Savings %       = (Saved / Input) × 100
 ```
 
 `Savings %` is a bash output byte ratio. Those bytes are one contributor to input tokens, and input tokens are only part of a bill that also counts output tokens.
-
-### Typical Savings by Command
-
-| Command | Bash output reduction | Mechanism |
-|---------|----------------------|-----------|
-| `ptk git status` | 77-93% | Compact stat format |
-| `PTK eslint` | 84% | Group by rule |
-| `ptk jest` | 94-99% | Show failures only |
-| `ptk vitest` | 94-99% | Show failures only |
-| `ptk find` | 75% | Tree format |
-| `ptk pnpm list` | 70-90% | Compact dependencies |
-| `ptk grep` | 70% | Truncate + group |
 
 ## Database Management
 
@@ -299,7 +289,7 @@ sqlite3 ~/.local/share/ptk/history.db ".schema"
 
 # Recent records
 sqlite3 ~/.local/share/ptk/history.db \
-  "SELECT timestamp, RTK_cmd, saved_tokens FROM commands
+  "SELECT timestamp, ptk_cmd, saved_tokens FROM commands
    ORDER BY timestamp DESC LIMIT 10"
 
 # Total database size
@@ -315,13 +305,13 @@ sqlite3 ~/.local/share/ptk/history.db \
 
 ```bash
 # Backup
-cp ~/.local/share/ptk/history.db ~/backups/PTK-history-$(date +%Y%m%d).db
+cp ~/.local/share/ptk/history.db ~/backups/ptk-history-$(date +%Y%m%d).db
 
 # Restore
-cp ~/backups/PTK-history-20260128.db ~/.local/share/ptk/history.db
+cp ~/backups/ptk-history-YYYYMMDD.db ~/.local/share/ptk/history.db
 
 # Export for migration
-sqlite3 ~/.local/share/ptk/history.db .dump > PTK-backup.sql
+sqlite3 ~/.local/share/ptk/history.db .dump > ptk-backup.sql
 ```
 
 ### Cleanup
@@ -333,7 +323,7 @@ sqlite3 ~/.local/share/ptk/history.db \
 
 # Reset all data
 rm ~/.local/share/ptk/history.db
-# Next PTK command will recreate database
+# Next ptk command will recreate database
 ```
 
 ## Integration Examples
@@ -341,7 +331,7 @@ rm ~/.local/share/ptk/history.db
 ### GitHub Actions CI/CD
 
 ```yaml
-# .github/workflows/PTK-stats.yml
+# .github/workflows/ptk-stats.yml
 name: PTK Stats Report
 on:
   schedule:
@@ -351,17 +341,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install PTK
-        run: cargo install --path .
+      - name: Install ptk
+        run: cargo install --git https://github.com/riaku/ptk ptk
       - name: Generate report
         run: |
           ptk gain --weekly --format json > stats/week-$(date +%Y-%W).json
       - name: Commit stats
         run: |
           git add stats/
-           git commit -m "Weekly PTK stats"
-           git push
- ```
+          git commit -m "Weekly ptk stats"
+          git push
+```
+
+### Slack Bot
+
+```python
+import subprocess
+import json
+import requests
+
+def send_ptk_stats():
+    result = subprocess.run(['ptk', 'gain', '--format', 'json'],
+                           capture_output=True, text=True)
+    data = json.loads(result.stdout)
+
+    message = f"""
+    📊 *PTK Token Savings Report*
+
+    Total Saved: {data['summary']['total_saved']:,} tokens
+    Savings Rate: {data['summary']['avg_savings_pct']:.1f}%
+    Commands: {data['summary']['total_commands']}
+    """
+
+    requests.post(SLACK_WEBHOOK_URL, json={'text': message})
+```
 
 ## Troubleshooting
 
@@ -382,11 +395,7 @@ ptk git status
 
 ```bash
 # Check for pipe errors
-ptk gain --format json 2>&1 | tee /tmp/PTK-debug.log | jq .
-
-# Use release build to avoid warnings
-cargo build --release
-./target/release/ptk gain --format json
+ptk gain --format json 2>&1 | tee /tmp/ptk-debug.log | jq .
 ```
 
 ### Incorrect statistics
@@ -404,7 +413,7 @@ import tiktoken
 enc = tiktoken.get_encoding('cl100k_base')
 text = open('output.txt').read()
 print(f'Actual tokens: {len(enc.encode(text))}')
-print(f'PTK estimate: {len(text) // 4}')
+print(f'ptk estimate: {len(text) // 4}')
 "
 ```
 
@@ -418,6 +427,6 @@ print(f'PTK estimate: {len(text) // 4}')
 
 ## See Also
 
-- [README.md](../README.md) - Full PTK documentation
-- [CLAUDE.md](../CLAUDE.md) - Claude Code integration guide
-- [ARCHITECTURE.md](../contributing/ARCHITECTURE.md) - Technical architecture
+- [README.md](../../README.md) - Full ptk documentation
+- [Token Savings Analytics](../guide/analytics/gain.md) - The full `ptk gain` surface
+- [How PTK Savings Work](../guide/resources/savings-explained.md) - What the numbers measure

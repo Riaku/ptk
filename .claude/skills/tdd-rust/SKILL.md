@@ -1,6 +1,6 @@
 ---
 name: tdd-rust
-description: TDD workflow for RTK filter development. Red-Green-Refactor with Rust idioms. Real fixtures, token savings assertions, snapshot tests with insta. Auto-triggers on new filter implementation.
+description: TDD workflow for PTK filter development. Red-Green-Refactor with Rust idioms. Real fixtures, token savings assertions, snapshot tests with insta. Auto-triggers on new filter implementation.
 triggers:
   - "new filter"
   - "implement filter"
@@ -14,12 +14,12 @@ allowed-tools:
   - Edit
   - Bash
 effort: medium
-tags: [tdd, testing, rust, filters, snapshots, token-savings, rtk]
+tags: [tdd, testing, rust, filters, snapshots, token-savings, ptk]
 ---
 
-# RTK TDD Workflow
+# PTK TDD Workflow
 
-Enforce Red-Green-Refactor for all RTK filter development.
+Enforce Red-Green-Refactor for all PTK filter development.
 
 ## The Loop
 
@@ -27,7 +27,7 @@ Enforce Red-Green-Refactor for all RTK filter development.
 1. RED   — Write failing test with real fixture
 2. GREEN — Implement minimum code to pass
 3. REFACTOR — Clean up, verify still passing
-4. SAVINGS — Verify ≥60% token reduction
+4. SAVINGS — Verify ≥20% token reduction
 5. SNAPSHOT — Lock output format with insta
 ```
 
@@ -68,7 +68,7 @@ mod tests {
         assert_snapshot!(output);
     }
 
-    // Test 2: Token savings ≥60%
+    // Test 2: Token savings ≥20%
     #[test]
     fn test_token_savings() {
         let input = include_str!("../tests/fixtures/mycmd_raw.txt");
@@ -79,8 +79,8 @@ mod tests {
         let savings = 100.0 * (1.0 - output_tokens as f64 / input_tokens as f64);
 
         assert!(
-            savings >= 60.0,
-            "Expected ≥60% token savings, got {:.1}% ({} → {} tokens)",
+            savings >= 20.0,
+            "Expected ≥20% token savings, got {:.1}% ({} → {} tokens)",
             savings, input_tokens, output_tokens
         );
     }
@@ -168,7 +168,7 @@ pub fn run(args: MycmdArgs) -> Result<()> {
 
     let filtered = filter_mycmd(&output.stdout)
         .unwrap_or_else(|e| {
-            eprintln!("rtk: filter warning: {}", e);
+            eprintln!("ptk: filter warning: {}", e);
             output.stdout.clone()
         });
 
@@ -208,7 +208,7 @@ fn test_filters_only_errors() {
 }
 ```
 
-## RTK-Specific Test Patterns
+## PTK-Specific Test Patterns
 
 ### Test ANSI stripping
 
@@ -240,14 +240,14 @@ fn test_filter_handles_unexpected_format() {
 ```rust
 #[test]
 fn test_savings_large_output() {
-    // 1000-line fixture → must still hit ≥60%
+    // 1000-line fixture → must still hit ≥20%
     let large_input: String = (0..1000)
         .map(|i| format!("info: processing item {}\n", i))
         .collect();
     let output = filter_mycmd(&large_input).expect("should succeed");
 
     let savings = 100.0 * (1.0 - count_tokens(&output) as f64 / count_tokens(&large_input) as f64);
-    assert!(savings >= 60.0, "Large output savings: {:.1}%", savings);
+    assert!(savings >= 20.0, "Large output savings: {:.1}%", savings);
 }
 ```
 
@@ -258,7 +258,7 @@ Checklist before moving on:
 - [ ] `tests/fixtures/<cmd>_raw.txt` — real command output
 - [ ] `filter_<cmd>()` function returns `Result<String>`
 - [ ] Snapshot test passes and accepted via `cargo insta review`
-- [ ] Token savings test: ≥60% verified
+- [ ] Token savings test: ≥20% verified
 - [ ] Empty input test: no panic
 - [ ] Malformed input test: no panic
 - [ ] `run()` function with fallback pattern

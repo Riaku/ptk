@@ -58,7 +58,7 @@ def write_fake_ptk(bin_dir):
     return fake_ptk
 
 
-class RtkRewritePluginTest(unittest.TestCase):
+class PtkRewritePluginTest(unittest.TestCase):
     def load_callback(self):
         module = load_plugin_module()
         module._ptk_available = None
@@ -291,7 +291,7 @@ class RtkRewritePluginTest(unittest.TestCase):
                 self.assertEqual({"command": "git status"}, args)
 
 
-class InstalledRtkRewritePluginTest(unittest.TestCase):
+class InstalledPtkRewritePluginTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("cargo"), "cargo is required for installed flow")
     def test_cargo_init_installs_importable_plugin_that_rewrites_with_fake_ptk(self):
         repo_root = Path(__file__).resolve().parents[3]

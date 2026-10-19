@@ -1,35 +1,35 @@
-# Copilot Instructions for rtk
+# Copilot Instructions for ptk
 
-**rtk (Rust Token Killer)** is a CLI proxy that filters and compresses command outputs before they reach an LLM context, cutting 60-90% of bash output. It wraps common tools (`git`, `cargo`, `grep`, `pnpm`, `go`, etc.) and outputs condensed summaries instead of raw output. Percentages measure bash output, not billed tokens; RTK ships no tokenizer (`src/core/tracking.rs` estimates `bytes / 4`).
+**ptk (Rust Token Killer)** is a CLI proxy that filters and compresses command outputs before they reach an LLM context. It wraps common tools (`git`, `cargo`, `grep`, `pnpm`, `go`, etc.) and outputs condensed summaries instead of raw output. Percentages measure bash output, not billed tokens; PTK ships no tokenizer (`src/core/tracking.rs` estimates `bytes / 4`).
 
-## Using rtk in this session
+## Using ptk in this session
 
-**Always prefix commands with `rtk` when running shell commands** — this reduces token consumption for every operation you perform.
+**Always prefix commands with `ptk` when running shell commands** — this reduces token consumption for every operation you perform.
 
 ```bash
 # Instead of:              Use:
-git status                 rtk git status
-git log -10                rtk git log -10
-cargo test                 rtk cargo test
-cargo clippy --all-targets rtk cargo clippy --all-targets
-grep -r "pattern" src/     rtk grep -r "pattern" src/
+git status                 ptk git status
+git log -10                ptk git log -10
+cargo test                 ptk cargo test
+cargo clippy --all-targets ptk cargo clippy --all-targets
+grep -r "pattern" src/     ptk grep -r "pattern" src/
 ```
 
-**rtk meta-commands** (always use these directly, no prefix needed):
+**ptk meta-commands** (always use these directly, no prefix needed):
 ```bash
-rtk gain              # Show token savings analytics
-rtk gain --history    # Full command history with per-command savings
-rtk discover          # Scan session history for missed rtk opportunities
-rtk proxy <cmd>       # Run a command raw (no filtering) but still track it
+ptk gain              # Show token savings analytics
+ptk gain --history    # Full command history with per-command savings
+ptk discover          # Scan session history for missed ptk opportunities
+ptk bypass <cmd>       # Run a command raw (no filtering) but still track it
 ```
 
-**Verify rtk is installed before starting:**
+**Verify ptk is installed before starting:**
 ```bash
-rtk --version   # Should print: rtk X.Y.Z
-rtk gain        # Should show a dashboard (not "command not found")
+ptk --version   # Should print: ptk X.Y.Z
+ptk gain        # Should show a dashboard (not "command not found")
 ```
 
-> Name collision: `rtk gain` failing means you have `reachingforthejack/rtk` (Rust Type Kit) installed instead. Run `which rtk` to check.
+> Name collision: `ptk gain` failing means you have `reachingforthejack/ptk` (Rust Type Kit) installed instead. Run `which ptk` to check.
 
 ## Build, Test & Lint
 
@@ -50,7 +50,7 @@ PRs target the **`develop`** branch, not `main`. All commits require a DCO sign-
 
 ## Architecture
 
-rtk routes CLI commands via a Clap `Commands` enum in `main.rs` to specialized filter modules in `src/cmds/*/`, each executing the underlying command and compressing output. Token savings are tracked in SQLite via `src/core/tracking.rs`.
+ptk routes CLI commands via a Clap `Commands` enum in `main.rs` to specialized filter modules in `src/cmds/*/`, each executing the underlying command and compressing output. Token savings are tracked in SQLite via `src/core/tracking.rs`.
 
 For full details see [ARCHITECTURE.md](../docs/contributing/ARCHITECTURE.md) and [docs/contributing/TECHNICAL.md](../docs/contributing/TECHNICAL.md). Module responsibilities are documented in each folder's `README.md` and each file's `//!` doc header.
 

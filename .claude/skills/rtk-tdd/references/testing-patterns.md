@@ -1,4 +1,4 @@
-# RTK Testing Patterns Reference
+# PTK Testing Patterns Reference
 
 ## Untested Modules Backlog
 
@@ -28,12 +28,12 @@ Prioritized by testability (pure functions first, I/O-heavy last).
 | `find_cmd.rs` | Directory grouping logic | Filesystem-dependent |
 | `wget_cmd.rs` | `compact_url`, `format_size`, `truncate_line`, `extract_filename_from_output` | Some pure helpers worth testing |
 | `gain.rs` | Display formatting | Depends on tracking DB |
-| `init.rs` | CLAUDE.md generation | File I/O |
+| `hooks/init/` | CLAUDE.md generation | File I/O |
 | `main.rs` | CLI routing | Covered by smoke tests |
 
-## RTK Test Patterns
+## PTK Test Patterns
 
-### Pattern 1: Filter Function (most common in RTK)
+### Pattern 1: Filter Function (most common in PTK)
 
 ```rust
 #[test]

@@ -4,6 +4,7 @@
 //! process lists into a dense, token-saving representation.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -102,7 +103,7 @@ pub fn is_process_passthrough(args: &[String]) -> bool {
 /// Run `Get-Process` via PowerShell and filter output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Get-Process", args);
-    let cmd_label = format!("Get-Process {}", args.join(" "));
+    let cmd_label = format!("Get-Process {}", display_args(args));
 
     if is_process_passthrough(args) {
         return runner::run(
@@ -118,7 +119,7 @@ pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
         cmd,
         "Get-Process",
         cmd_label.trim(),
-        |raw| filter_process_output(raw),
+        filter_process_output,
         RunOptions::default(),
     )
 }

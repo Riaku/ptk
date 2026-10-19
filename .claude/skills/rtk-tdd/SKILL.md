@@ -1,5 +1,5 @@
 ---
-name: rtk-tdd
+name: ptk-tdd
 description: >
   Enforces TDD (Red-Green-Refactor) for Rust development. Auto-triggers on
   implementation, testing, refactoring, and bug fixing tasks. Provides
@@ -11,7 +11,7 @@ allowed-tools:
   - Edit
   - Bash
 effort: medium
-tags: [tdd, testing, rust, red-green-refactor, rtk]
+tags: [tdd, testing, rust, red-green-refactor, ptk]
 ---
 
 # Rust TDD Workflow

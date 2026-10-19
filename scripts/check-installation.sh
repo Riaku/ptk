@@ -158,5 +158,5 @@ if [ "$GLOBAL_INIT" = false ] && [ "$LOCAL_INIT" = false ]; then
 fi
 
 echo ""
-echo "Need help? See docs/TROUBLESHOOTING.md"
+echo "Need help? See docs/guide/resources/troubleshooting.md"
 echo "═══════════════════════════════════════════════════════════"

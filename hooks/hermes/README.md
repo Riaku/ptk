@@ -8,15 +8,7 @@ Rewrites Hermes `terminal` tool commands to PTK equivalents before execution, so
 ptk init --agent hermes
 ```
 
-The installer writes the plugin to `~/.hermes/plugins/ptk-rewrite/` and enables it through `plugins.enabled` in the Hermes config. The repository copy lives in `hooks/hermes/`; don't use that repo path as the runtime install path.
-
-## Development
-
-Run the Hermes plugin tests from the repository root:
-
-```bash
-python3 -m unittest discover -s hooks/hermes
-```
+The installer writes the plugin to `~/.hermes/plugins/ptk-rewrite/` and enables it through `plugins.enabled` in the Hermes config.
 
 ## How it works
 
@@ -28,9 +20,9 @@ All rewrite rules stay in Rust inside `ptk rewrite`. When PTK adds or changes co
 
 The plugin does not block command execution. If anything goes wrong, Hermes runs the original command unchanged.
 
-If PTK is not available in PATH when Hermes loads the plugin, the plugin prints a warning and skips hook registration.
+If ptk is not available in PATH when Hermes loads the plugin, the plugin prints a warning and skips hook registration.
 
-- `PTK` is missing from `PATH`
+- `ptk` is missing from `PATH`
 - `ptk rewrite` exits with an error
 - Hermes sends a non-terminal tool call
 - The tool payload has no string `command`
@@ -39,5 +31,5 @@ If PTK is not available in PATH when Hermes loads the plugin, the plugin prints 
 ## Limitations
 
 - Only Hermes `terminal` tool calls are rewritten.
-- Commands skipped by `ptk rewrite` stay unchanged, including commands already prefixed with `PTK`, compound shell commands, heredocs, and commands without an PTK filter.
+- Commands skipped by `ptk rewrite` stay unchanged, including commands already prefixed with `ptk`, compound shell commands, heredocs, and commands without an PTK filter.
 - Shell hooks are not used for Hermes command rewriting. The integration depends on Hermes loading Python plugins and passing a mutable terminal tool payload.

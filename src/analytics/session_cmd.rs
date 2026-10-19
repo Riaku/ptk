@@ -1,7 +1,7 @@
 //! Compares PTK-routed vs raw commands in a coding session.
 
 use crate::core::utils::format_tokens;
-use crate::discover::is_already_rtk;
+use crate::discover::is_already_ptk;
 use crate::discover::provider::{ClaudeProvider, ExtractedCommand, SessionProvider};
 use crate::discover::registry::{Classification, classify_command, split_command_chain};
 use anyhow::{Context, Result};
@@ -28,8 +28,8 @@ impl SessionSummary {
 
 /// Count PTK-covered commands from extracted commands.
 /// A command is "covered" if it either:
-/// - is an explicit ptk invocation, excluding `ptk proxy` (see `is_already_rtk` —
-///   proxy deliberately runs the raw command unfiltered, so it must not count as
+/// - is an explicit ptk invocation, excluding `ptk bypass` (see `is_already_ptk` —
+///   bypass deliberately runs the raw command unfiltered, so it must not count as
 ///   adopted usage), or
 /// - would be rewritten by the hook (classify_command returns Supported)
 ///
@@ -42,7 +42,7 @@ fn count_ptk_commands(cmds: &[ExtractedCommand]) -> (usize, usize, usize) {
         let parts = split_command_chain(&c.command);
         for part in &parts {
             total += 1;
-            if is_already_rtk(part)
+            if is_already_ptk(part)
                 || matches!(classify_command(part), Classification::Supported { .. })
             {
                 ptk += 1;
@@ -158,13 +158,13 @@ pub fn run(_verbose: u8) -> Result<()> {
     println!("{}", "-".repeat(70));
 
     let mut total_cmds = 0;
-    let mut total_rtk = 0;
+    let mut total_ptk = 0;
 
     for s in &summaries {
         let pct = s.adoption_pct();
         let bar = progress_bar(pct, 5);
         total_cmds += s.total_cmds;
-        total_rtk += s.ptk_cmds;
+        total_ptk += s.ptk_cmds;
 
         println!(
             "{:<12} {:<12} {:>5} {:>5} {:>8.0}% {:<7} {:>8}",
@@ -181,7 +181,7 @@ pub fn run(_verbose: u8) -> Result<()> {
     println!("{}", "-".repeat(70));
 
     let avg_adoption = if total_cmds > 0 {
-        total_rtk as f64 / total_cmds as f64 * 100.0
+        total_ptk as f64 / total_cmds as f64 * 100.0
     } else {
         0.0
     };
@@ -222,7 +222,7 @@ mod tests {
     // --- count_ptk_commands: core counting logic ---
 
     #[test]
-    fn test_count_all_rtk() {
+    fn test_count_all_ptk() {
         let cmds = vec![
             make_cmd("ptk git status", Some(200)),
             make_cmd("ptk cargo test", Some(5000)),
@@ -277,17 +277,17 @@ mod tests {
     }
 
     #[test]
-    fn test_count_ptk_proxy_not_counted_as_adopted() {
-        // `ptk proxy <cmd>` deliberately runs the raw command unfiltered — it must
+    fn test_count_ptk_bypass_not_counted_as_adopted() {
+        // `ptk bypass <cmd>` deliberately runs the raw command unfiltered — it must
         // not count as adopted ptk usage, or the session report would flatter
-        // itself via its own escape hatch (mirrors discover::is_already_rtk).
+        // itself via its own escape hatch (mirrors discover::is_already_ptk).
         let cmds = vec![
-            make_cmd("ptk proxy git log -20", Some(2000)),
+            make_cmd("ptk bypass git log -20", Some(2000)),
             make_cmd("ptk git status", Some(200)),
         ];
         let (total, ptk, _) = count_ptk_commands(&cmds);
         assert_eq!(total, 2);
-        assert_eq!(ptk, 1, "only the explicit non-proxy ptk invocation counts");
+        assert_eq!(ptk, 1, "only the explicit non-bypass ptk invocation counts");
     }
 
     #[test]

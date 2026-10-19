@@ -23,7 +23,7 @@ Use when: issue is valid but missing information to act on it (reproduction step
 
 To move forward, we need the following:
 
-- {Specific missing info 1 — e.g., "RTK version (`rtk --version` output)"}
+- {Specific missing info 1 — e.g., "PTK version (`ptk --version` output)"}
 - {Specific missing info 2 — e.g., "Full command used and raw output"}
 - {Specific missing info 3 — e.g., "OS and shell (macOS/Linux, zsh/bash)"}
 
@@ -32,7 +32,7 @@ To move forward, we need the following:
 {What happens once the info is provided — e.g., "Once confirmed, we'll prioritize this for the next release."}
 
 ---
-*Triaged via [rtk](https://github.com/rtk-ai/rtk) `/issue-triage`*
+*Triaged via [ptk](https://github.com/riaku/ptk) `/issue-triage`*
 ```
 
 ---
@@ -53,7 +53,7 @@ This issue covers the same problem as #{original_number}: **{original_title}**.
 If your situation differs in an important way (different command, different OS, different error message), please reopen and add that context. Otherwise, follow the original issue for updates.
 
 ---
-*Triaged via [rtk](https://github.com/rtk-ai/rtk) `/issue-triage`*
+*Triaged via [ptk](https://github.com/riaku/ptk) `/issue-triage`*
 ```
 
 ---
@@ -74,32 +74,32 @@ If this is still relevant:
 Thanks for taking the time to report it.
 
 ---
-*Triaged via [rtk](https://github.com/rtk-ai/rtk) `/issue-triage`*
+*Triaged via [ptk](https://github.com/riaku/ptk) `/issue-triage`*
 ```
 
 ---
 
 ## Template 4 — Close (Out of Scope)
 
-Use when: issue requests something that doesn't align with RTK's design goals (e.g., adding async runtime, platform-specific features outside scope, changing core behavior).
+Use when: issue requests something that doesn't align with PTK's design goals (e.g., adding async runtime, platform-specific features outside scope, changing core behavior).
 
 ```markdown
 ## Closing: Out of Scope
 
-After review, this request falls outside RTK's current design goals.
+After review, this request falls outside PTK's current design goals.
 
 ### Rationale
 
-{1-2 sentences explaining why — be specific. Reference design constraints if relevant, e.g., "RTK is intentionally single-threaded with zero async dependencies to maintain <10ms startup time."}
+{1-2 sentences explaining why — be specific. Reference design constraints if relevant, e.g., "PTK is intentionally single-threaded with zero async dependencies to maintain <10ms startup time."}
 
 ### Alternatives
 
-{If applicable: what the user can do instead. E.g., "For this use case, `rtk proxy <cmd>` gives you raw output while still tracking usage metrics."}
+{If applicable: what the user can do instead. E.g., "For this use case, `ptk bypass <cmd>` gives you raw output while still tracking usage metrics."}
 
 If the use case evolves or the scope changes in a future version, feel free to reopen with updated context.
 
 ---
-*Triaged via [rtk](https://github.com/rtk-ai/rtk) `/issue-triage`*
+*Triaged via [ptk](https://github.com/riaku/ptk) `/issue-triage`*
 ```
 
 ---
@@ -127,8 +127,8 @@ If the use case evolves or the scope changes in a future version, feel free to r
 - L : 3-5 days
 - XL : >1 week
 
-**RTK-specific context to include when relevant** :
-- Mention `rtk --version` as the first diagnostic step for bug reports
+**PTK-specific context to include when relevant** :
+- Mention `ptk --version` as the first diagnostic step for bug reports
 - Reference the relevant module (`src/git.rs`, `src/vitest_cmd.rs`, etc.) when known
 - Link to the filter development checklist in CLAUDE.md for feature requests that involve new commands
 - Note performance constraints (<10ms startup) when rejecting async/heavy dependency requests

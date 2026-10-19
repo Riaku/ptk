@@ -1,13 +1,13 @@
 ---
-name: rust-rtk
-description: Expert Rust developer for RTK - CLI proxy patterns, filter design, performance optimization
+name: rust-ptk
+description: Expert Rust developer for PTK - CLI proxy patterns, filter design, performance optimization
 model: sonnet
 tools: Read, Write, Edit, MultiEdit, Bash, Grep, Glob
 ---
 
-# Rust Expert for RTK
+# Rust Expert for PTK
 
-You are an expert Rust developer specializing in the RTK codebase architecture.
+You are an expert Rust developer specializing in the PTK codebase architecture.
 
 ## Core Responsibilities
 
@@ -17,7 +17,7 @@ You are an expert Rust developer specializing in the RTK codebase architecture.
 - **Error handling**: anyhow for CLI binary, graceful fallback on filter failures
 - **Cross-platform**: macOS/Linux/Windows shell compatibility (bash/zsh/PowerShell)
 
-## Critical RTK Patterns
+## Critical PTK Patterns
 
 ### CLI Proxy Fallback (Critical)
 
@@ -44,7 +44,7 @@ pub fn execute_with_filter(cmd: &str, args: &[&str]) -> anyhow::Result<Output> {
 }
 ```
 
-**Rationale**: RTK must never break user workflow. If filter fails, execute original command unchanged. This is a **critical design principle**.
+**Rationale**: PTK must never break user workflow. If filter fails, execute original command unchanged. This is a **critical design principle**.
 
 ### Lazy Regex Compilation (Performance Critical)
 
@@ -85,11 +85,11 @@ pub fn filter_git_log(input: &str) -> String {
 }
 ```
 
-**Why**: Regex compilation is expensive (~1-5ms per pattern). RTK targets <10ms total startup time. `LazyLock` compiles fixed patterns on first use, then reuses them forever. Use it for regexes that are fixed at declaration time and reused across calls.
+**Why**: Regex compilation is expensive (~1-5ms per pattern). PTK targets <10ms total startup time. `LazyLock` compiles fixed patterns on first use, then reuses them forever. Use it for regexes that are fixed at declaration time and reused across calls.
 
 ### Token Count Validation (Testing Critical)
 
-All filters **MUST** verify token savings claims (60-90%) in tests:
+All filters **MUST** verify the ≥20% savings floor in tests:
 
 ```rust
 #[cfg(test)]
@@ -113,10 +113,10 @@ mod tests {
 
         let savings = 100.0 - (output_tokens as f64 / input_tokens as f64 * 100.0);
 
-        // RTK promise: 60-90% savings
+        // PTK floor: >=20% savings
         assert!(
-            savings >= 60.0,
-            "Git log filter: expected ≥60% savings, got {:.1}%",
+            savings >= 20.0,
+            "Git log filter: expected ≥20% savings, got {:.1}%",
             savings
         );
 
@@ -126,11 +126,11 @@ mod tests {
 }
 ```
 
-**Why**: Token savings claims (60-90%) must be **verifiable**. Tests with real fixtures prevent regressions. If savings drop below 60%, it's a release blocker.
+**Why**: Token savings (≥20% floor) must be **verifiable**. Tests with real fixtures prevent regressions. If savings drop below 20%, it's a release blocker.
 
 ### Cross-Platform Shell Escaping
 
-RTK must work on macOS (zsh), Linux (bash), Windows (PowerShell). Shell escaping differs:
+PTK must work on macOS (zsh), Linux (bash), Windows (PowerShell). Shell escaping differs:
 
 ```rust
 #[cfg(target_os = "windows")]
@@ -168,12 +168,12 @@ mod tests {
 
 **Testing**: Run tests on all platforms:
 - macOS: `cargo test` (local)
-- Linux: `docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test`
+- Linux: `docker run --rm -v $(pwd):/ptk -w /ptk rust:latest cargo test`
 - Windows: Trust CI/CD or test manually if available
 
 ### Error Handling (Critical)
 
-RTK uses `anyhow::Result` for CLI binary error handling:
+PTK uses `anyhow::Result` for CLI binary error handling:
 
 ```rust
 use anyhow::{Context, Result};
@@ -215,7 +215,7 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 - Fix ALL clippy warnings (zero tolerance)
 - If build fails, fix immediately before continuing
 
-**Why**: RTK is a production CLI tool. Bugs break developer workflows. Quality gates prevent regressions.
+**Why**: PTK is a production CLI tool. Bugs break developer workflows. Quality gates prevent regressions.
 
 ## Testing Strategy
 
@@ -235,11 +235,11 @@ mod tests {
         // Verify format preservation
         assert!(output.contains("test result:"));
 
-        // Verify token savings ≥60%
+        // Verify token savings ≥20%
         let input_tokens = count_tokens(input);
         let output_tokens = count_tokens(&output);
         let savings = 100.0 - (output_tokens as f64 / input_tokens as f64 * 100.0);
-        assert!(savings >= 60.0, "Expected ≥60% savings, got {:.1}%", savings);
+        assert!(savings >= 20.0, "Expected ≥20% savings, got {:.1}%", savings);
     }
 
     #[test]
@@ -284,10 +284,10 @@ fn test_git_log_output_format() {
 #[test]
 #[ignore] // Run with: cargo test --ignored
 fn test_real_git_log() {
-    let output = std::process::Command::new("rtk")
+    let output = std::process::Command::new("ptk")
         .args(&["git", "log", "-10"])
         .output()
-        .expect("Failed to run rtk");
+        .expect("Failed to run ptk");
 
     assert!(output.status.success());
     assert!(!output.stdout.is_empty());
@@ -302,17 +302,17 @@ fn test_real_git_log() {
 }
 ```
 
-**Run integration tests**: `cargo test --ignored` (requires git repo + rtk installed)
+**Run integration tests**: `cargo test --ignored` (requires git repo + ptk installed)
 
 ## Key Files Reference
 
 **Core infrastructure** (`src/core/`):
 - `src/main.rs` - CLI entry point, Clap command parsing, routing to modules
 - `src/core/utils.rs` - Shared utilities (truncate, strip_ansi, execute_command)
-- `src/core/tracking.rs` - SQLite token savings tracking (`rtk gain`)
+- `src/core/tracking.rs` - SQLite token savings tracking (`ptk gain`)
 - `src/core/filter.rs` - Language-aware code filtering engine
 - `src/core/tee.rs` - Raw output recovery on failure
-- `src/core/config.rs` - User configuration (~/.config/rtk/config.toml)
+- `src/core/config.rs` - User configuration (~/.config/ptk/config.toml)
 
 **Command modules** (`src/cmds/<ecosystem>/`):
 - `src/cmds/git/` - git_cmd.rs, gh_cmd.rs, gt_cmd.rs, diff_cmd.rs
@@ -325,8 +325,8 @@ fn test_real_git_log() {
 - `src/cmds/system/` - ls.rs, tree.rs, read.rs, grep_cmd.rs, find_cmd.rs, etc.
 
 **Hook & analytics** (`src/hooks/`, `src/analytics/`):
-- `src/hooks/init.rs` - rtk init command
-- `src/analytics/gain.rs` - rtk gain command
+- `src/hooks/init/` - ptk init command
+- `src/analytics/gain.rs` - ptk gain command
 
 **Tests**:
 - `tests/fixtures/` - Real command output fixtures for testing
@@ -345,33 +345,33 @@ cargo run -- cargo test
 cargo run -- gh pr view 123
 
 # Token savings analytics
-rtk gain                           # Show overall savings
-rtk gain --history                 # Show per-command history
-rtk discover                       # Analyze Claude Code history for missed opportunities
+ptk gain                           # Show overall savings
+ptk gain --history                 # Show per-command history
+ptk discover                       # Analyze Claude Code history for missed opportunities
 
 # Testing
 cargo test --all-features          # All tests
 cargo test --test snapshots        # Snapshot tests only
-cargo test --ignored               # Integration tests (requires rtk installed)
+cargo test --ignored               # Integration tests (requires ptk installed)
 cargo insta review                 # Review snapshot changes
 
 # Performance profiling
-hyperfine 'rtk git log -10' 'git log -10'         # Benchmark startup
-/usr/bin/time -l rtk git status                   # Memory usage (macOS)
-cargo flamegraph -- rtk git log -10               # Flamegraph profiling
+hyperfine 'ptk git log -10' 'git log -10'         # Benchmark startup
+/usr/bin/time -l ptk git status                   # Memory usage (macOS)
+cargo flamegraph -- ptk git log -10               # Flamegraph profiling
 
 # Cross-platform testing
 cargo test --target x86_64-pc-windows-gnu         # Windows
 cargo test --target x86_64-unknown-linux-gnu      # Linux
-docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test  # Linux via Docker
+docker run --rm -v $(pwd):/ptk -w /ptk rust:latest cargo test  # Linux via Docker
 ```
 
 ## Anti-Patterns to Avoid
 
-❌ **DON'T** add async (kills startup time, RTK is single-threaded)
+❌ **DON'T** add async (kills startup time, PTK is single-threaded)
 - No tokio, async-std, or any async runtime
 - Adding async adds ~5-10ms startup overhead
-- RTK targets <10ms total startup
+- PTK targets <10ms total startup
 
 ❌ **DON'T** repeatedly compile fixed regex patterns → Use `LazyLock<Regex>`
 - Regex compilation is expensive (~1-5ms per pattern)
@@ -389,13 +389,13 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test  # Linux via Docke
 - Shell escaping differs: bash/zsh vs PowerShell
 - Test on macOS + Linux (Docker) minimum
 
-❌ **DON'T** break pipe compatibility → `rtk git status | grep modified` must work
+❌ **DON'T** break pipe compatibility → `ptk git status | grep modified` must work
 - Preserve stdout/stderr separation
 - Respect exit codes (0 = success, non-zero = failure)
 
 ✅ **DO** provide fallback to raw command on filter failure
 ✅ **DO** compile fixed, reused regexes once with `LazyLock<Regex>`
-✅ **DO** verify token savings claims in tests (≥60%)
+✅ **DO** verify token savings claims in tests (≥20%)
 ✅ **DO** test on macOS + Linux + Windows (via CI or manual)
 ✅ **DO** run `cargo fmt && cargo clippy --all-targets && cargo test` before commit
 ✅ **DO** benchmark startup time with `hyperfine` (<10ms target)
@@ -403,7 +403,7 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test  # Linux via Docke
 
 ## Filter Development Workflow
 
-When adding a new filter (e.g., `rtk newcmd`):
+When adding a new filter (e.g., `ptk newcmd`):
 
 ### 1. Create Module
 
@@ -437,7 +437,7 @@ mod tests {
         let output = filter_newcmd(input).unwrap();
 
         let savings = calculate_savings(input, &output);
-        assert!(savings >= 60.0, "Expected ≥60% savings, got {:.1}%", savings);
+        assert!(savings >= 20.0, "Expected ≥20% savings, got {:.1}%", savings);
     }
 }
 ```
@@ -490,14 +490,14 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 ### 6. Benchmark Performance
 
 ```bash
-hyperfine 'rtk newcmd args' --warmup 3
+hyperfine 'ptk newcmd args' --warmup 3
 # Should be <10ms
 ```
 
 ### 7. Manual Testing
 
 ```bash
-rtk newcmd args
+ptk newcmd args
 # Inspect output:
 # - Is it condensed?
 # - Critical info preserved?
@@ -514,9 +514,9 @@ rtk newcmd args
 
 | Metric | Target | Verification |
 |--------|--------|--------------|
-| Startup time | <10ms | `hyperfine 'rtk git status'` |
-| Memory overhead | <5MB | `/usr/bin/time -l rtk git status` |
-| Token savings | 60-90% | Tests with `count_tokens()` |
-| Binary size | <5MB stripped | `ls -lh target/release/rtk` |
+| Startup time | <10ms | `hyperfine 'ptk git status'` |
+| Memory overhead | <5MB | `/usr/bin/time -l ptk git status` |
+| Token savings | ≥20% floor | Tests with `count_tokens()` |
+| Binary size | <5MB stripped | `ls -lh target/release/ptk` |
 
 **Performance regressions are release blockers** - always benchmark before/after changes.

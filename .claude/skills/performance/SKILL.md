@@ -4,7 +4,7 @@ description: CLI performance optimization - startup time, memory usage, token sa
 
 # Performance Optimization Skill
 
-Systematic performance analysis and optimization for RTK CLI tool, focusing on **startup time (<10ms)**, **memory usage (<5MB)**, and **token savings (60-90%)**.
+Systematic performance analysis and optimization for PTK CLI tool, focusing on **startup time (<10ms)**, **memory usage (<5MB)**, and **token savings (≥20% floor)**.
 
 ## When to Use
 
@@ -12,14 +12,14 @@ Systematic performance analysis and optimization for RTK CLI tool, focusing on *
 - **Manual invocation**: When performance degradation suspected or before release
 - **Proactive**: After any code change that could impact startup time or memory
 
-## RTK Performance Targets
+## PTK Performance Targets
 
 | Metric | Target | Verification Method | Failure Threshold |
 |--------|--------|---------------------|-------------------|
-| **Startup time** | <10ms | `hyperfine 'rtk <cmd>'` | >15ms = blocker |
-| **Memory usage** | <5MB resident | `/usr/bin/time -l rtk <cmd>` (macOS) | >7MB = blocker |
-| **Token savings** | 60-90% | Tests with `count_tokens()` | <60% = blocker |
-| **Binary size** | <5MB stripped | `ls -lh target/release/rtk` | >8MB = investigate |
+| **Startup time** | <10ms | `hyperfine 'ptk <cmd>'` | >15ms = blocker |
+| **Memory usage** | <5MB resident | `/usr/bin/time -l ptk <cmd>` (macOS) | >7MB = blocker |
+| **Token savings** | ≥20% floor | Tests with `count_tokens()` | <20% = blocker |
+| **Binary size** | <5MB stripped | `ls -lh target/release/ptk` | >8MB = investigate |
 
 ## Performance Analysis Workflow
 
@@ -29,16 +29,16 @@ Before making any changes, capture current performance:
 
 ```bash
 # Startup time baseline
-hyperfine 'rtk git status' --warmup 3 --export-json /tmp/baseline_startup.json
+hyperfine 'ptk git status' --warmup 3 --export-json /tmp/baseline_startup.json
 
 # Memory usage baseline (macOS)
-/usr/bin/time -l rtk git status 2>&1 | grep "maximum resident set size" > /tmp/baseline_memory.txt
+/usr/bin/time -l ptk git status 2>&1 | grep "maximum resident set size" > /tmp/baseline_memory.txt
 
 # Memory usage baseline (Linux)
-/usr/bin/time -v rtk git status 2>&1 | grep "Maximum resident set size" > /tmp/baseline_memory.txt
+/usr/bin/time -v ptk git status 2>&1 | grep "Maximum resident set size" > /tmp/baseline_memory.txt
 
 # Binary size baseline
-ls -lh target/release/rtk | tee /tmp/baseline_binary_size.txt
+ls -lh target/release/ptk | tee /tmp/baseline_binary_size.txt
 ```
 
 ### 2. Make Changes
@@ -52,29 +52,29 @@ Implement optimization or feature changes.
 cargo build --release
 
 # Measure startup time
-hyperfine 'target/release/rtk git status' --warmup 3 --export-json /tmp/after_startup.json
+hyperfine 'target/release/ptk git status' --warmup 3 --export-json /tmp/after_startup.json
 
 # Measure memory usage
-/usr/bin/time -l target/release/rtk git status 2>&1 | grep "maximum resident set size" > /tmp/after_memory.txt
+/usr/bin/time -l target/release/ptk git status 2>&1 | grep "maximum resident set size" > /tmp/after_memory.txt
 
 # Check binary size
-ls -lh target/release/rtk | tee /tmp/after_binary_size.txt
+ls -lh target/release/ptk | tee /tmp/after_binary_size.txt
 ```
 
 ### 4. Compare Results
 
 ```bash
 # Startup time comparison
-hyperfine 'rtk git status' 'target/release/rtk git status' --warmup 3
+hyperfine 'ptk git status' 'target/release/ptk git status' --warmup 3
 
 # Example output:
-#   Benchmark 1: rtk git status
+#   Benchmark 1: ptk git status
 #     Time (mean ± σ):       6.2 ms ±   0.3 ms    [User: 4.1 ms, System: 1.8 ms]
-#   Benchmark 2: target/release/rtk git status
+#   Benchmark 2: target/release/ptk git status
 #     Time (mean ± σ):       7.8 ms ±   0.4 ms    [User: 5.2 ms, System: 2.1 ms]
 #
 #   Summary
-#     'rtk git status' ran 1.26 times faster than 'target/release/rtk git status'
+#     'ptk git status' ran 1.26 times faster than 'target/release/ptk git status'
 
 # Memory comparison
 diff /tmp/baseline_memory.txt /tmp/after_memory.txt
@@ -89,7 +89,7 @@ diff /tmp/baseline_binary_size.txt /tmp/after_binary_size.txt
 ```bash
 # Profile with flamegraph
 cargo install flamegraph
-cargo flamegraph -- target/release/rtk git status
+cargo flamegraph -- target/release/ptk git status
 
 # Open flamegraph.svg
 open flamegraph.svg
@@ -112,13 +112,13 @@ cargo install dhat
 # static ALLOC: dhat::Alloc = dhat::Alloc;
 ```
 
-**Token savings regression** (<60% savings):
+**Token savings regression** (<20% savings):
 ```bash
 # Run token accuracy tests
 cargo test test_token_savings
 
 # Example failure output:
-# Git log filter: expected ≥60% savings, got 52.3%
+# Git log filter: expected ≥20% savings, got 52.3%
 
 # Fix: Improve filter condensation logic
 ```
@@ -132,7 +132,7 @@ cargo test test_token_savings
 **Detection**:
 ```bash
 # Flamegraph shows Regex::new() calls during execution
-cargo flamegraph -- target/release/rtk git log -10
+cargo flamegraph -- target/release/ptk git log -10
 # Check whether fixed patterns are compiled outside LazyLock statics
 ```
 
@@ -163,7 +163,7 @@ fn filter_line(line: &str) -> Option<&str> {
 ```bash
 # DHAT heap profiling
 cargo +nightly build --release
-valgrind --tool=dhat target/release/rtk git status
+valgrind --tool=dhat target/release/ptk git status
 ```
 
 **Fix**:
@@ -191,11 +191,11 @@ fn filter_lines(input: &str) -> String {
 **Detection**:
 ```bash
 # strace on Linux
-strace -c target/release/rtk git status 2>&1 | grep -E "open|read"
+strace -c target/release/ptk git status 2>&1 | grep -E "open|read"
 
 # dtrace on macOS (requires SIP disabled)
 sudo dtrace -n 'syscall::open*:entry { @[execname] = count(); }' &
-target/release/rtk git status
+target/release/ptk git status
 sudo pkill dtrace
 ```
 
@@ -203,7 +203,7 @@ sudo pkill dtrace
 ```rust
 // ❌ WRONG: File I/O on startup
 fn main() {
-    let config = load_config().unwrap(); // Reads ~/.config/rtk/config.toml
+    let config = load_config().unwrap(); // Reads ~/.config/ptk/config.toml
     // ...
 }
 
@@ -319,23 +319,23 @@ serde = { version = "1", features = ["derive"], default-features = false }
 Before committing filter changes:
 
 ### Startup Time
-- [ ] Benchmark with `hyperfine 'rtk <cmd>' --warmup 3`
+- [ ] Benchmark with `hyperfine 'ptk <cmd>' --warmup 3`
 - [ ] Verify <10ms mean time
 - [ ] Check variance (σ) is small (<1ms)
 - [ ] Compare against baseline (regression <2ms)
 
 ### Memory Usage
-- [ ] Profile with `/usr/bin/time -l rtk <cmd>`
+- [ ] Profile with `/usr/bin/time -l ptk <cmd>`
 - [ ] Verify <5MB resident set size
 - [ ] Compare against baseline (regression <1MB)
 
 ### Token Savings
 - [ ] Run `cargo test test_token_savings`
-- [ ] Verify all filters achieve ≥60% savings
+- [ ] Verify all filters achieve ≥20% savings
 - [ ] Check real fixtures used (not synthetic)
 
 ### Binary Size
-- [ ] Check `ls -lh target/release/rtk`
+- [ ] Check `ls -lh target/release/ptk`
 - [ ] Verify <5MB stripped binary
 - [ ] Run `cargo bloat --release --crates` if >5MB
 
@@ -352,7 +352,7 @@ Add to `.claude/hooks/bash/pre-commit-performance.sh`:
 echo "🚀 Running performance checks..."
 
 # Benchmark startup time
-CURRENT_TIME=$(hyperfine 'rtk git status' --warmup 3 --export-json /tmp/perf.json 2>&1 | grep "Time (mean" | awk '{print $4}')
+CURRENT_TIME=$(hyperfine 'ptk git status' --warmup 3 --export-json /tmp/perf.json 2>&1 | grep "Time (mean" | awk '{print $4}')
 
 # Extract numeric value (remove "ms")
 CURRENT_MS=$(echo $CURRENT_TIME | sed 's/ms//')
@@ -364,7 +364,7 @@ if (( $(echo "$CURRENT_MS > 10" | bc -l) )); then
 fi
 
 # Check binary size
-BINARY_SIZE=$(ls -l target/release/rtk | awk '{print $5}')
+BINARY_SIZE=$(ls -l target/release/ptk | awk '{print $5}')
 MAX_SIZE=$((5 * 1024 * 1024))  # 5MB
 
 if [ $BINARY_SIZE -gt $MAX_SIZE ]; then
@@ -386,10 +386,10 @@ Add to `.github/workflows/ci.yml`:
     cargo install hyperfine
 
     # Benchmark startup time
-    hyperfine 'target/release/rtk git status' --warmup 3 --max-runs 10
+    hyperfine 'target/release/ptk git status' --warmup 3 --max-runs 10
 
     # Check binary size
-    BINARY_SIZE=$(ls -l target/release/rtk | awk '{print $5}')
+    BINARY_SIZE=$(ls -l target/release/ptk | awk '{print $5}')
     MAX_SIZE=$((5 * 1024 * 1024))
     if [ $BINARY_SIZE -gt $MAX_SIZE ]; then
       echo "Binary too large: $(($BINARY_SIZE / 1024 / 1024))MB"
@@ -413,14 +413,14 @@ Add to `.github/workflows/ci.yml`:
 
 | Tool | Purpose | Command |
 |------|---------|---------|
-| **hyperfine** | Benchmark startup time | `hyperfine 'rtk <cmd>' --warmup 3` |
-| **time** | Memory usage (macOS) | `/usr/bin/time -l rtk <cmd>` |
-| **time** | Memory usage (Linux) | `/usr/bin/time -v rtk <cmd>` |
-| **flamegraph** | CPU profiling | `cargo flamegraph -- rtk <cmd>` |
+| **hyperfine** | Benchmark startup time | `hyperfine 'ptk <cmd>' --warmup 3` |
+| **time** | Memory usage (macOS) | `/usr/bin/time -l ptk <cmd>` |
+| **time** | Memory usage (Linux) | `/usr/bin/time -v ptk <cmd>` |
+| **flamegraph** | CPU profiling | `cargo flamegraph -- ptk <cmd>` |
 | **cargo bloat** | Binary size analysis | `cargo bloat --release --crates` |
 | **cargo tree** | Dependency tree | `cargo tree` |
 | **DHAT** | Heap profiling | `cargo +nightly build && valgrind --tool=dhat` |
-| **strace** | System call tracing (Linux) | `strace -c target/release/rtk <cmd>` |
+| **strace** | System call tracing (Linux) | `strace -c target/release/ptk <cmd>` |
 | **dtrace** | System call tracing (macOS) | `sudo dtrace -n 'syscall::open*:entry'` |
 
 **Install tools**:

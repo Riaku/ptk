@@ -1,4 +1,4 @@
-use super::report::RtkStatus;
+use super::report::PtkStatus;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PipelineSafety {
@@ -19,7 +19,7 @@ impl PipelineSafety {
     }
 }
 
-pub struct RtkRule {
+pub struct PtkRule {
     pub pattern: &'static str,
     pub ptk_cmd: &'static str,
     /// Pipeline stage positions this command may be rewritten in (#3171).
@@ -28,15 +28,15 @@ pub struct RtkRule {
     pub category: &'static str,
     pub savings_pct: f64,
     pub subcmd_savings: &'static [(&'static str, f64)],
-    pub subcmd_status: &'static [(&'static str, RtkStatus)],
+    pub subcmd_status: &'static [(&'static str, PtkStatus)],
 }
 
-impl RtkRule {
+impl PtkRule {
     // `Default::default()` isn't a const fn on stable, so `RULES` (a const array) can't call
     // it via `..Default::default()` — hence this associated const as the const-context
     // workaround. Once `const_trait_impl` stabilizes, drop this and derive/impl
-    // `const Default` instead, then switch call sites back to `..RtkRule::default()`.
-    pub const DEFAULT: RtkRule = RtkRule {
+    // `const Default` instead, then switch call sites back to `..PtkRule::default()`.
+    pub const DEFAULT: PtkRule = PtkRule {
         pattern: "",
         ptk_cmd: "",
         pipeline_safety: PipelineSafety::None,
@@ -48,15 +48,17 @@ impl RtkRule {
     };
 }
 
-impl Default for RtkRule {
+impl Default for PtkRule {
     fn default() -> Self {
         Self::DEFAULT
     }
 }
 
-pub const RULES: &[RtkRule] = &[
-    RtkRule {
-        pattern: r"^(?:git|yadm)\s+(?:-[Cc]\s+\S+\s+)*(status|log|diff|show|add|commit|checkout|push|pull|branch|fetch|stash|worktree)",
+/// A rule declaring subcommands also needs its tool in
+/// `core::tracking::SUBCOMMAND_ROUTERS`, or its telemetry label stops at the tool name.
+pub const RULES: &[PtkRule] = &[
+    PtkRule {
+        pattern: r"^(?:git|yadm)\s+(?:-[Cc]\s+\S+\s+)*(status|log|diff|show|add|commit|checkout|push|pull|branch|fetch|stash|worktree)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk git",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["git", "yadm"],
@@ -68,116 +70,118 @@ pub const RULES: &[RtkRule] = &[
             ("add", 59.0),
             ("commit", 59.0),
         ],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^gh\s+(pr|issue|run|repo|api|release)",
+    PtkRule {
+        pattern: r"^gh\s+(pr|issue|run|repo|api|release)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk gh",
         rewrite_prefixes: &["gh"],
         category: "GitHub",
         savings_pct: 82.0,
         subcmd_savings: &[("pr", 87.0), ("run", 82.0), ("issue", 80.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^glab\s+(mr|issue|ci|pipeline|api|release)",
+    PtkRule {
+        pattern: r"^glab\s+(mr|issue|ci|pipeline|api|release)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk glab",
         rewrite_prefixes: &["glab"],
         category: "GitLab",
         savings_pct: 82.0,
         subcmd_savings: &[("mr", 87.0), ("ci", 82.0), ("issue", 80.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^cargo\s+(build|test|clippy|check|fmt|install)",
+    PtkRule {
+        pattern: r"^cargo\s+(build|test|clippy|check|fmt|install)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk cargo",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["cargo"],
         category: "Cargo",
         savings_pct: 80.0,
         subcmd_savings: &[("test", 90.0), ("check", 80.0)],
-        subcmd_status: &[("fmt", RtkStatus::Passthrough)],
+        subcmd_status: &[("fmt", PtkStatus::Passthrough)],
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^pnpm\s+(exec|i|install|list|ls|outdated|run|run-script)",
         ptk_cmd: "ptk pnpm",
         rewrite_prefixes: &["pnpm"],
         category: "PackageManager",
         savings_pct: 80.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^npm\s+(exec|run|run-script|rum|urn|x)(\s|$)",
         ptk_cmd: "ptk npm",
         rewrite_prefixes: &["npm"],
         category: "PackageManager",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^npx\s+",
         ptk_cmd: "ptk npx",
         rewrite_prefixes: &["npx"],
         category: "PackageManager",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(cat|head|tail)\s+",
         ptk_cmd: "ptk read",
         rewrite_prefixes: &["cat", "head", "tail"],
         category: "Files",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^grep\s+",
         ptk_cmd: "ptk grep",
         pipeline_safety: PipelineSafety::Both,
         rewrite_prefixes: &["grep"],
         category: "Files",
         savings_pct: 75.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^rg\s+",
         ptk_cmd: "ptk rg",
         pipeline_safety: PipelineSafety::Both,
         rewrite_prefixes: &["rg"],
         category: "Files",
         savings_pct: 75.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^ast-grep\s+",
         ptk_cmd: "ptk ast-grep",
-        // Unlike grep/rg, `ptk ast-grep`'s run() execs with stdin null (no
-        // piped-stdin support yet), so it must not be rewritten as a
-        // pipeline's final stage — that would silently drop the pipe input.
+        // Unlike grep/rg, `ptk ast-grep`'s run() captures with stdin null on the
+        // path it filters, so it must not be rewritten as a pipeline's final
+        // stage — that would silently drop the pipe input. `run --stdin` and the
+        // other subcommands do reach the child's stdin, but only when invoked
+        // directly: this rule keeps the hook from producing that form at all.
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["ast-grep"],
         category: "Files",
         savings_pct: 85.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^ls(\s|$)",
         ptk_cmd: "ptk ls",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["ls"],
         category: "Files",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^find\s+",
         ptk_cmd: "ptk find",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["find"],
         category: "Files",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?tsc(\s|$)",
         ptk_cmd: "ptk tsc",
         rewrite_prefixes: &[
@@ -199,9 +203,9 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Build",
         savings_pct: 83.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?(biome|eslint|lint)(\s|$)",
         ptk_cmd: "ptk lint",
         pipeline_safety: PipelineSafety::ProducerOnly,
@@ -250,10 +254,10 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Build",
         savings_pct: 84.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?prettier",
+    PtkRule {
+        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?prettier(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk prettier",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &[
@@ -275,10 +279,10 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Build",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?next\s+build",
+    PtkRule {
+        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?next\s+build(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk next",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &[
@@ -300,9 +304,9 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Build",
         savings_pct: 87.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?jest(\s+run)?(\s|$)",
         ptk_cmd: "ptk jest",
         rewrite_prefixes: &[
@@ -339,9 +343,9 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Tests",
         savings_pct: 99.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?vitest(\s+run)?(\s|$)",
         ptk_cmd: "ptk vitest",
         rewrite_prefixes: &[
@@ -378,18 +382,18 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Tests",
         savings_pct: 99.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^ctest(?:\s|$)",
         ptk_cmd: "ptk ctest",
         rewrite_prefixes: &["ctest"],
         category: "Tests",
         savings_pct: 80.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?playwright",
+    PtkRule {
+        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?playwright(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk playwright",
         rewrite_prefixes: &[
             "npm exec playwright",
@@ -410,10 +414,10 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Tests",
         savings_pct: 94.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?prisma",
+    PtkRule {
+        pattern: r"^((p?np(m|x)|p?npm\s+(exec|run|run-script)|npm\s+(rum|urn|x)|pnpm\s+dlx)\s+)?prisma(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk prisma",
         rewrite_prefixes: &[
             "npm exec prisma",
@@ -434,159 +438,159 @@ pub const RULES: &[RtkRule] = &[
         ],
         category: "Build",
         savings_pct: 88.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^docker\s+(ps|images|logs|run|exec|build|compose\s+(ps|logs|build))",
+    PtkRule {
+        pattern: r"^docker\s+(ps|images|logs|run|exec|build|compose\s+(ps|logs|build))(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk docker",
         rewrite_prefixes: &["docker"],
         category: "Infra",
         savings_pct: 85.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^kubectl\s+(get|logs|describe|apply)",
+    PtkRule {
+        pattern: r"^kubectl\s+(get|logs|describe|apply)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk kubectl",
         rewrite_prefixes: &["kubectl"],
         category: "Infra",
         savings_pct: 85.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^oc\s+(get|logs|describe|apply|status|adm)",
+    PtkRule {
+        pattern: r"^oc\s+(get|logs|describe|apply|status|adm)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk oc",
         rewrite_prefixes: &["oc"],
         category: "Infra",
         savings_pct: 85.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^tree(\s|$)",
         ptk_cmd: "ptk tree",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["tree"],
         category: "Files",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^diff\s+",
         ptk_cmd: "ptk diff",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["diff"],
         category: "Files",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^curl\s+",
         ptk_cmd: "ptk curl",
         rewrite_prefixes: &["curl"],
         category: "Network",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^wget\s+",
         ptk_cmd: "ptk wget",
         rewrite_prefixes: &["wget"],
         category: "Network",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(python3?\s+-m\s+)?mypy(\s|$)",
         ptk_cmd: "ptk mypy",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["python3 -m mypy", "python -m mypy", "mypy"],
         category: "Build",
         savings_pct: 80.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^ruff\s+(check|format)",
+    PtkRule {
+        pattern: r"^ruff\s+(check|format)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk ruff",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["ruff"],
         category: "Python",
         savings_pct: 80.0,
         subcmd_savings: &[("check", 80.0), ("format", 75.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^sqlfluff\s+lint",
+    PtkRule {
+        pattern: r"^sqlfluff\s+lint(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk sqlfluff",
         rewrite_prefixes: &["sqlfluff"],
         category: "Python",
         savings_pct: 75.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(python[0-9.]*\s+-m\s+)?pytest(\s|$)",
         ptk_cmd: "ptk pytest",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["python3 -m pytest", "python -m pytest", "pytest"],
         category: "Python",
         savings_pct: 90.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^(pip3?|uv\s+pip)\s+(list|outdated|install|show)",
+    PtkRule {
+        pattern: r"^(pip3?|uv\s+pip)\s+(list|outdated|install|show)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk pip",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["pip3", "pip", "uv pip"],
         category: "Python",
         savings_pct: 75.0,
         subcmd_savings: &[("list", 75.0), ("outdated", 80.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^uv\s+run(?:\s|$)",
         ptk_cmd: "ptk uv",
         rewrite_prefixes: &["uv"],
         category: "Python",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^go\s+(test|build|vet)",
+    PtkRule {
+        pattern: r"^go\s+(test|build|vet)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk go",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["go"],
         category: "Go",
         savings_pct: 85.0,
         subcmd_savings: &[("test", 90.0), ("build", 80.0), ("vet", 75.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:golangci-lint|golangci)\s+(run)(?:\s|$)",
         ptk_cmd: "ptk golangci-lint run",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["golangci-lint run", "golangci run"],
         category: "Go",
         savings_pct: 85.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
     // Scala/SBT
-    RtkRule {
+    PtkRule {
         pattern: r#"^sbt\s+["']?(testOnly|testQuick|test|compile|run|clean|assembly|package)(?:[\s"']|$)"#,
         ptk_cmd: "ptk sbt",
         rewrite_prefixes: &["sbt"],
         category: "Build",
         savings_pct: 80.0,
         subcmd_savings: &[("test", 90.0), ("testOnly", 90.0), ("compile", 75.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^bundle\s+(install|update)\b",
         ptk_cmd: "ptk bundle",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["bundle"],
         category: "Ruby",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^(?:bundle\s+exec\s+)?(?:bin/)?(?:rake|rails)\s+test",
+    PtkRule {
+        pattern: r"^(?:bundle\s+exec\s+)?(?:bin/)?(?:rake|rails)\s+test(?:[\s:]|$|[;|&()<>])",
         ptk_cmd: "ptk rake",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &[
@@ -599,51 +603,51 @@ pub const RULES: &[RtkRule] = &[
         category: "Ruby",
         savings_pct: 85.0,
         subcmd_savings: &[("test", 90.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:bundle\s+exec\s+)?rspec(?:\s|$)",
         ptk_cmd: "ptk rspec",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["bundle exec rspec", "bin/rspec", "rspec"],
         category: "Tests",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:bundle\s+exec\s+)?rubocop(?:\s|$)",
         ptk_cmd: "ptk rubocop",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["bundle exec rubocop", "rubocop"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
     // PHP tooling
-    RtkRule {
+    PtkRule {
         pattern: r"^php\s+artisan(?:\s|$)",
         ptk_cmd: "ptk php",
         rewrite_prefixes: &["php"],
         category: "Build",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^php\s+-l(?:\s|$)",
         ptk_cmd: "ptk php",
         rewrite_prefixes: &["php"],
         category: "Build",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^php\s+run-tests\.php(?:\s|$)",
         ptk_cmd: "ptk phpt",
         rewrite_prefixes: &["php run-tests.php"],
         category: "Tests",
         savings_pct: 99.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:php\s+)?(?:\./)?(?:(?:vendor/)?bin/)?phpunit(?:\s|$)",
         ptk_cmd: "ptk phpunit",
         pipeline_safety: PipelineSafety::ProducerOnly,
@@ -654,9 +658,9 @@ pub const RULES: &[RtkRule] = &[
         rewrite_prefixes: &["bin/phpunit", "phpunit"],
         category: "Tests",
         savings_pct: 75.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:php\s+)?(?:\./)?(?:(?:vendor/)?bin/)?phpstan\s+analy[sz]e\b",
         ptk_cmd: "ptk phpstan",
         pipeline_safety: PipelineSafety::ProducerOnly,
@@ -664,45 +668,45 @@ pub const RULES: &[RtkRule] = &[
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[("analyse", 65.0), ("analyze", 65.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:\./)?(?:vendor/bin/)?pest(?:\s|$)",
         ptk_cmd: "ptk pest",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["pest"],
         category: "Tests",
         savings_pct: 80.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:\./)?(?:vendor/bin/)?paratest(?:\s|$)",
         ptk_cmd: "ptk paratest",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["paratest"],
         category: "Tests",
         savings_pct: 80.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:\./)?(?:vendor/bin/)?ecs(?:\s|$)",
         ptk_cmd: "ptk ecs",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["ecs"],
         category: "Build",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:\./)?(?:vendor/bin/)?pint(?:\s|$)",
         ptk_cmd: "ptk pint",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["pint"],
         category: "Build",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^aws\s+",
         ptk_cmd: "ptk aws",
         rewrite_prefixes: &["aws"],
@@ -724,18 +728,18 @@ pub const RULES: &[RtkRule] = &[
             ("sqs", 78.0),
             ("secretsmanager", 75.0),
         ],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^psql(\s|$)",
         ptk_cmd: "ptk psql",
         rewrite_prefixes: &["psql"],
         category: "Infra",
         savings_pct: 75.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
     // Bun/Deno
-    RtkRule {
+    PtkRule {
         pattern: r"^bun\s+(install|add|remove|test|build|run|pm\s+ls|pm|x)\b",
         ptk_cmd: "ptk bun",
         rewrite_prefixes: &["bun"],
@@ -748,21 +752,21 @@ pub const RULES: &[RtkRule] = &[
         // bundle to stdout unless an output flag is present, so its common form
         // runs unfiltered and it cannot claim the headline number.
         subcmd_status: &[
-            ("run", RtkStatus::Passthrough),
-            ("pm", RtkStatus::Passthrough),
-            ("build", RtkStatus::Passthrough),
+            ("run", PtkStatus::Passthrough),
+            ("pm", PtkStatus::Passthrough),
+            ("build", PtkStatus::Passthrough),
         ],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^bunx\s+",
         ptk_cmd: "ptk bunx",
         rewrite_prefixes: &["bunx"],
         category: "PackageManager",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^deno\s+(test|lint|check|run|task|compile|install)\b",
         ptk_cmd: "ptk deno",
         rewrite_prefixes: &["deno"],
@@ -775,151 +779,151 @@ pub const RULES: &[RtkRule] = &[
         // Audited alongside the bun rule above: test, lint and check are
         // filtered, the rest run unchanged.
         subcmd_status: &[
-            ("run", RtkStatus::Passthrough),
-            ("task", RtkStatus::Passthrough),
-            ("install", RtkStatus::Passthrough),
-            ("compile", RtkStatus::Passthrough),
+            ("run", PtkStatus::Passthrough),
+            ("task", PtkStatus::Passthrough),
+            ("install", PtkStatus::Passthrough),
+            ("compile", PtkStatus::Passthrough),
         ],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
     // TOML-filtered commands
-    RtkRule {
+    PtkRule {
         pattern: r"^ansible-playbook\b",
         ptk_cmd: "ptk ansible-playbook",
         rewrite_prefixes: &["ansible-playbook"],
         category: "Infra",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^brew\s+(install|upgrade)\b",
         ptk_cmd: "ptk brew",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["brew"],
         category: "PackageManager",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^composer\s+(install|update|require)\b",
         ptk_cmd: "ptk composer",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["composer"],
         category: "PackageManager",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^df(\s|$)",
         ptk_cmd: "ptk df",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["df"],
         category: "System",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^dotnet\s+build\b",
         ptk_cmd: "ptk dotnet",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["dotnet"],
         category: "Build",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^du\b",
         ptk_cmd: "ptk du",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["du"],
         category: "System",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^fail2ban-client\b",
         ptk_cmd: "ptk fail2ban-client",
         rewrite_prefixes: &["fail2ban-client"],
         category: "Infra",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^gcloud\b",
         ptk_cmd: "ptk gcloud",
         rewrite_prefixes: &["gcloud"],
         category: "Infra",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:\./gradlew|gradlew\.bat|gradlew|gradle)(?:\s+(test|build|clean|assemble\w*|install\w*|check|lint\w*|dependencies))?(\s|$)",
         ptk_cmd: "ptk gradlew",
         rewrite_prefixes: &["./gradlew", "gradlew.bat", "gradlew", "gradle"],
         category: "Build",
         savings_pct: 75.0,
         subcmd_savings: &[("test", 90.0), ("build", 80.0), ("check", 80.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^hadolint\b",
         ptk_cmd: "ptk hadolint",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["hadolint"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^helm\b",
         ptk_cmd: "ptk helm",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["helm"],
         category: "Infra",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^iptables\b",
         ptk_cmd: "ptk iptables",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["iptables"],
         category: "Infra",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^make\b",
         ptk_cmd: "ptk make",
         rewrite_prefixes: &["make"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^markdownlint\b",
         ptk_cmd: "ptk markdownlint",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["markdownlint"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^mix\s+(compile|format)(\s|$)",
         ptk_cmd: "ptk mix",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["mix"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^(?:\./mvnw|mvnw\.cmd|mvnw|mvn)\b(?:\s+\S+)*?\s+(compile|test|integration-test|package|install|verify|deploy)\b",
         ptk_cmd: "ptk mvn",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["./mvnw", "mvnw.cmd", "mvnw", "mvn"],
         category: "Build",
         savings_pct: 82.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         // `mvnd` is a separate binary, not a `mvn` wrapper — it must keep its
         // own ptk_cmd so the daemon is what actually runs. mvnd ships
         // `mvnd.cmd` on Windows; listed explicitly (longer prefix first) on
@@ -932,51 +936,51 @@ pub const RULES: &[RtkRule] = &[
         rewrite_prefixes: &["mvnd.cmd", "mvnd"],
         category: "Build",
         savings_pct: 82.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^ping\b",
         ptk_cmd: "ptk ping",
         rewrite_prefixes: &["ping"],
         category: "Network",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^pio\s+run",
+    PtkRule {
+        pattern: r"^pio\s+run(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk pio",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["pio"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^poetry\s+(install|lock|update)\b",
         ptk_cmd: "ptk poetry",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["poetry"],
         category: "Python",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^pre-commit\b",
         ptk_cmd: "ptk pre-commit",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["pre-commit"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^ps(\s|$)",
         ptk_cmd: "ptk ps",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["ps"],
         category: "System",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^pulumi\s+(preview|up|destroy|refresh|stack)(\s|$)",
         ptk_cmd: "ptk pulumi",
         rewrite_prefixes: &["pulumi"],
@@ -989,51 +993,51 @@ pub const RULES: &[RtkRule] = &[
             ("preview", 25.0),
             ("stack", 29.0),
         ],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^quarto\s+render",
+    PtkRule {
+        pattern: r"^quarto\s+render(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk quarto",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["quarto"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^rsync\b",
         ptk_cmd: "ptk rsync",
         rewrite_prefixes: &["rsync"],
         category: "Network",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^shellcheck\b",
         ptk_cmd: "ptk shellcheck",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["shellcheck"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^shopify\s+theme\s+(push|pull)",
+    PtkRule {
+        pattern: r"^shopify\s+theme\s+(push|pull)(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk shopify",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["shopify"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^sops\b",
         ptk_cmd: "ptk sops",
         rewrite_prefixes: &["sops"],
         category: "Infra",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^swift\s+(build|test)\b",
         ptk_cmd: "ptk swift",
         pipeline_safety: PipelineSafety::ProducerOnly,
@@ -1041,85 +1045,85 @@ pub const RULES: &[RtkRule] = &[
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[("test", 90.0)],
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^systemctl\s+status\b",
         ptk_cmd: "ptk systemctl",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["systemctl"],
         category: "System",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^terraform\s+plan",
+    PtkRule {
+        pattern: r"^terraform\s+plan(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk terraform",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["terraform"],
         category: "Infra",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^tofu\s+(fmt|init|plan|validate)(\s|$)",
         ptk_cmd: "ptk tofu",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["tofu"],
         category: "Infra",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
-        pattern: r"^trunk\s+build",
+    PtkRule {
+        pattern: r"^trunk\s+build(?:\s|$|[;|&()<>])",
         ptk_cmd: "ptk trunk",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["trunk"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^uv\s+(sync|pip\s+install)\b",
         ptk_cmd: "ptk uv",
         rewrite_prefixes: &["uv"],
         category: "Python",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^yamllint\b",
         ptk_cmd: "ptk yamllint",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["yamllint"],
         category: "Build",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^wc(\s|$)",
         ptk_cmd: "ptk wc",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["wc"],
         category: "Files",
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^gt\s+",
         ptk_cmd: "ptk gt",
         rewrite_prefixes: &["gt"],
         category: "Git",
         savings_pct: 70.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
-    RtkRule {
+    PtkRule {
         pattern: r"^liquibase(?:\s|$)",
         ptk_cmd: "ptk liquibase",
         pipeline_safety: PipelineSafety::ProducerOnly,
         rewrite_prefixes: &["liquibase"],
         category: "Infra",
         savings_pct: 65.0,
-        ..RtkRule::DEFAULT
+        ..PtkRule::DEFAULT
     },
 ];
 

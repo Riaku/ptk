@@ -4,6 +4,7 @@
 //! on every single matching line, saving significant token overhead.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 use std::collections::BTreeMap;
@@ -62,13 +63,13 @@ pub fn filter_search_output(raw: &str) -> String {
 /// Run `findstr` via CMD and filter output.
 pub fn run_findstr(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_cmd("findstr", args);
-    let cmd_label = format!("findstr {}", args.join(" "));
+    let cmd_label = format!("findstr {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "findstr",
         cmd_label.trim(),
-        |raw| filter_search_output(raw),
+        filter_search_output,
         RunOptions::default(),
     )
 }
@@ -84,7 +85,7 @@ pub fn is_select_string_passthrough(args: &[String]) -> bool {
 /// Run `Select-String` via PowerShell and filter output.
 pub fn run_select_string(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Select-String", args);
-    let cmd_label = format!("Select-String {}", args.join(" "));
+    let cmd_label = format!("Select-String {}", display_args(args));
 
     if is_select_string_passthrough(args) {
         return runner::run(
@@ -100,7 +101,7 @@ pub fn run_select_string(args: &[String], _verbose: u8) -> Result<i32> {
         cmd,
         "Select-String",
         cmd_label.trim(),
-        |raw| filter_search_output(raw),
+        filter_search_output,
         RunOptions::default(),
     )
 }

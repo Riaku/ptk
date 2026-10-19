@@ -50,16 +50,16 @@ fi
 ```
 
 ```bash
-# Hook PTK-suggest.sh check
-if [ -f ".claude/hooks/PTK-suggest.sh" ]; then
-    echo "✅ OK: PTK-suggest.sh hook present"
-    if [ -x ".claude/hooks/PTK-suggest.sh" ]; then
+# Hook ptk-suggest.sh check
+if [ -f ".claude/hooks/ptk-suggest.sh" ]; then
+    echo "✅ OK: ptk-suggest.sh hook present"
+    if [ -x ".claude/hooks/ptk-suggest.sh" ]; then
         echo "✅ OK: hook is executable"
     else
         echo "⚠️ WARNING: hook not executable (chmod +x needed)"
     fi
 else
-    echo "❌ MISSING: PTK-suggest.sh hook"
+    echo "❌ MISSING: ptk-suggest.sh hook"
 fi
 ```
 
@@ -135,7 +135,7 @@ fi
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📦 PTK Binary:      ✅ OK (v0.16.0) | ❌ NOT FOUND
-🔗 Hooks:           ✅ OK (ptk-rewrite.sh + PTK-suggest.sh executable)
+🔗 Hooks:           ✅ OK (ptk-rewrite.sh + ptk-suggest.sh executable)
                     ❌ MISSING or ⚠️ WARNING (not executable)
 📊 Token Analytics: ✅ OK (ptk gain working)
                     ❌ FAILED (command not available)

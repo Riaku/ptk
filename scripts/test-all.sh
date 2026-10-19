@@ -525,8 +525,8 @@ assert_ok      "ptk verify"                   ptk verify
 
 section "Proxy"
 
-assert_ok      "ptk proxy echo hello"         ptk proxy echo hello
-assert_contains "ptk proxy passthrough"       "hello" ptk proxy echo hello
+assert_ok      "ptk bypass echo hello"        ptk bypass echo hello
+assert_contains "ptk bypass passthrough"      "hello" ptk bypass echo hello
 
 # ── 35. Discover ──────────────────────────────────────
 

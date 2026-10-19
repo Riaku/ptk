@@ -1,0 +1,28 @@
+# ptk:delegate-reads — oversize reads answered by a cheaper model
+#
+# Declares two delegation tasks and routes a whole-file Read over 350 lines to
+# the `bulk-read` task, so the file never enters the agent's context. Needs an
+# upstream you supply: without one the rule is inert and `validate` says so
+# (W007).
+#
+# Benchmark: not published. `ptk gain` accounts for the worker's own cost
+#            separately.
+
+schema_version = 1
+
+[pipeline]
+name    = "ptk:delegate-reads"
+extends = "ptk:default"
+
+# no upstream: you supply the model
+[task.bulk-read]
+kind = "summarize"
+
+[task.code-write]
+kind = "generate"
+
+[[hook.before_tool.read]]
+name   = "shunt-large-read"
+when   = { file_lines_gt = 350, whole_file = true }
+action = "route"
+task   = "bulk-read"

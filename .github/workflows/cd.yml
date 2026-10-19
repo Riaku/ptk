@@ -26,7 +26,7 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -36,6 +36,8 @@ jobs:
         run: |
           LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | grep -v '-' | head -1)
           if [ -z "$LATEST_TAG" ]; then
+            # A fork with no releases yet has no tag to measure from: start
+            # from the manifest version instead of failing the run.
             FALLBACK_VER=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
             LATEST_TAG="v${FALLBACK_VER}"
             echo "No existing release tags found. Defaulting base to $LATEST_TAG"
@@ -50,12 +52,15 @@ jobs:
           HAS_FIX=$(echo "$COMMITS"     | grep -cE '^fix(\(.+\))?:'      || true)
           echo "Commits since ${LATEST_TAG} — breaking=$HAS_BREAKING feat=$HAS_FEAT fix=$HAS_FIX"
 
-          # ── Compute next version (matches release-please observed behaviour) ──
-          # Pre-1.0 with bump-minor-pre-major: breaking → minor, feat → minor, fix → patch
+          # ── Compute next version (matches release-please config) ──
+          # bump-minor-pre-major is OFF: a breaking change bumps the major
+          # even pre-1.0.
           IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
           if [ "$MAJOR" -eq 0 ]; then
-            if [ "$HAS_BREAKING" -gt 0 ] || [ "$HAS_FEAT" -gt 0 ]; then
-              MINOR=$((MINOR + 1)); PATCH=0            # breaking or feat → minor
+            if [ "$HAS_BREAKING" -gt 0 ]; then
+              MAJOR=1; MINOR=0; PATCH=0                # breaking → 1.0.0
+            elif [ "$HAS_FEAT" -gt 0 ]; then
+              MINOR=$((MINOR + 1)); PATCH=0            # feat → minor
             else
               PATCH=$((PATCH + 1))                     # fix only → patch
             fi
@@ -116,19 +121,19 @@ jobs:
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/create-github-app-token@v3
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
+        # Optional: without App credentials the job uses the default token.
         if: steps.app-creds.outputs.configured == 'true'
         with:
-          app-id: ${{ secrets.APP_CLIENT_ID }}
+          client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          release-type: rust
-          package-name: ptk
           token: ${{ steps.app-token.outputs.token || github.token }}
           target-branch: ${{ github.ref_name }}
 
@@ -161,15 +166,16 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/create-github-app-token@v3
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
+        # Optional: without App credentials the job uses the default token.
         if: steps.app-creds.outputs.configured == 'true'
         with:
-          app-id: ${{ secrets.APP_CLIENT_ID }}
+          client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: write
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token || github.token }}

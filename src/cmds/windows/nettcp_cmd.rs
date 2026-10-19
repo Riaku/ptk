@@ -4,6 +4,7 @@
 //! connection dumps to save tokens.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -216,13 +217,13 @@ pub fn filter_netstat_output(raw: &str) -> String {
 /// Run `Get-NetTCPConnection` via PowerShell and filter output.
 pub fn run_nettcp(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Get-NetTCPConnection", args);
-    let cmd_label = format!("Get-NetTCPConnection {}", args.join(" "));
+    let cmd_label = format!("Get-NetTCPConnection {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Get-NetTCPConnection",
         cmd_label.trim(),
-        |raw| filter_nettcp_output(raw),
+        filter_nettcp_output,
         RunOptions::default(),
     )
 }
@@ -233,13 +234,13 @@ pub fn run_netstat(args: &[String], _verbose: u8) -> Result<i32> {
     for arg in args {
         cmd.arg(arg);
     }
-    let cmd_label = format!("netstat {}", args.join(" "));
+    let cmd_label = format!("netstat {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "netstat",
         cmd_label.trim(),
-        |raw| filter_netstat_output(raw),
+        filter_netstat_output,
         RunOptions::default(),
     )
 }

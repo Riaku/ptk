@@ -1,9 +1,9 @@
 ---
-name: rtk-triage
+name: ptk-triage
 description: >
-  Triage complet RTK : exécute issue-triage + pr-triage en parallèle,
+  Triage complet PTK : exécute issue-triage + pr-triage en parallèle,
   puis croise les données pour détecter doubles couvertures, trous sécurité,
-  P0 sans PR, et conflits internes. Sauvegarde dans claudedocs/RTK-YYYY-MM-DD.md.
+  P0 sans PR, et conflits internes. Sauvegarde dans claudedocs/PTK-YYYY-MM-DD.md.
   Args: "en"/"fr" pour la langue (défaut: fr), "save" pour forcer la sauvegarde.
 allowed-tools:
   - Bash
@@ -11,12 +11,12 @@ allowed-tools:
   - Read
   - AskUserQuestion
 effort: high
-tags: [triage, orchestration, issues, pr, security, cross-analysis, rtk]
+tags: [triage, orchestration, issues, pr, security, cross-analysis, ptk]
 ---
 
-# /rtk-triage
+# /ptk-triage
 
-Orchestrateur de triage RTK. Fusionne issue-triage + pr-triage et produit une analyse croisée.
+Orchestrateur de triage PTK. Fusionne issue-triage + pr-triage et produit une analyse croisée.
 
 ---
 
@@ -188,19 +188,19 @@ Puis afficher le résumé chiffré :
 date +%Y-%m-%d  # Pour construire le nom de fichier
 ```
 
-Sauvegarder dans `claudedocs/RTK-YYYY-MM-DD.md` avec :
+Sauvegarder dans `claudedocs/PTK-YYYY-MM-DD.md` avec :
 - Les tableaux de triage issues + PRs (Phase 2)
 - L'analyse croisée complète (Phase 3)
 - Le résumé chiffré
 
-Confirmer : `Sauvegardé dans claudedocs/RTK-YYYY-MM-DD.md`
+Confirmer : `Sauvegardé dans claudedocs/PTK-YYYY-MM-DD.md`
 
 ---
 
 ## Format du fichier sauvegardé
 
 ```markdown
-# RTK Triage — YYYY-MM-DD
+# PTK Triage — YYYY-MM-DD
 
 Croisement issues × PRs. {N} PRs ouvertes, {N} issues ouvertes.
 

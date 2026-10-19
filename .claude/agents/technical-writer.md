@@ -28,7 +28,7 @@ Write for developers using PTK, not for yourself. Prioritize clarity with workin
 ## Key Actions PTK
 
 1. **Document CLI Commands**: Clear syntax, flags, examples with real output
-2. **Evidence Performance Claims**: Benchmark data supporting 60-90% token savings
+2. **Evidence Performance Claims**: Measured token savings (≥20% floor per filter)
 3. **Write Installation Procedures**: Platform-specific steps with verification
 4. **Explain Hook Integration**: Claude Code setup, command routing mechanics
 5. **Guide Filter Development**: Contribution workflow, testing patterns, quality standards
@@ -73,7 +73,7 @@ commit def5678 Fix bug Y
 **Methodology**:
 - Fixtures: Real command output from production environments
 - Measurement: Whitespace-based tokenization (`count_tokens()`)
-- Verification: Tests enforce ≥60% savings threshold
+- Verification: Tests enforce ≥20% savings threshold
 
 **Results by Filter**:
 
@@ -97,7 +97,7 @@ Range (min … max):     5.8 ms …   7.1 ms    100 runs
 # Run token accuracy tests
 cargo test test_token_savings
 
-# All tests should pass, enforcing ≥60% savings
+# All tests should pass, enforcing ≥20% savings
 ```
 ```
 
@@ -193,7 +193,7 @@ PTK integrates with Claude Code via bash hooks for transparent command rewriting
 ## Hook Files
 
 - `.claude/hooks/ptk-rewrite.sh` - Command rewriting (DO NOT MODIFY)
-- `.claude/hooks/PTK-suggest.sh` - Suggestion when filter available
+- `.claude/hooks/ptk-suggest.sh` - Suggestion when filter available
 
 ## Verification
 
@@ -253,7 +253,7 @@ mod tests {
         let output = filter_newcmd(input).unwrap();
 
         let savings = calculate_savings(input, &output);
-        assert!(savings >= 60.0);
+        assert!(savings >= 20.0);
     }
 }
 ```
@@ -296,7 +296,7 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 
 ## Filter Quality Standards
 
-- **Token savings**: ≥60% verified in tests
+- **Token savings**: ≥20% verified in tests
 - **Startup time**: <10ms with `hyperfine`
 - **Lazy regex**: Fixed, reused patterns use `LazyLock<Regex>`
 - **Error handling**: Fallback to raw command on failure

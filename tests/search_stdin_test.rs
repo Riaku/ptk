@@ -1,12 +1,14 @@
 #![cfg(unix)]
 //! Which stdin the engines actually read. These run in CI as integration tests rather than
-//! `#[ignore]`d unit tests: `CARGO_BIN_EXE_ptk` guarantees a built binary, so the fix they
+//! `#[ignore]`d unit tests: cargo guarantees a built binary here, so the fix they
 //! cover is exercised by `cargo test --all` instead of only by a flag nobody passes.
 
 use std::process::{Command, Stdio};
 
+mod common;
+
 fn ptk() -> Command {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_ptk"));
+    let mut cmd = common::ptk_command();
     cmd.env("LC_ALL", "C");
     cmd
 }

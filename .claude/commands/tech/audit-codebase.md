@@ -1,11 +1,11 @@
 ---
 model: sonnet
-description: RTK Codebase Health Audit — 7 catégories scorées 0-10
+description: PTK Codebase Health Audit — 7 catégories scorées 0-10
 argument-hint: "[--category <cat>] [--fix] [--json]"
 allowed-tools: [Read, Grep, Glob, Bash, Write]
 ---
 
-# Audit Codebase — Santé du Projet RTK
+# Audit Codebase — Santé du Projet PTK
 
 Score global et par catégorie (0-10) avec plan d'action priorisé.
 
@@ -99,11 +99,11 @@ cargo audit 2>&1 | tail -30
 # Dépendances outdated
 cargo outdated 2>&1 | head -30
 
-# Dépendances async (interdit dans RTK)
+# Dépendances async (interdit dans PTK)
 Grep "tokio\|async-std\|futures" Cargo.toml
 
 # Taille binaire post-strip
-ls -lh target/release/rtk 2>/dev/null || echo "Build needed"
+ls -lh target/release/ptk 2>/dev/null || echo "Build needed"
 ```
 
 | Condition                        | Score         |
@@ -117,7 +117,7 @@ ls -lh target/release/rtk 2>/dev/null || echo "Build needed"
 
 ## Phase 4 : Audit Structure (Poids: 1.5x)
 
-**Objectif** : Architecture RTK respectée, conventions Rust appliquées.
+**Objectif** : Architecture PTK respectée, conventions Rust appliquées.
 
 ```bash
 # Regex non-lazy (compilées à chaque appel)
@@ -180,10 +180,10 @@ ls scripts/test-all.sh 2>/dev/null && echo "Smoke tests present" || echo "Missin
 
 ```bash
 # Benchmark startup (si hyperfine dispo)
-which hyperfine && hyperfine 'rtk git status' --warmup 3 2>&1 | grep "Time"
+which hyperfine && hyperfine 'ptk git status' --warmup 3 2>&1 | grep "Time"
 
 # Mémoire binaire
-ls -lh target/release/rtk 2>/dev/null
+ls -lh target/release/ptk 2>/dev/null
 
 # Dépendances lourdes
 Grep "serde_json\|regex\|rusqlite" Cargo.toml
@@ -250,7 +250,7 @@ Score global = (
 ## Format de Sortie
 
 ```
-🔍 Audit RTK — {date}
+🔍 Audit PTK — {date}
 
 ┌──────────────┬───────┬────────┬──────────────────────────────┐
 │ Catégorie    │ Score │ Tier   │ Top issue                    │

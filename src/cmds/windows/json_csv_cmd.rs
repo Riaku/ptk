@@ -5,6 +5,7 @@
 //! - `Export-Csv` (`epcsv`)
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -50,10 +51,10 @@ pub fn filter_convertto_json(raw: &str) -> String {
     let trimmed = clean.trim();
 
     // Try parsing as serde_json::Value to produce safely minified JSON
-    if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
-        if let Ok(minified) = serde_json::to_string(&val) {
-            return minified.trim_end().to_string();
-        }
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed)
+        && let Ok(minified) = serde_json::to_string(&val)
+    {
+        return minified.trim_end().to_string();
     }
 
     // Fallback: strip line-by-line whitespace
@@ -118,13 +119,13 @@ pub fn filter_export_csv_output(raw: &str, target_file: Option<&str>) -> String 
 /// Run `ConvertFrom-Json` via PowerShell and filter output.
 pub fn run_convertfrom_json(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("ConvertFrom-Json", args);
-    let cmd_label = format!("ConvertFrom-Json {}", args.join(" "));
+    let cmd_label = format!("ConvertFrom-Json {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "ConvertFrom-Json",
         cmd_label.trim(),
-        |raw| filter_convertfrom_json(raw),
+        filter_convertfrom_json,
         RunOptions::default(),
     )
 }
@@ -132,13 +133,13 @@ pub fn run_convertfrom_json(args: &[String], _verbose: u8) -> Result<i32> {
 /// Run `ConvertTo-Json` via PowerShell and minify output.
 pub fn run_convertto_json(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("ConvertTo-Json", args);
-    let cmd_label = format!("ConvertTo-Json {}", args.join(" "));
+    let cmd_label = format!("ConvertTo-Json {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "ConvertTo-Json",
         cmd_label.trim(),
-        |raw| filter_convertto_json(raw),
+        filter_convertto_json,
         RunOptions::default(),
     )
 }
@@ -146,13 +147,13 @@ pub fn run_convertto_json(args: &[String], _verbose: u8) -> Result<i32> {
 /// Run `ConvertFrom-Csv` via PowerShell and filter output.
 pub fn run_convertfrom_csv(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("ConvertFrom-Csv", args);
-    let cmd_label = format!("ConvertFrom-Csv {}", args.join(" "));
+    let cmd_label = format!("ConvertFrom-Csv {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "ConvertFrom-Csv",
         cmd_label.trim(),
-        |raw| filter_convertfrom_csv(raw),
+        filter_convertfrom_csv,
         RunOptions::default(),
     )
 }
@@ -173,7 +174,7 @@ pub fn run_export_csv(args: &[String], _verbose: u8) -> Result<i32> {
     }
 
     let cmd = windows_shell::spawn_powershell_args("Export-Csv", args);
-    let cmd_label = format!("Export-Csv {}", args.join(" "));
+    let cmd_label = format!("Export-Csv {}", display_args(args));
 
     runner::run_filtered(
         cmd,
