@@ -42,7 +42,7 @@ Use this template to generate GitHub PR review comments. Fill in each section ba
 {- Description of what's done right.}
 
 ---
-*Automated review via [rtk](https://github.com/rtk-ai/rtk) `/pr-triage`*
+*Automated review via [ptk](https://github.com/riaku/ptk) `/pr-triage`*
 ```
 
 ---
@@ -56,12 +56,12 @@ Use this template to generate GitHub PR review comments. Fill in each section ba
 - 🟡 Important : error handling gap, performance regression, scope creep, missing token savings assertion
 - 🟢 Suggestion : naming, DRY opportunity, documentation, style
 
-**RTK-specific checks to mention if relevant** :
+**PTK-specific checks to mention if relevant** :
 - `LazyLock<Regex>` for fixed patterns reused across calls
 - `anyhow::Result` + `.context("msg")` (no bare `?`, no `.unwrap()`)
 - Fallback to raw command on filter failure
 - Exit code propagation (`std::process::exit(code)`)
-- Token savings assertion ≥60% in tests
+- Token savings assertion ≥20% in tests
 - Real fixtures (not synthetic test data)
 - No async/tokio dependencies (startup time)
 

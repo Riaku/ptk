@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ptk-hook-version: 3
+# ptk-hook-version: 4
 # PTK Claude Code hook — rewrites commands to use ptk for token savings.
 # Requires: ptk >= 0.23.0, jq
 #
@@ -8,10 +8,10 @@
 # To add or change rewrite rules, edit the Rust registry — not this file.
 #
 # Exit code protocol for `ptk rewrite`:
-#   0 + stdout  Rewrite found, no deny/ask rule matched → auto-allow
+#   0 + stdout  Rewrite found, an allow rule matched → auto-allow
 #   1           No PTK equivalent → pass through unchanged
 #   2           Deny rule matched → pass through (Claude Code native deny handles it)
-#   3 + stdout  Ask rule matched → rewrite but let Claude Code prompt the user
+#   3 + stdout  Ask rule matched, or no rule matched → rewrite but let Claude Code prompt the user
 
 if ! command -v jq &>/dev/null; then
   echo "[ptk] WARNING: jq is not installed. Hook cannot rewrite commands. Install jq: https://jqlang.github.io/jq/download/" >&2
@@ -19,7 +19,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 if ! command -v ptk &>/dev/null; then
-  echo "[ptk] WARNING: ptk is not installed or not in PATH. Hook cannot rewrite commands. Install: https://github.com/Riaku/ptk/blob/develop/INSTALL.md" >&2
+  echo "[ptk] WARNING: ptk is not installed or not in PATH. Hook cannot rewrite commands. Install: https://github.com/riaku/ptk#installation" >&2
   exit 0
 fi
 
@@ -52,12 +52,16 @@ if [ -z "$CMD" ]; then
 fi
 
 # Delegate all rewrite + permission logic to the Rust binary.
-REWRITTEN=$(ptk rewrite "$CMD" 2>/dev/null)
+# Scrub PTK_REWRITE_HOST: that channel relaxes PTK's approval gate, and this
+# hook turns exit 0 into an explicit allow, so an inherited value (a shell rc,
+# .envrc, or CI env) must not reach it. Only the delegate that sets it may
+# rely on it.
+REWRITTEN=$(env -u PTK_REWRITE_HOST ptk rewrite "$CMD" 2>/dev/null)
 EXIT_CODE=$?
 
 case $EXIT_CODE in
   0)
-    # Rewrite found, no permission rules matched — safe to auto-allow.
+    # Rewrite found and an allow rule matched — safe to auto-allow.
     # If the output is identical, the command was already using PTK.
     [ "$CMD" = "$REWRITTEN" ] && exit 0
     ;;
@@ -70,8 +74,8 @@ case $EXIT_CODE in
     exit 0
     ;;
   3)
-    # Ask rule matched — rewrite the command but do NOT auto-allow so that
-    # Claude Code prompts the user for confirmation.
+    # An ask rule matched, or no rule did — rewrite the command but do NOT
+    # auto-allow, so Claude Code prompts the user for confirmation.
     ;;
   *)
     exit 0

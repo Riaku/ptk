@@ -4,6 +4,7 @@
 //! a compact, token-saving DNS answer table: `NAME  TYPE  IP/TARGET  (TTL)`.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -45,10 +46,10 @@ pub fn filter_dns_output(raw: &str) -> String {
                     "Name" => current.name = val.to_string(),
                     "QueryType" | "Type" => current.query_type = val.to_string(),
                     "TTL" => current.ttl = val.to_string(),
-                    "IPAddress" | "IP4Address" | "IP6Address" | "NameHost" | "PrimaryServer" => {
-                        if current.target.is_empty() {
-                            current.target = val.to_string();
-                        }
+                    "IPAddress" | "IP4Address" | "IP6Address" | "NameHost" | "PrimaryServer"
+                        if current.target.is_empty() =>
+                    {
+                        current.target = val.to_string();
                     }
                     _ => {}
                 }
@@ -133,13 +134,13 @@ pub fn filter_dns_output(raw: &str) -> String {
 /// Run `Resolve-DnsName` via PowerShell and filter output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Resolve-DnsName", args);
-    let cmd_label = format!("Resolve-DnsName {}", args.join(" "));
+    let cmd_label = format!("Resolve-DnsName {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Resolve-DnsName",
         cmd_label.trim(),
-        |raw| filter_dns_output(raw),
+        filter_dns_output,
         RunOptions::default(),
     )
 }
@@ -183,5 +184,28 @@ IP4Address : 127.0.0.1
         assert!(filtered.contains("localhost"));
         assert!(filtered.contains("127.0.0.1"));
         assert!(filtered.contains("::1"));
+    }
+
+    #[test]
+    fn test_first_address_for_a_name_wins() {
+        // Resolve-DnsName can report several address keys for one name; the
+        // filter keeps the first and drops the rest, so the name is listed once.
+        let sample = r#"
+Name       : multi.example
+QueryType  : A
+TTL        : 60
+Section    : Answer
+IP4Address : 10.0.0.1
+IPAddress  : 10.0.0.2
+"#;
+        let filtered = filter_dns_output(sample);
+        assert!(
+            filtered.contains("10.0.0.1"),
+            "the first address is kept: {filtered}"
+        );
+        assert!(
+            !filtered.contains("10.0.0.2"),
+            "a second address for the same name is dropped: {filtered}"
+        );
     }
 }

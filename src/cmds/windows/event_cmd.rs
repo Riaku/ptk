@@ -4,6 +4,7 @@
 //! wide table column margins.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -140,13 +141,13 @@ pub fn filter_winevent_output(raw: &str) -> String {
 /// Run `Get-EventLog` via PowerShell and filter output.
 pub fn run_eventlog(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Get-EventLog", args);
-    let cmd_label = format!("Get-EventLog {}", args.join(" "));
+    let cmd_label = format!("Get-EventLog {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Get-EventLog",
         cmd_label.trim(),
-        |raw| filter_eventlog_output(raw),
+        filter_eventlog_output,
         RunOptions::default(),
     )
 }
@@ -154,13 +155,13 @@ pub fn run_eventlog(args: &[String], _verbose: u8) -> Result<i32> {
 /// Run `Get-WinEvent` via PowerShell and filter output.
 pub fn run_winevent(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Get-WinEvent", args);
-    let cmd_label = format!("Get-WinEvent {}", args.join(" "));
+    let cmd_label = format!("Get-WinEvent {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Get-WinEvent",
         cmd_label.trim(),
-        |raw| filter_winevent_output(raw),
+        filter_winevent_output,
         RunOptions::default(),
     )
 }

@@ -1,6 +1,6 @@
 ---
 name: design-patterns
-description: Rust design patterns for RTK. Newtype, Builder, RAII, Trait Objects, State Machine. Applied to CLI filter modules. Use when designing new modules or refactoring existing ones.
+description: Rust design patterns for PTK. Newtype, Builder, RAII, Trait Objects, State Machine. Applied to CLI filter modules. Use when designing new modules or refactoring existing ones.
 triggers:
   - "design pattern"
   - "how to structure"
@@ -11,12 +11,12 @@ allowed-tools:
   - Grep
   - Glob
 effort: medium
-tags: [rust, design-patterns, architecture, newtype, builder, rtk]
+tags: [rust, design-patterns, architecture, newtype, builder, ptk]
 ---
 
-# RTK Rust Design Patterns
+# PTK Rust Design Patterns
 
-Patterns that apply to RTK's filter module architecture. Focused on CLI tool patterns, not web/service patterns.
+Patterns that apply to PTK's filter module architecture. Focused on CLI tool patterns, not web/service patterns.
 
 ## Pattern 1: Newtype (Type Safety)
 
@@ -35,7 +35,7 @@ track(OutputTokens(100), InputTokens(400));  // Compile error ✅
 ```
 
 ```rust
-// Practical RTK example: command name validation
+// Practical PTK example: command name validation
 pub struct CommandName(String);
 impl CommandName {
     pub fn new(s: &str) -> Result<Self> {
@@ -82,7 +82,7 @@ When NOT to use Builder: if the struct has 1-3 fields with obvious meaning. Over
 Use when: parsing multi-section output (test results, build output) where context changes behavior.
 
 ```rust
-// RTK example: pytest output parsing
+// PTK example: pytest output parsing
 #[derive(Debug, PartialEq)]
 enum ParseState {
     LookingForTests,
@@ -134,18 +134,18 @@ impl OutputFilter for GitFilter {
     fn command_name(&self) -> &str { "git" }
 }
 
-// RTK currently uses match-based dispatch in main.rs (simpler, no dynamic dispatch overhead)
+// PTK currently uses match-based dispatch in main.rs (simpler, no dynamic dispatch overhead)
 // Trait objects are useful if filter registry becomes dynamic (e.g., TOML-loaded plugins)
 ```
 
-Note: RTK's current `match` dispatch in `main.rs` is intentional — static dispatch, zero overhead. Only move to trait objects if the match arm count exceeds ~20 commands.
+Note: PTK's current `match` dispatch in `main.rs` is intentional — static dispatch, zero overhead. Only move to trait objects if the match arm count exceeds ~20 commands.
 
 ## Pattern 5: RAII (Resource Management)
 
 Use when: managing resources that need cleanup (temp files, SQLite connections).
 
 ```rust
-// RTK tee.rs — RAII for temp output files
+// PTK tee.rs — RAII for temp output files
 pub struct TeeFile {
     path: PathBuf,
 }
@@ -187,16 +187,16 @@ pub fn apply_filter(input: &str, mode: FilterMode) -> String {
 
 ## Pattern 7: Extension Trait (Add Methods to External Types)
 
-Use when: you need to add methods to types you don't own (like `&str` for RTK-specific parsing).
+Use when: you need to add methods to types you don't own (like `&str` for PTK-specific parsing).
 
 ```rust
-pub trait RtkStrExt {
+pub trait PtkStrExt {
     fn is_error_line(&self) -> bool;
     fn is_warning_line(&self) -> bool;
     fn token_count(&self) -> usize;
 }
 
-impl RtkStrExt for str {
+impl PtkStrExt for str {
     fn is_error_line(&self) -> bool {
         self.starts_with("error") || self.contains("[E")
     }
@@ -213,7 +213,7 @@ if line.is_error_line() { ... }
 let tokens = output.token_count();
 ```
 
-## RTK Pattern Selection Guide
+## PTK Pattern Selection Guide
 
 | Situation | Pattern | Avoid |
 |-----------|---------|-------|
@@ -225,7 +225,7 @@ let tokens = output.token_count();
 | Resource with cleanup | RAII / Drop | Manual cleanup |
 | Dynamic filter registry | Trait Object | Match sprawl |
 
-## Anti-Patterns in RTK Context
+## Anti-Patterns in PTK Context
 
 ```rust
 // ❌ Generic over-engineering for one command
@@ -243,6 +243,6 @@ static FILTER_REGISTRY: Mutex<HashMap<String, Box<dyn Filter>>> = ...;
 #[async_trait]
 pub trait Filter { async fn apply(&self, input: &str) -> Result<String>; }
 
-// ✅ Synchronous — RTK is single-threaded by design
+// ✅ Synchronous — PTK is single-threaded by design
 pub trait Filter { fn apply(&self, input: &str) -> Result<String>; }
 ```

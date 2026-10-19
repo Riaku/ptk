@@ -1,3 +1,10 @@
+#![cfg_attr(
+    not(windows),
+    allow(
+        dead_code,
+        reason = "the CMD/PowerShell entry points are only reachable from the Windows fallback"
+    )
+)]
 //! Windows CMD and PowerShell command execution and filtering modules.
 
 pub mod dir_cmd;

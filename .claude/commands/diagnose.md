@@ -50,16 +50,16 @@ fi
 ```
 
 ```bash
-# Hook PTK-suggest.sh check
-if [ -f ".claude/hooks/PTK-suggest.sh" ]; then
-    echo "✅ OK: PTK-suggest.sh hook present"
-    if [ -x ".claude/hooks/PTK-suggest.sh" ]; then
+# Hook ptk-suggest.sh check
+if [ -f ".claude/hooks/ptk-suggest.sh" ]; then
+    echo "✅ OK: ptk-suggest.sh hook present"
+    if [ -x ".claude/hooks/ptk-suggest.sh" ]; then
         echo "✅ OK: hook is executable"
     else
         echo "⚠️ WARNING: hook not executable (chmod +x needed)"
     fi
 else
-    echo "❌ MISSING: PTK-suggest.sh hook"
+    echo "❌ MISSING: ptk-suggest.sh hook"
 fi
 ```
 
@@ -135,7 +135,7 @@ fi
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📦 PTK Binary:      ✅ OK (v0.16.0) | ❌ NOT FOUND
-🔗 Hooks:           ✅ OK (ptk-rewrite.sh + PTK-suggest.sh executable)
+🔗 Hooks:           ✅ OK (ptk-rewrite.sh + ptk-suggest.sh executable)
                     ❌ MISSING or ⚠️ WARNING (not executable)
 📊 Token Analytics: ✅ OK (ptk gain working)
                     ❌ FAILED (command not available)
@@ -171,10 +171,10 @@ options:
 options:
   - label: "cargo install --path ."
     description: "Installer PTK localement (si dans le repo)"
-  - label: "cargo install --git https://github.com/Riaku/ptk"
+  - label: "cargo install --git https://github.com/riaku/ptk"
     description: "Installer PTK depuis le repo GitHub (dernière release)"
   - label: "Télécharger un binaire précompilé"
-    description: "Depuis https://github.com/Riaku/ptk/releases (Windows/macOS/Linux)"
+    description: "Depuis https://github.com/riaku/ptk/releases (Windows/macOS/Linux)"
 ```
 
 ### Si hooks manquants/non exécutables
@@ -283,15 +283,18 @@ export PATH="$HOME/.cargo/bin:$PATH"
 source ~/.zshrc  # or source ~/.bashrc
 ```
 
-### Issue : Multiple PTK binaries (name collision)
+### Issue : a stale `ptk` binary shadowing the current one
 
 **Symptom**: `ptk gain` fails with "command not found" even though `ptk --version` works
 
 **Diagnosis**:
 ```bash
-# Check if wrong PTK installed (reachingforthejack/PTK)
+# The Rust Type Kit (reachingforthejack/rtk) installs `rtk`, so it cannot be the cause:
+# a missing `gain` means an older build of this fork is first on PATH.
 ptk --version
-# Should show "ptk X.Y.Z", NOT "Rust Type Kit"
+# Should show "ptk X.Y.Z"
+which -a ptk
+# More than one path means an old install is shadowing the new one
 
 ptk --help | grep gain
 # Should show "gain" command - if missing, wrong binary

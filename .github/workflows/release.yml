@@ -17,7 +17,6 @@ on:
       tag:
         description: 'Tag to release (e.g., v0.1.0)'
         required: true
-        type: string
       prerelease:
         description: 'Mark as pre-release'
         type: boolean
@@ -60,10 +59,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable branch, untagged
         with:
           targets: ${{ matrix.target }}
 
@@ -80,31 +79,113 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools
 
-      - name: Build
+      - name: Build ptk
         run: cargo build --release --target ${{ matrix.target }}
         env:
-          RTK_TELEMETRY_URL: ${{ vars.RTK_TELEMETRY_URL }}
-          RTK_TELEMETRY_TOKEN: ${{ secrets.RTK_TELEMETRY_TOKEN }}
+          PTK_TELEMETRY_URL: ${{ vars.PTK_TELEMETRY_URL }}
+          PTK_TELEMETRY_TOKEN: ${{ secrets.PTK_TELEMETRY_TOKEN }}
 
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
         run: |
+          # The binary links the BUSL-1.1 ptk-engine, so both texts travel
+          # with every artifact: LICENSE (Apache-2.0, the CLI sources) and
+          # LICENSE-ENGINE (BUSL-1.1, the linked engine).
+          cp LICENSE target/${{ matrix.target }}/release/LICENSE
+          cp engine/LICENSE target/${{ matrix.target }}/release/LICENSE-ENGINE
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk
+          tar -czvf ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk LICENSE LICENSE-ENGINE
           cd ../../..
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         run: |
+          cp LICENSE target/${{ matrix.target }}/release/LICENSE
+          cp engine/LICENSE target/${{ matrix.target }}/release/LICENSE-ENGINE
           cd target/${{ matrix.target }}/release
-          7z a ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk.exe
+          7z a ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk.exe LICENSE LICENSE-ENGINE
           cd ../../..
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ptk-${{ matrix.target }}
           path: ptk-${{ matrix.target }}.${{ matrix.archive }}
+
+      # The Apache-2.0 edition: the same binary built without the BUSL engine,
+      # so only LICENSE travels with it. Same binary name `ptk` inside -- an
+      # installed hook command must keep working across editions.
+      - name: Build ptk (Apache-2.0 edition)
+        run: cargo build --release --no-default-features --target ${{ matrix.target }}
+        env:
+          PTK_TELEMETRY_URL: ${{ vars.PTK_TELEMETRY_URL }}
+          PTK_TELEMETRY_TOKEN: ${{ secrets.PTK_TELEMETRY_TOKEN }}
+
+      - name: Package ptk-oss (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cp LICENSE target/${{ matrix.target }}/release/LICENSE
+          cd target/${{ matrix.target }}/release
+          tar -czvf ../../../ptk-oss-${{ matrix.target }}.${{ matrix.archive }} ptk LICENSE
+          cd ../../..
+
+      - name: Package ptk-oss (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cp LICENSE target/${{ matrix.target }}/release/LICENSE
+          cd target/${{ matrix.target }}/release
+          7z a ../../../ptk-oss-${{ matrix.target }}.${{ matrix.archive }} ptk.exe LICENSE
+          cd ../../..
+
+      - name: Upload ptk-oss artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ptk-oss-${{ matrix.target }}
+          path: ptk-oss-${{ matrix.target }}.${{ matrix.archive }}
+
+      # The daemon ships as its own archive rather than inside the ptk one.
+      # It is licensed BUSL-1.1, not Apache-2.0, so bundling it would hand
+      # every ptk user a binary under different terms without them choosing
+      # it. The BSL requires its text to travel with the work, hence the
+      # LICENSE alongside the binary, plus LICENSE-ENGINE for the ptk-engine
+      # crate the daemon links.
+      #
+      # `--target-dir target` keeps the output where the packaging steps look:
+      # proxy/ is not a workspace member, so its default target dir would be
+      # proxy/target/.
+      - name: Build ptk-proxy
+        id: build_proxy
+        run: >
+          cargo build --release
+          --manifest-path proxy/Cargo.toml
+          --target-dir target
+          --target ${{ matrix.target }}
+        env:
+          CFLAGS_x86_64_unknown_linux_musl: "-Du_int8_t=uint8_t -Du_int16_t=uint16_t -Du_int64_t=uint64_t"
+
+      - name: Package ptk-proxy (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cp proxy/LICENSE target/${{ matrix.target }}/release/LICENSE
+          cp engine/LICENSE target/${{ matrix.target }}/release/LICENSE-ENGINE
+          cd target/${{ matrix.target }}/release
+          tar -czvf ../../../ptk-proxy-${{ matrix.target }}.${{ matrix.archive }} ptk-proxy LICENSE LICENSE-ENGINE
+          cd ../../..
+
+      - name: Package ptk-proxy (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cp proxy/LICENSE target/${{ matrix.target }}/release/LICENSE
+          cp engine/LICENSE target/${{ matrix.target }}/release/LICENSE-ENGINE
+          cd target/${{ matrix.target }}/release
+          7z a ../../../ptk-proxy-${{ matrix.target }}.${{ matrix.archive }} ptk-proxy.exe LICENSE LICENSE-ENGINE
+          cd ../../..
+
+      - name: Upload ptk-proxy artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ptk-proxy-${{ matrix.target }}
+          path: ptk-proxy-${{ matrix.target }}.${{ matrix.archive }}
 
   release:
     name: Create Release
@@ -123,16 +204,19 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/create-github-app-token@v3
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
+        # Optional, like cd.yml: without App credentials the release still
+        # publishes on the default workflow token. Otherwise the only install
+        # channel produces nothing at all.
         if: steps.app-creds.outputs.configured == 'true'
         with:
-          app-id: ${{ secrets.APP_CLIENT_ID }}
+          client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: write
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -162,9 +246,9 @@ jobs:
           sha256sum * > checksums.txt
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.version.outputs.version }}
           files: release/*
           prerelease: ${{ inputs.prerelease }}
-          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || github.token }}

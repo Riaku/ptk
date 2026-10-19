@@ -1,3 +1,10 @@
+#![cfg_attr(
+    not(windows),
+    allow(
+        dead_code,
+        reason = "the CMD/PowerShell entry points are only reachable from the Windows fallback"
+    )
+)]
 //! Windows shell execution engine for PTK.
 //!
 //! Provides transparent spawning and handling for Windows CMD built-ins
@@ -77,15 +84,16 @@ pub fn is_powershell_cmdlet(name: &str) -> bool {
         return true;
     }
     // Any Verb-Noun cmdlet naming convention (e.g. Get-*, Set-*, Test-*)
-    if let Some((verb, noun)) = lower.split_once('-') {
-        if !verb.is_empty() && !noun.is_empty() {
-            let common_verbs = [
-                "get", "set", "new", "remove", "test", "invoke", "start", "stop", "restart",
-                "enable", "disable", "add", "clear", "export", "import", "select", "format", "out",
-                "write", "measure", "sort", "where",
-            ];
-            return common_verbs.contains(&verb);
-        }
+    if let Some((verb, noun)) = lower.split_once('-')
+        && !verb.is_empty()
+        && !noun.is_empty()
+    {
+        let common_verbs = [
+            "get", "set", "new", "remove", "test", "invoke", "start", "stop", "restart", "enable",
+            "disable", "add", "clear", "export", "import", "select", "format", "out", "write",
+            "measure", "sort", "where",
+        ];
+        return common_verbs.contains(&verb);
     }
     false
 }
@@ -93,7 +101,7 @@ pub fn is_powershell_cmdlet(name: &str) -> bool {
 /// Resolves the preferred PowerShell executable (`pwsh` for PowerShell 7+, fallback to `powershell`).
 pub fn resolve_powershell_bin() -> &'static str {
     static PS_BIN: OnceLock<&'static str> = OnceLock::new();
-    *PS_BIN.get_or_init(|| {
+    PS_BIN.get_or_init(|| {
         if which::which("pwsh").is_ok() {
             "pwsh"
         } else {

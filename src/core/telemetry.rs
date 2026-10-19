@@ -1,8 +1,8 @@
 //! Optional usage ping so we know which commands people run most.
 
-use super::constants::PTK_DATA_DIR;
 use crate::core::config;
 use crate::core::tracking;
+use crate::core::user_dirs;
 use crate::hooks::constants::CLAUDE_DIR;
 use crate::hooks::init::resolve_claude_dir;
 use sha2::{Digest, Sha256};
@@ -12,6 +12,9 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 static CACHED_SALT: OnceLock<String> = OnceLock::new();
+
+const TELEMETRY_URL: Option<&str> = option_env!("PTK_TELEMETRY_URL");
+const TELEMETRY_TOKEN: Option<&str> = option_env!("PTK_TELEMETRY_TOKEN");
 const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 
 /// The telemetry endpoint compiled into this build, if any.
@@ -22,7 +25,7 @@ const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 /// CI `env:` block, which exports an empty string when the repository variable
 /// is not configured.
 pub fn endpoint_url() -> Option<&'static str> {
-    None
+    TELEMETRY_URL.filter(|&u| crate::core::utils::env_is_some(Some(u)))
 }
 
 /// Send a telemetry ping if enabled and not already sent today.
@@ -152,7 +155,11 @@ fn send_ping() -> Result<(), Box<dyn std::error::Error>> {
         ),
     });
 
-    let req = ureq::post(url).set("Content-Type", "application/json");
+    let mut req = ureq::post(url).set("Content-Type", "application/json");
+
+    if let Some(token) = TELEMETRY_TOKEN {
+        req = req.set("X-PTK-Token", token);
+    }
 
     // 2 second timeout — if server is down, we move on
     req.timeout(std::time::Duration::from_secs(2))
@@ -213,10 +220,7 @@ fn random_salt() -> String {
 }
 
 pub fn salt_file_path() -> PathBuf {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join(PTK_DATA_DIR)
-        .join(".device_salt")
+    user_dirs::data_under("/tmp").join(".device_salt")
 }
 
 fn get_stats(tracker: &tracking::Tracker) -> (i64, Vec<String>, Option<f64>, i64, i64) {
@@ -326,7 +330,7 @@ fn get_enriched_stats(tracker: &tracking::Tracker) -> EnrichedStats {
     }
 }
 
-/// Build meta-command usage counts (gain, discover, proxy, verify, learn, init).
+/// Build meta-command usage counts (gain, discover, bypass, verify, learn, init).
 fn recall_mode_label() -> &'static str {
     use crate::core::retriever::RecoveryMode;
     match crate::core::config::Config::load()
@@ -429,7 +433,7 @@ fn build_recall_stats(stats: &[crate::core::retriever::RecallStat]) -> serde_jso
 }
 
 fn build_meta_usage(tracker: &tracking::Tracker) -> serde_json::Value {
-    let meta_cmds = ["gain", "discover", "proxy", "verify", "learn", "init"];
+    let meta_cmds = ["gain", "discover", "bypass", "verify", "learn", "init"];
     let mut usage = serde_json::Map::new();
     for meta in &meta_cmds {
         let count = tracker.count_meta_command(meta).unwrap_or(0);
@@ -442,8 +446,8 @@ fn build_meta_usage(tracker: &tracking::Tracker) -> serde_json::Value {
 
 /// Check if user has a config.toml file.
 fn detect_has_config() -> bool {
-    dirs::config_dir()
-        .map(|d| d.join("ptk/config.toml").exists())
+    user_dirs::config()
+        .map(|d| d.join(crate::core::constants::CONFIG_TOML).exists())
         .unwrap_or(false)
 }
 
@@ -456,7 +460,7 @@ fn count_exclude_commands() -> usize {
 
 /// Detect which AI agent hook is installed.
 fn detect_hook_type() -> String {
-    let home = match dirs::home_dir() {
+    let home = match user_dirs::home() {
         Some(h) => h,
         None => return "unknown".to_string(),
     };
@@ -480,7 +484,7 @@ fn detect_hook_type() -> String {
     }
 
     // Check project-level hooks (Claude script + project-scoped Copilot config)
-    if let Ok(cwd) = std::env::current_dir() {
+    if let Some(cwd) = user_dirs::working_dir() {
         if cwd.join(".claude/hooks/ptk-rewrite.sh").exists() {
             return "claude".to_string();
         }
@@ -497,7 +501,7 @@ fn count_custom_toml_filters() -> usize {
     let mut count = 0;
 
     // Project-local: .ptk/filters/*.toml
-    if let Ok(cwd) = std::env::current_dir()
+    if let Some(cwd) = user_dirs::working_dir()
         && let Ok(entries) = std::fs::read_dir(cwd.join(".ptk/filters"))
     {
         count += entries
@@ -507,8 +511,8 @@ fn count_custom_toml_filters() -> usize {
     }
 
     // Global: ~/.config/ptk/filters/*.toml
-    if let Some(config_dir) = dirs::config_dir()
-        && let Ok(entries) = std::fs::read_dir(config_dir.join("ptk/filters"))
+    if let Some(ptk_dir) = user_dirs::config()
+        && let Ok(entries) = std::fs::read_dir(ptk_dir.join("filters"))
     {
         count += entries
             .filter_map(|e| e.ok())
@@ -546,9 +550,7 @@ fn install_method_from_path(path: &str) -> &'static str {
 }
 
 pub fn telemetry_marker_path() -> PathBuf {
-    let data_dir = dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join(PTK_DATA_DIR);
+    let data_dir = user_dirs::data_under("/tmp");
     let _ = crate::core::utils::create_private_dir(&data_dir);
     data_dir.join(".telemetry_last_ping")
 }

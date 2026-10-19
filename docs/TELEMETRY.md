@@ -5,7 +5,7 @@ PTK collects anonymous, aggregate usage metrics once per day to help improve the
 ## Data Collector
 
 **Entity**: `the PTK fork maintainers`
-**Contact**: the GitHub issue tracker (https://github.com/Riaku/ptk/issues)
+**Contact**: the GitHub issue tracker (https://github.com/riaku/ptk/issues)
 
 ## Why we collect telemetry
 
@@ -131,7 +131,7 @@ ptk telemetry forget     # Withdraw consent + delete local data + request server
 
 Environment variable override (blocks telemetry regardless of consent):
 ```bash
-export RTK_TELEMETRY_DISABLED=1
+export PTK_TELEMETRY_DISABLED=1
 ```
 
 ## Retention Policy
@@ -146,16 +146,16 @@ Under the EU General Data Protection Regulation, you have the right to:
 
 - **Access** your data: `ptk telemetry status` shows your device hash; the telemetry payload is fully documented above.
 - **Rectification**: since data is anonymous and aggregate, rectification is not applicable.
-- **Erasure** (Art. 17): run `ptk telemetry forget` to delete local data and send an erasure request to the server. Alternatively, email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) with your device hash.
+- **Erasure** (Art. 17): run `ptk telemetry forget` to delete local data and send an erasure request to the server. Alternatively, email the GitHub issue tracker (https://github.com/riaku/ptk/issues) with your device hash.
 - **Restriction of processing**: `ptk telemetry disable` stops all data collection immediately.
 - **Portability**: the local SQLite database at `~/.local/share/ptk/tracking.db` contains all locally stored data.
-- **Objection**: `ptk telemetry disable` or `export RTK_TELEMETRY_DISABLED=1`.
+- **Objection**: `ptk telemetry disable` or `export PTK_TELEMETRY_DISABLED=1`.
 
 ## Erasure Procedure
 
 1. Run `ptk telemetry forget` — this disables telemetry, deletes your device salt, ping marker, and local tracking database (`history.db`), then sends an erasure request to the server.
-2. If the server is unreachable, the CLI prints your full device hash and fallback instructions to email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) for manual erasure.
-3. You can also email the GitHub issue tracker (https://github.com/Riaku/ptk/issues) directly to request manual erasure.
+2. If the server is unreachable, the CLI prints your full device hash and fallback instructions to email the GitHub issue tracker (https://github.com/riaku/ptk/issues) for manual erasure.
+3. You can also email the GitHub issue tracker (https://github.com/riaku/ptk/issues) directly to request manual erasure.
 
 ## Data Handling
 
@@ -179,7 +179,7 @@ The telemetry implementation lives in `src/core/telemetry.rs`. Key design decisi
 - **Fire-and-forget**: errors are silently ignored, never shown to users
 - **Non-blocking**: runs in a `std::thread::spawn`, 2-second timeout
 - **No async**: consistent with PTK's single-threaded design
-- **Compile-time gating**: if `RTK_TELEMETRY_URL` is not set at build time, all telemetry code is dead — the binary makes zero network calls
+- **Compile-time gating**: if `PTK_TELEMETRY_URL` is not set at build time, all telemetry code is dead — the binary makes zero network calls
 - **23-hour interval**: prevents clock-drift accumulation that a strict 24h interval would cause
 
 When adding new fields:

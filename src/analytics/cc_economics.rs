@@ -959,7 +959,7 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_monthly_only_rtk() {
+    fn test_merge_monthly_only_ptk() {
         let ptk = vec![MonthStats {
             month: "2026-01".to_string(),
             commands: 10,

@@ -15,7 +15,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 if ! command -v ptk &>/dev/null; then
-  echo "[ptk] WARNING: ptk is not installed or not in PATH. Hook cannot rewrite commands. Install: https://github.com/Riaku/ptk/blob/develop/INSTALL.md" >&2
+  echo "[ptk] WARNING: ptk is not installed or not in PATH. Hook cannot rewrite commands. Install: https://github.com/riaku/ptk#installation" >&2
   exit 0
 fi
 
@@ -41,7 +41,11 @@ fi
 # Delegate all rewrite logic to the Rust binary.
 # Exit codes: 0 = allow rewrite, 1 = no rewrite (passthrough),
 #             2 = deny, 3 = ask.
-REWRITTEN=$(ptk rewrite "$CMD" 2>/dev/null)
+# Scrub PTK_REWRITE_HOST: that channel relaxes PTK's approval gate, and this
+# hook turns exit 0 into an explicit allow, so an inherited value (a shell rc,
+# .envrc, or CI env) must not reach it. Only the delegate that sets it may
+# rely on it.
+REWRITTEN=$(env -u PTK_REWRITE_HOST ptk rewrite "$CMD" 2>/dev/null)
 RC=$?
 if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
   echo '{}'

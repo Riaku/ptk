@@ -4,6 +4,7 @@
 //! oversized files with helpful recovery hints so agents don't blow context.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -50,7 +51,7 @@ pub fn filter_content(raw: &str, max_lines: usize) -> String {
 /// Run `type` via CMD and filter output.
 pub fn run_cmd_type(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_cmd("type", args);
-    let cmd_label = format!("type {}", args.join(" "));
+    let cmd_label = format!("type {}", display_args(args));
 
     runner::run_filtered(
         cmd,
@@ -72,7 +73,7 @@ pub fn is_get_content_passthrough(args: &[String]) -> bool {
 /// Run `Get-Content` via PowerShell and filter output.
 pub fn run_get_content(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Get-Content", args);
-    let cmd_label = format!("Get-Content {}", args.join(" "));
+    let cmd_label = format!("Get-Content {}", display_args(args));
 
     if is_get_content_passthrough(args) {
         return runner::run(

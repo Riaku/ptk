@@ -3,6 +3,7 @@
 //! - `Format-List` (`fl`)
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -78,13 +79,13 @@ pub fn filter_format_list(raw: &str) -> String {
 /// Run `Format-Table` via PowerShell and filter output.
 pub fn run_format_table(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Format-Table", args);
-    let cmd_label = format!("Format-Table {}", args.join(" "));
+    let cmd_label = format!("Format-Table {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Format-Table",
         cmd_label.trim(),
-        |raw| filter_format_table(raw),
+        filter_format_table,
         RunOptions::default(),
     )
 }
@@ -92,13 +93,13 @@ pub fn run_format_table(args: &[String], _verbose: u8) -> Result<i32> {
 /// Run `Format-List` via PowerShell and filter output.
 pub fn run_format_list(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Format-List", args);
-    let cmd_label = format!("Format-List {}", args.join(" "));
+    let cmd_label = format!("Format-List {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Format-List",
         cmd_label.trim(),
-        |raw| filter_format_list(raw),
+        filter_format_list,
         RunOptions::default(),
     )
 }

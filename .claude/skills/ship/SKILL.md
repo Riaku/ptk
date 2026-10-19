@@ -5,7 +5,7 @@ allowed-tools: Read Write Edit Bash Grep Glob
 
 # Ship Release
 
-Systematic release workflow for RTK: build verification, version bump, changelog update, git tag, and push to trigger CI/CD.
+Systematic release workflow for PTK: build verification, version bump, changelog update, git tag, and push to trigger CI/CD.
 
 ## When to Use
 
@@ -26,10 +26,10 @@ cargo test --all           # All tests pass
 
 ### 2. Performance Benchmarks Pass
 ```bash
-hyperfine 'target/release/rtk git status' --warmup 3
+hyperfine 'target/release/ptk git status' --warmup 3
 # Should show <10ms mean time
 
-/usr/bin/time -l target/release/rtk git status
+/usr/bin/time -l target/release/ptk git status
 # Should show <5MB maximum resident set size
 ```
 
@@ -49,12 +49,12 @@ git status  # Should show "nothing to commit, working tree clean"
 ### Step 1: Determine Version Bump
 
 **Semantic Versioning** (MAJOR.MINOR.PATCH):
-- **MAJOR** (v1.0.0): Breaking changes (rare for RTK)
+- **MAJOR** (v1.0.0): Breaking changes (rare for PTK)
 - **MINOR** (v0.X.0): New features, new filters, new commands
 - **PATCH** (v0.0.X): Bug fixes, performance improvements
 
 **Examples**:
-- New filter added (`rtk pytest`) → **MINOR** bump (v0.16.0 → v0.17.0)
+- New filter added (`ptk pytest`) → **MINOR** bump (v0.16.0 → v0.17.0)
 - Bug fix in `git log` filter → **PATCH** bump (v0.16.0 → v0.16.1)
 - Breaking CLI arg change → **MAJOR** bump (v0.16.0 → v1.0.0)
 
@@ -70,12 +70,12 @@ git status  # Should show "nothing to commit, working tree clean"
 ```toml
 # Cargo.toml (before)
 [package]
-name = "rtk"
+name = "ptk"
 version = "0.16.0"  # Current version
 
 # Cargo.toml (after - MINOR bump)
 [package]
-name = "rtk"
+name = "ptk"
 version = "0.17.0"  # New version
 ```
 
@@ -84,7 +84,7 @@ version = "0.17.0"  # New version
 ## [0.17.0] - 2026-02-15
 
 ### Added
-- `rtk pytest` command for Python test filtering (90% token reduction)
+- `ptk pytest` command for Python test filtering (90% token reduction)
 - Support for `pytest` JSON output parsing
 - Integration with `uv` package manager auto-detection
 
@@ -104,7 +104,7 @@ cargo clean
 cargo build --release
 
 # Verify binary
-target/release/rtk --version
+target/release/ptk --version
 # Should show new version
 
 # Run full quality checks
@@ -113,7 +113,7 @@ cargo clippy --all-targets
 cargo test --all
 
 # Benchmark performance
-hyperfine 'target/release/rtk git status' --warmup 3
+hyperfine 'target/release/ptk git status' --warmup 3
 # Should still be <10ms
 ```
 
@@ -140,7 +140,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 git tag -a v0.17.0 -m "Release v0.17.0
 
 Added:
-- rtk pytest command (90% token reduction)
+- ptk pytest command (90% token reduction)
 - Support for uv package manager
 
 Fixed:
@@ -188,9 +188,9 @@ gh release view v0.17.0
 ### 3. Installation Verification
 ```bash
 # Test installation from release
-curl -sSL https://github.com/rtk-ai/rtk/releases/download/v0.17.0/rtk-macos-latest -o rtk
-chmod +x rtk
-./rtk --version
+curl -sSL https://github.com/riaku/ptk/releases/download/v0.17.0/ptk-macos-latest -o ptk
+chmod +x ptk
+./ptk --version
 # Should show v0.17.0
 ```
 
@@ -269,7 +269,7 @@ cargo build --release
 
 # 4. Verify version
 echo "✅ Verifying version..."
-target/release/rtk --version | grep "$NEW_VERSION"
+target/release/ptk --version | grep "$NEW_VERSION"
 
 # 5. Commit
 echo "💾 Committing version bump..."
@@ -346,16 +346,16 @@ git push origin v0.17.0
 
 ### Issue: Version Mismatch
 
-**Symptom**: `rtk --version` shows old version after bump
+**Symptom**: `ptk --version` shows old version after bump
 
 **Solution**:
 ```bash
 # Cargo.lock might be out of sync
-cargo update -p rtk
+cargo update -p ptk
 cargo build --release
 
 # Verify
-target/release/rtk --version
+target/release/ptk --version
 ```
 
 ### Issue: Changelog Merge Conflict

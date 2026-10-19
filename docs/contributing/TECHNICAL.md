@@ -2,8 +2,8 @@
 
 > **Start here** for a guided tour of how PTK works end-to-end.
 >
-> - [CONTRIBUTING.md](../CONTRIBUTING.md) — Design philosophy, PR process, branch naming, testing requirements
-> - [ARCHITECTURE.md](ARCHITECTURE.md) — Deep reference: filtering taxonomy, performance benchmarks, architecture decisions
+> - [CONTRIBUTING.md](../../CONTRIBUTING.md) — Design philosophy, PR process, branch naming, testing requirements
+> - [ARCHITECTURE.md](ARCHITECTURE.md) — Deep reference: filtering taxonomy, performance targets, architecture decisions
 > - Each folder has its own `README.md` with implementation details and file descriptions
 
 ---
@@ -12,7 +12,7 @@
 
 LLM-powered coding agents (Claude Code, Copilot, Cursor, etc.) consume tokens for every CLI command output they process. Most command outputs contain boilerplate, progress bars, ANSI escape codes, and verbose formatting that wastes tokens without providing actionable information.
 
-PTK sits between the agent and the CLI, filtering outputs to keep only what matters. This cuts 60-90% of the bash output per command, reducing costs and increasing effective context window utilization. PTK is a single Rust binary with no runtime dependencies beyond the compiled binary itself, adding less than 10ms overhead per command.
+PTK sits between the agent and the CLI, filtering outputs to keep only what matters. This reduces the bash output per command, reducing costs and increasing effective context window utilization. PTK is a single Rust binary with no runtime dependencies beyond the compiled binary itself, adding less than 10ms overhead per command.
 
 Every percentage below measures **bash output**, which is one contributor to input tokens, themselves only part of a bill that also counts output tokens. PTK ships no tokenizer (`src/core/tracking.rs` estimates `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
 
@@ -75,11 +75,11 @@ The user runs `ptk init` to set up hooks for their LLM agent. This:
 1. Writes a thin shell hook script (e.g., `~/.claude/hooks/ptk-rewrite.sh`)
 2. Stores its SHA-256 hash for integrity verification
 3. Patches the agent's settings file (e.g., `settings.json`) to register the hook
-4. Writes PTK awareness instructions (e.g., `@@PTKMD@@`) for prompt-level guidance
+4. Writes PTK awareness instructions (e.g., `PTK.md`) for prompt-level guidance
 
 PTK supports 7 agents, each with its own installation mode. The hook scripts are embedded in the binary and written at install time.
 
-> **Details**: [`src/hooks/README.md`](../src/hooks/README.md) covers all installation modes, configuration files, and the uninstall flow.
+> **Details**: [`src/hooks/README.md`](../../src/hooks/README.md) covers all installation modes, configuration files, and the uninstall flow.
 
 ### 3.2 Hook Interception (Command Rewriting)
 
@@ -90,11 +90,11 @@ When an LLM agent runs a command (e.g., `git status`):
 3. The hook calls `ptk rewrite "git status"` as a subprocess
 4. `ptk rewrite` consults the command registry and returns `ptk git status`
 5. The hook sends a response telling the agent to use the rewritten command
-6. If anything fails (jq missing, PTK not found, no match), the hook exits silently -- the raw command runs unchanged
+6. If anything fails (jq missing, ptk not found, no match), the hook exits silently -- the raw command runs unchanged
 
 All rewrite logic lives in Rust (`src/discover/registry.rs`). Hooks are thin delegates that handle agent-specific JSON formats.
 
-> **Details**: [`hooks/README.md`](../hooks/README.md) covers each agent's JSON format, the rewrite registry, compound command handling, and the `RTK_DISABLED` override.
+> **Details**: [`hooks/README.md`](../../hooks/README.md) covers each agent's JSON format, the rewrite registry, compound command handling, and the `PTK_DISABLED` override.
 
 #### Rewrite Pipeline
 
@@ -111,7 +111,7 @@ LLM Agent: "cargo fmt --all && cargo test 2>&1 | tail -20"
   |
   |  Hook shell (hooks/claude/ptk-rewrite.sh)
   |  Reads JSON from agent, extracts command, calls `ptk rewrite "$CMD"`
-  |  On failure (jq missing, PTK missing, old version): exit 0 (passthrough)
+  |  On failure (jq missing, ptk missing, old version): exit 0 (passthrough)
   |
   v
 rewrite_cmd::run(cmd)                              [src/hooks/rewrite_cmd.rs]
@@ -121,13 +121,19 @@ rewrite_cmd::run(cmd)                              [src/hooks/rewrite_cmd.rs]
   |     → None → exit(1)          (no PTK equivalent, passthrough)
   |     → Some + Allow → print, exit(0)
   |     → Some + Ask   → print, exit(3)
+  |  4. ApprovalOwner::from_env() — PTK_REWRITE_HOST names the calling
+  |     delegate. For one that gates the rewritten command itself
+  |     (OpenClaw), a Default ask renders as exit(0) instead of exit(3); an
+  |     explicit Ask rule still exits 3 so the host can prompt. Deny and
+  |     passthrough are untouched, so this never relaxes a deny or drops an
+  |     explicit ask.
   |
   v
 rewrite_command(cmd, excluded)                     [src/discover/registry.rs]
   |  Early exits:
   |  - Empty → None
   |  - Contains "<<" or "$((" (heredoc/arithmetic) → None
-  |  - Simple "PTK ..." (no operators) → return as-is
+  |  - Simple "ptk ..." (no operators) → return as-is
   |  - Otherwise → rewrite_compound(cmd, excluded)
   |
   v
@@ -146,7 +152,7 @@ rewrite_compound(cmd, excluded)                    [src/discover/registry.rs]
   |  Pipe (|) → keep intermediate stages raw
   |             rewrite a pipeline-safe final stage, or the
   |             producer when its rule allows it and all
-  |             consumers are display-only (#3171)
+  |             consumers are display-only
   |  Stderr pipe (|&) → keep the complete pipeline raw
   |  Shellism (&) → rewrite both sides (background)
   |
@@ -179,22 +185,22 @@ rewrite_segment(seg, excluded)                     [src/discover/registry.rs]
   |  a. Find matching rule from rules.rs
   |  b. Extract env prefix (ENV_PREFIX regex, second pass — first was in classify)
   |     e.g. "GIT_SSH_COMMAND=\"ssh -o ...\" git push" → prefix="GIT_SSH_COMMAND=..."
-  |  c. Guard: RTK_DISABLED=1 in prefix → None
+  |  c. Guard: PTK_DISABLED=1 in prefix → None
   |  d. Guard: gh with --json/--jq/--template → None
   |  e. Apply rule's rewrite_prefixes: "cargo fmt" → "ptk cargo fmt"
-  |  f. Reassemble: env_prefix + RTK_cmd + args + redirect_suffix
+  |  f. Reassemble: env_prefix + ptk_cmd + args + redirect_suffix
   |
   v
 classify_command(cmd)                              [src/discover/registry.rs]
   |  1. Check IGNORED_EXACT (cd, echo, fi, done, ...)
-  |  2. Check IGNORED_PREFIXES (PTK, mkdir, mv, ...)
+  |  2. Check IGNORED_PREFIXES (ptk, mkdir, mv, ...)
   |  3. Strip env prefix with ENV_PREFIX regex (for pattern matching only)
   |  4. Normalize absolute paths: /usr/bin/grep → grep
   |  5. Strip git global opts: git -C /tmp status → git status
   |  6. Guard: cat/head/tail with redirect (>, >>) → Unsupported (write, not read)
   |  7. Match against REGEX_SET (60+ compiled patterns from rules.rs)
   |  8. Extract subcommand → lookup custom savings/status overrides
-  |  9. Return Classification::Supported { RTK_equivalent, category, savings, status }
+  |  9. Return Classification::Supported { ptk_equivalent, category, savings, status }
   |
   v
 Result: "ptk cargo fmt --all && ptk cargo test 2>&1 | tail -20"
@@ -204,12 +210,13 @@ Result: "ptk cargo fmt --all && ptk cargo test 2>&1 | tail -20"
   |
   v
 LLM Agent executes rewritten command
-  (bash handles && and |, each PTK invocation is a separate process)
+  (bash handles && and |, each ptk invocation is a separate process)
 ```
 
 Key design decisions:
 - **Lexer-based tokenization**: A single-pass state machine (`lexer.rs`) handles all shell constructs (quotes, escapes, redirects, operators). Used for both compound splitting and redirect stripping.
 - **Segment-level rewriting**: Compound commands are split by operators, each segment rewritten independently. Bash recombines them at execution time.
+- **Conservative shell-wrapper recursion**: Only exact quoted `sh|bash|zsh|fish -c` wrappers enter one level of inner rewriting. The parser hands back byte ranges instead of a decoded script, so the wrapper's own bytes are never re-quoted, and it reports the shell it matched so the script is attested under that shell's grammar rather than under bash's.
 - **Pipe semantics**: Producers and intermediate stages of `|` remain raw. Only an argument-safe final stage whose rule has `pipeline_final_safe` may be rewritten; initially this is limited to ordinary `grep` and `rg` invocations. Search pattern-file forms (`-f`/`--file`) defer because they can consume pipeline stdin as configuration. `|&` is recognized separately and its complete pipeline stays raw.
 - **Double env prefix handling**: `classify_command()` strips env prefixes to match the underlying command against rules. `rewrite_segment()` extracts the same prefix separately to re-prepend it to the rewritten command.
 - **Fallback contract**: If any segment fails to match, it stays raw. `rewrite_command()` returns `None` only when zero segments were rewritten.
@@ -242,13 +249,13 @@ Each filter module follows the same pattern:
 5. Track token savings to SQLite
 6. Propagate exit code
 
-> **Details**: [`src/cmds/README.md`](../src/cmds/README.md) covers the common pattern, ecosystem organization, cross-command dependencies, and how to add new filters.
+> **Details**: [`src/cmds/README.md`](../../src/cmds/README.md) covers the common pattern, ecosystem organization, cross-command dependencies, and how to add new filters.
 
 ### 3.5 Fallback Path
 
 When Clap parsing fails (unknown command):
 
-1. Guard: check if the command is an PTK meta-command (`gain`, `init`, etc.) -- if so, show Clap error
+1. Guard: check if the command is a PTK meta-command (`gain`, `init`, etc.) -- if so, show Clap error
 2. Look up TOML DSL filters via `toml_filter::find_matching_filter()`
 3. If TOML match: capture stdout, apply filter pipeline, track savings
 4. If no match: pure passthrough with `Stdio::inherit`, track as 0% output reduction
@@ -263,7 +270,7 @@ Command received
                  -> No:  Passthrough (inherit stdio, track 0% reduction)
 ```
 
-> **Details**: [`src/core/README.md`](../src/core/README.md) covers the TOML filter engine, filter pipeline stages, and trust-gated project filters.
+> **Details**: [`src/core/README.md`](../../src/core/README.md) covers the TOML filter engine, filter pipeline stages, and trust-gated project filters.
 
 ### 3.6 Token Tracking
 
@@ -276,7 +283,7 @@ Every command execution records metrics to SQLite (`~/.local/share/ptk/tracking.
 
 Analytics commands (`ptk gain`, `ptk cc-economics`, `ptk session`) query this database to produce dashboards and ROI reports.
 
-> **Details**: [`src/analytics/README.md`](../src/analytics/README.md) covers the analytics modules, and [`src/core/README.md`](../src/core/README.md) covers the tracking database schema.
+> **Details**: [`src/analytics/README.md`](../../src/analytics/README.md) covers the analytics modules, and [`src/core/README.md`](../../src/core/README.md) covers the tracking database schema.
 
 ### 3.7 Output Recovery (recall store)
 
@@ -288,7 +295,7 @@ On command failure (non-zero exit code) — or when a filter truncates a long li
 
 The mode is selectable via `ptk config recall <sqlite|tee|disabled>` — `tee` keeps the legacy per-file behavior (`~/.local/share/ptk/tee/{epoch}_{slug}.log`). Recovery never affects command output or exit code. `ptk gain --recalls` reports how often elided output is actually consulted, per filter.
 
-> **Details**: [`src/core/README.md`](../src/core/README.md) covers the recall store, tee mode configuration, and the rotation strategy.
+> **Details**: [`src/core/README.md`](../../src/core/README.md) covers the recall store, tee mode configuration, and the rotation strategy.
 
 ---
 
@@ -301,27 +308,27 @@ Start here, then drill down into each README for file-level details.
 | Directory | What it does | What you'll find in its README |
 |-----------|-------------|-------------------------------|
 | `main.rs` | CLI entry point, `Commands` enum, routing match | _(no README — read the file directly)_ |
-| [`core/`](../src/core/README.md) | Shared infrastructure | Tracking DB schema, config system, tee recovery, TOML filter engine, utility functions |
-| [`hooks/`](../src/hooks/README.md) | Hook system | Installation flow (`ptk init`), integrity verification, rewrite command, trust model |
-| [`analytics/`](../src/analytics/README.md) | Token savings analytics | `ptk gain` dashboard, Claude Code economics, ccusage parsing |
-| [`cmds/`](../src/cmds/README.md) | **Command filters (9 ecosystems)** | Common filter pattern, cross-command routing, token savings table, **links to each ecosystem** |
-| [`discover/`](../src/discover/README.md) | History analysis + rewrite registry | Rewrite patterns, session providers, compound command splitting |
-| [`learn/`](../src/learn/README.md) | CLI correction detection | Error classification, correction pair detection, rule generation |
-| [`parser/`](../src/parser/README.md) | Parser infrastructure | Canonical types (TestResult, LintResult, etc.), 3-tier format modes, migration guide |
-| [`filters/`](../src/filters/README.md) | TOML filter configs | TOML DSL syntax, 8-stage pipeline, inline testing, naming conventions |
+| [`core/`](../../src/core/README.md) | Shared infrastructure | Tracking DB schema, config system, tee recovery, TOML filter engine, utility functions |
+| [`hooks/`](../../src/hooks/README.md) | Hook system | Installation flow (`ptk init`), integrity verification, rewrite command, trust model |
+| [`analytics/`](../../src/analytics/README.md) | Token savings analytics | `ptk gain` dashboard, Claude Code economics, ccusage parsing |
+| [`cmds/`](../../src/cmds/README.md) | **Command filters (9 ecosystems)** | Common filter pattern, cross-command routing, token savings table, **links to each ecosystem** |
+| [`discover/`](../../src/discover/README.md) | History analysis + rewrite registry | Rewrite patterns, session providers, compound command splitting |
+| [`learn/`](../../src/learn/README.md) | CLI correction detection | Error classification, correction pair detection, rule generation |
+| [`parser/`](../../src/parser/README.md) | Parser infrastructure | Canonical types (TestResult, LintResult, etc.), 3-tier format modes, migration guide |
+| [`filters/`](../../src/filters/README.md) | TOML filter configs | TOML DSL syntax, 8-stage pipeline, inline testing, naming conventions |
 
 ### `hooks/` — Deployed hook artifacts (root directory)
 
 | Directory | Agent | What you'll find in its README |
 |-----------|-------|-------------------------------|
-| [`hooks/`](../hooks/README.md) | _(parent)_ | **All JSON formats**, rewrite registry overview, exit code contract, override controls |
-| [`claude/`](../hooks/claude/README.md) | Claude Code | Shell hook mechanism, `PreToolUse` JSON, test script |
-| [`copilot/`](../hooks/copilot/README.md) | GitHub Copilot | Rust binary hook, single `PreToolUse` schema shared by VS Code Chat and Copilot CLI |
-| [`cursor/`](../hooks/cursor/README.md) | Cursor IDE | Shell hook, empty JSON response requirement |
-| [`cline/`](../hooks/cline/README.md) | Cline / Roo Code | Rules file (prompt-level, no programmatic hook) |
-| [`windsurf/`](../hooks/windsurf/README.md) | Windsurf / Cascade | Rules file (workspace-scoped) |
-| [`codex/`](../hooks/codex/README.md) | OpenAI Codex CLI | Native `PreToolUse` processor, hooks.json registration, AGENTS.md awareness |
-| [`opencode/`](../hooks/opencode/README.md) | OpenCode | TypeScript plugin, zx library, in-place mutation |
+| [`hooks/`](../../hooks/README.md) | _(parent)_ | **All JSON formats**, rewrite registry overview, exit code contract, override controls |
+| [`claude/`](../../hooks/claude/README.md) | Claude Code | Shell hook mechanism, `PreToolUse` JSON, test script |
+| [`copilot/`](../../hooks/copilot/README.md) | GitHub Copilot | Rust binary hook, single `PreToolUse` schema shared by VS Code Chat and Copilot CLI |
+| [`cursor/`](../../hooks/cursor/README.md) | Cursor IDE | Shell hook, empty JSON response requirement |
+| [`cline/`](../../hooks/cline/README.md) | Cline / Roo Code | Rules file (prompt-level, no programmatic hook) |
+| [`windsurf/`](../../hooks/windsurf/README.md) | Windsurf / Cascade | Rules file (workspace-scoped) |
+| [`codex/`](../../hooks/codex/README.md) | OpenAI Codex CLI | Native `PreToolUse` processor, hooks.json registration, AGENTS.md awareness |
+| [`opencode/`](../../hooks/opencode/README.md) | OpenCode | TypeScript plugin, in-place mutation (OpenCode 2.0 and 1.x >= 1.18.29) |
 
 ---
 
@@ -339,9 +346,9 @@ PTK supports the following LLM agents through hook integrations:
 | Cline/Roo Code | Rules file | Prompt-level guidance | N/A (prompt) |
 | Windsurf | Rules file | Prompt-level guidance | N/A (prompt) |
 | Codex CLI | Rust binary | `ptk hook codex` reads JSON | Yes (`updatedInput`) |
-| OpenCode | TS plugin | `tool.execute.before` event | Yes (in-place mutation) |
+| OpenCode | TS plugin | execute.before (v2) / tool.execute.before (v1) | Yes (in-place mutation) |
 
-> **Details**: [`hooks/README.md`](../hooks/README.md) has the full JSON schemas for each agent. [`src/hooks/README.md`](../src/hooks/README.md) covers installation, integrity verification, and the rewrite command.
+> **Details**: [`hooks/README.md`](../../hooks/README.md) has the full JSON schemas for each agent. [`src/hooks/README.md`](../../src/hooks/README.md) covers installation, integrity verification, and the rewrite command.
 
 ---
 
@@ -349,15 +356,15 @@ PTK supports the following LLM agents through hook integrations:
 
 ### Rust Filters (cmds/**)
 
-Compiled filter modules for complex transformations, cutting 60-95% of the bash output.
+Compiled filter modules for complex transformations.
 
-> **Details**: [`src/cmds/README.md`](../src/cmds/README.md) and each ecosystem subdirectory README.
+> **Details**: [`src/cmds/README.md`](../../src/cmds/README.md) and each ecosystem subdirectory README.
 
 ### TOML DSL Filters (src/filters/*.toml)
 
-Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match output, strip/keep lines, truncate lines, head/tail, max lines, on-empty message. Loaded from three tiers: built-in (compiled), global (`~/.config/ptk/filters/`), project-local (`.PTK/filters/`, trust-gated).
+Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match output, strip/keep lines, truncate lines, head/tail, max lines, on-empty message. Loaded from three tiers: built-in (compiled), global (`~/.config/ptk/filters/`), project-local (`.ptk/filters/`, trust-gated).
 
-> **Details**: [`src/core/README.md`](../src/core/README.md) covers the TOML filter engine.
+> **Details**: [`src/core/README.md`](../../src/core/README.md) covers the TOML filter engine.
 
 ---
 
@@ -367,7 +374,7 @@ Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match o
 |--------|--------|--------------|
 | Startup time | < 10ms | `hyperfine 'ptk git status' 'git status'` |
 | Memory usage | < 5MB resident | `/usr/bin/time -v ptk git status` |
-| Binary size | < 5MB stripped | `ls -lh target/release/PTK` |
+| Binary size | < 5MB stripped | `ls -lh target/release/ptk` |
 | Bash output reduction | ≥20% per filter (floor) | Snapshot + token count tests |
 
 Achieved through:
@@ -426,7 +433,7 @@ tests/
 - **Fixtures**: real command output in `tests/fixtures/`
 - **Integration tests**: `#[ignore]` attribute, run with `cargo test --ignored`
 
-> For testing requirements, pre-commit gate, and PR checklist, see [CONTRIBUTING.md — Testing](../CONTRIBUTING.md#testing).
+> For testing requirements, pre-commit gate, and PR checklist, see [CONTRIBUTING.md — Testing](../../CONTRIBUTING.md#testing).
 
 ---
 

@@ -4,6 +4,7 @@
 //! and footer byte counts, formatting output into a dense, LLM-friendly list.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -127,13 +128,13 @@ fn format_size(bytes: u64) -> String {
 /// Run `dir` with args via `cmd.exe` and filter its output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_cmd("dir", args);
-    let cmd_label = format!("dir {}", args.join(" "));
+    let cmd_label = format!("dir {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "dir",
         cmd_label.trim(),
-        |raw| filter_dir_output(raw),
+        filter_dir_output,
         RunOptions::default(),
     )
 }

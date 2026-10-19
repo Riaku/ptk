@@ -1,12 +1,13 @@
 //! Audits hook activity logs to show what commands were rewritten and when.
 
+use crate::core::user_env;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Default log file location (aligned with hook's $HOME/.local/share/ptk/).
 fn default_log_path() -> PathBuf {
-    if let Ok(dir) = crate::core::env_compat::env_compat("AUDIT_DIR") {
+    if let Some(dir) = user_env::var("PTK_AUDIT_DIR") {
         PathBuf::from(dir).join("hook-audit.log")
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
@@ -62,7 +63,7 @@ fn filter_since_days(entries: &[AuditEntry], days: u64) -> Vec<&AuditEntry> {
     // `crate::core::utils::days_ago_cutoff` clamps instead of panicking on a huge
     // `days` (see its doc comment) — `ptk hook audit --since <huge>` used to crash
     // with the same "DateTime - TimeDelta overflowed" panic `ptk discover --since`
-    // did (rtk-ai/rtk#3206 review).
+    // did (riaku/ptk#3206 review).
     let cutoff = crate::core::utils::days_ago_cutoff(days);
     let cutoff_str = cutoff.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
@@ -244,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_filter_since_days_does_not_panic_on_huge_value() {
-        // rtk-ai/rtk#3206 review: `ptk hook audit --since 100000000` panicked with
+        // riaku/ptk#3206 review: `ptk hook audit --since 100000000` panicked with
         // "DateTime - TimeDelta overflowed" — same overflow class fixed for `ptk
         // discover --since` via the shared `core::utils::days_ago_cutoff`.
         let entries = vec![make_entry("rewrite", "git status")];
@@ -262,7 +263,7 @@ mod tests {
         let raw_log = r#"2026-02-16T14:30:01Z | rewrite | git status | ptk git status
 2026-02-16T14:30:02Z | skip:no_match | echo hello | -
 2026-02-16T14:30:03Z | rewrite | cargo test | ptk cargo test
-2026-02-16T14:30:04Z | skip:already_rtk | ptk git log | -
+2026-02-16T14:30:04Z | skip:already_ptk | ptk git log | -
 2026-02-16T14:30:05Z | rewrite | git log --oneline -10 | ptk git log --oneline -10
 2026-02-16T14:30:06Z | rewrite | gh pr view 42 | ptk gh pr view 42
 2026-02-16T14:30:07Z | skip:no_match | mkdir -p foo | -

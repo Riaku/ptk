@@ -47,8 +47,10 @@ bench() {
   local unix_cmd="$2"
   local ptk_cmd="$3"
 
-  unix_out=$(eval "$unix_cmd" 2>/dev/null || true)
-  ptk_out=$(eval "$ptk_cmd" 2>/dev/null || true)
+  # ptk forwards the stderr it does not filter, so measuring only stdout would book
+  # a passed-through stream as if the filter had removed it.
+  unix_out=$(eval "$unix_cmd" 2>&1 || true)
+  ptk_out=$(eval "$ptk_cmd" 2>&1 || true)
 
   unix_tokens=$(count_tokens "$unix_out")
   ptk_tokens=$(count_tokens "$ptk_out")
@@ -287,11 +289,16 @@ bench "grep -c" "grep -ron 'fn ' src/ || true" "$PTK grep -rc 'fn ' src/"
 # ===================
 # rg (native ripgrep, recursive by default, same output filter)
 # ===================
-section "rg"
-bench "rg fn" "rg -n 'fn ' src/ || true" "$PTK rg 'fn ' src/"
-bench "rg struct" "rg -n 'struct ' src/ || true" "$PTK rg 'struct ' src/"
-bench "rg -l files" "rg -l 'fn ' src/ || true" "$PTK rg -l 'fn ' src/"
-bench "rg -c count" "rg -c 'fn ' src/ || true" "$PTK rg -c 'fn ' src/"
+if command -v rg &>/dev/null; then
+  section "rg"
+  bench "rg fn" "rg -n 'fn ' src/ || true" "$PTK rg 'fn ' src/"
+  bench "rg struct" "rg -n 'struct ' src/ || true" "$PTK rg 'struct ' src/"
+  bench "rg -l files" "rg -l 'fn ' src/ || true" "$PTK rg -l 'fn ' src/"
+  bench "rg -c count" "rg -c 'fn ' src/ || true" "$PTK rg -c 'fn ' src/"
+else
+  echo ""
+  echo "⏭️  rg (not installed, skipped)"
+fi
 
 # ===================
 # json

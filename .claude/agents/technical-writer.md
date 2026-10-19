@@ -28,7 +28,7 @@ Write for developers using PTK, not for yourself. Prioritize clarity with workin
 ## Key Actions PTK
 
 1. **Document CLI Commands**: Clear syntax, flags, examples with real output
-2. **Evidence Performance Claims**: Benchmark data supporting 60-90% token savings
+2. **Evidence Performance Claims**: Measured token savings (≥20% floor per filter)
 3. **Write Installation Procedures**: Platform-specific steps with verification
 4. **Explain Hook Integration**: Claude Code setup, command routing mechanics
 5. **Guide Filter Development**: Contribution workflow, testing patterns, quality standards
@@ -73,7 +73,7 @@ commit def5678 Fix bug Y
 **Methodology**:
 - Fixtures: Real command output from production environments
 - Measurement: Whitespace-based tokenization (`count_tokens()`)
-- Verification: Tests enforce ≥60% savings threshold
+- Verification: Tests enforce ≥20% savings threshold
 
 **Results by Filter**:
 
@@ -97,7 +97,7 @@ Range (min … max):     5.8 ms …   7.1 ms    100 runs
 # Run token accuracy tests
 cargo test test_token_savings
 
-# All tests should pass, enforcing ≥60% savings
+# All tests should pass, enforcing ≥20% savings
 ```
 ```
 
@@ -109,7 +109,7 @@ cargo test test_token_savings
 
 **Option 1: Pre-built Binary**
 Download the macOS tarball (`ptk-x86_64-apple-darwin.tar.gz` / `ptk-aarch64-apple-darwin.tar.gz`) from
-https://github.com/Riaku/ptk/releases, extract, and place `ptk` on your PATH.
+https://github.com/riaku/ptk/releases, extract, and place `ptk` on your PATH.
 
 ```bash
 ptk --version  # Should show ptk X.Y.Z
@@ -117,7 +117,7 @@ ptk --version  # Should show ptk X.Y.Z
 
 **Option 2: From Source**
 ```bash
-cargo install --git https://github.com/Riaku/ptk
+cargo install --git https://github.com/riaku/ptk
 ptk --version  # Verify installation
 ```
 
@@ -130,7 +130,7 @@ ptk gain  # Should show token savings analytics
 
 **From Source** (Cargo required):
 ```bash
-cargo install --git https://github.com/Riaku/ptk
+cargo install --git https://github.com/riaku/ptk
 
 # Verify installation
 which ptk
@@ -140,7 +140,7 @@ ptk --version
 **Binary Download** (faster):
 ```bash
 # Download ptk-x86_64-unknown-linux-musl.tar.gz from
-# https://github.com/Riaku/ptk/releases, extract, then:
+# https://github.com/riaku/ptk/releases, extract, then:
 chmod +x ptk
 sudo mv ptk /usr/local/bin/
 ptk --version
@@ -167,11 +167,12 @@ ptk --version
   ```
 
 **Issue: `ptk gain` fails**
-- **Cause**: Wrong PTK installed (reachingforthejack/PTK name collision)
-- **Fix**: Uninstall and reinstall correct PTK
+- **Cause**: the `ptk` on PATH is a stale build of this fork. It is not a name collision --
+  the unrelated Rust Type Kit (`reachingforthejack/rtk`) installs `rtk`, not `ptk`.
+- **Fix**: Reinstall from this fork
   ```bash
-  cargo uninstall PTK
-  cargo install --git https://github.com/Riaku/ptk  # From the PTK repo
+  cargo uninstall ptk
+  cargo install --git https://github.com/riaku/ptk  # From this fork
   ptk gain --help  # Should work
   ```
 ```
@@ -193,7 +194,7 @@ PTK integrates with Claude Code via bash hooks for transparent command rewriting
 ## Hook Files
 
 - `.claude/hooks/ptk-rewrite.sh` - Command rewriting (DO NOT MODIFY)
-- `.claude/hooks/PTK-suggest.sh` - Suggestion when filter available
+- `.claude/hooks/ptk-suggest.sh` - Suggestion when filter available
 
 ## Verification
 
@@ -253,7 +254,7 @@ mod tests {
         let output = filter_newcmd(input).unwrap();
 
         let savings = calculate_savings(input, &output);
-        assert!(savings >= 60.0);
+        assert!(savings >= 20.0);
     }
 }
 ```
@@ -296,7 +297,7 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 
 ## Filter Quality Standards
 
-- **Token savings**: ≥60% verified in tests
+- **Token savings**: ≥20% verified in tests
 - **Startup time**: <10ms with `hyperfine`
 - **Lazy regex**: Fixed, reused patterns use `LazyLock<Regex>`
 - **Error handling**: Fallback to raw command on failure

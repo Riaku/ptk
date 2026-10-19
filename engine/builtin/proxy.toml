@@ -1,0 +1,18 @@
+# ptk:proxy — cache alignment in the daemon
+#
+# Adds an ephemeral cache breakpoint when the client set none. Stripping of
+# ANSI codes, progress bars and repeated lines is inherited from ptk:default.
+# CCR (reversible compress-cache-retrieve) and write-body retirement are not
+# enabled here.
+#
+# Benchmark: not published.
+
+schema_version = 1
+
+[pipeline]
+name    = "ptk:proxy"
+extends = "ptk:default"
+
+[[proxy.request.cache]]
+name = "align"
+use  = ["cache-align"]

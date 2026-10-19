@@ -1,6 +1,6 @@
-# Contributing to PTK
+# Contributing to ptk
 
-**Welcome!** We appreciate your interest in contributing to PTK.
+**Welcome!** We appreciate your interest in contributing to ptk.
 
 ## Quick Links
 
@@ -11,9 +11,9 @@
 
 ---
 
-## What is PTK?
+## What is ptk?
 
-**PTK (Rust Token Killer)** is a coding agent proxy that cuts noise from command outputs. It filters and compresses CLI output before it reaches your LLM context, reducing bash output by 60-90% on common operations. The vision is to make AI-assisted development faster and cheaper by eliminating unnecessary token consumption.
+**ptk (Rust Token Killer)** is a coding agent proxy that cuts noise from command outputs. It filters and compresses CLI output before it reaches your LLM context, so the agent reads less bash output on common operations.
 
 Every percentage in this repo measures **bash output**, not your bill: those bytes are one contributor to input tokens, and input tokens are only part of a cost that also counts output tokens. See [How PTK Savings Work](docs/guide/resources/savings-explained.md) before quoting any figure.
 
@@ -28,6 +28,7 @@ Every percentage in this repo measures **bash output**, not your bill: those byt
 | **Build** | New filters, new command support, new features (for core features, discuss with maintainers before) |
 | **Review** | Review open PRs, test changes locally, leave constructive feedback |
 | **Document** | Improve docs, clarify |
+| **Extend** | Write your own pipeline method as a Rust plugin — no core change needed. See the [Plugins guide](docs/guide/pipelines/plugins.md) (`ptk plugins new/build`) |
 ---
 
 ## Design Philosophy
@@ -40,7 +41,7 @@ When a user or LLM explicitly requests detailed output via flags (e.g., `git log
 
 Filters should be flag-aware: default output (no flags) gets aggressively compressed, but verbose/detailed flags should pass through more content. When in doubt, preserve correctness.
 
-> Example: `ptk cargo test` shows failures only (90% less bash output). But `ptk cargo test -- --nocapture` preserves all output because the user explicitly asked for it.
+> Example: `ptk cargo test` shows failures only. But `ptk cargo test -- --nocapture` preserves all output because the user explicitly asked for it.
 
 ### Transparency
 
@@ -204,7 +205,7 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 **No obvious comments.** Don't comment what the code already says. Comments should explain *why*, never *what* to avoid noise.
 
-**Large command files are expected.** Command modules (`*_cmd.rs`) contain the implementation, tests, and fixture in the same file. A big file is fine when it's self-contained for one command. This will be moved in the future.
+**Large command files are expected.** Command modules (`*_cmd.rs`) contain the implementation, tests, and fixture in the same file. A big file is fine when it's self-contained for one command.
 
 ### 3. Add Tests
 
@@ -220,7 +221,7 @@ All contributions require signing our **Contributor License Agreement (CLA)** be
 
 By signing, you certify that:
 - You have authored 100% of the contribution, or have the necessary rights to submit it.
-- You grant **PTK-ai** and **PTK-ai Labs** a perpetual, worldwide, royalty-free license to use your contribution — including in commercial products such as **PTK Pro** — under the [Apache License 2.0](LICENSE).
+- You grant **PTK AI Labs** a perpetual, worldwide, royalty-free license to use your contribution — including in commercial products such as **ptk Pro**. A contribution to the `ptk` CLI is licensed under the [Apache License 2.0](LICENSE); a contribution to `engine/` or `proxy/` is licensed under [BUSL-1.1](engine/LICENSE), as those crates are (see [`engine/CONTRIBUTING.md`](engine/CONTRIBUTING.md)).
 - If your employer has rights over your work, you have obtained their permission.
 
 **This is automatic.** When you open a Pull Request, [CLA Assistant](https://cla-assistant.io) will post a comment asking you to sign. Click the link in that comment to sign with your GitHub account. You only need to sign once.
@@ -249,7 +250,7 @@ your branch --> develop (review + CI + integration testing) --> version branch -
 
 Every change **must** include tests. We follow **TDD (Red-Green-Refactor)**: write a failing test first, implement the minimum to pass, then refactor.
 
-For how to write tests (fixtures, snapshots, token savings verification), see [docs/contributing/TECHNICAL.md — Testing](docs/contributing/TECHNICAL.md#testing).
+For how to write tests (fixtures, snapshots, token savings verification), see [docs/contributing/TECHNICAL.md — Testing](docs/contributing/TECHNICAL.md#8-testing).
 
 ### Test Types
 
@@ -311,4 +312,4 @@ This protects PTK's shell execution capabilities against injection attacks and s
 
 ---
 
-**Thank you for contributing to PTK!**
+**Thank you for contributing to ptk!**

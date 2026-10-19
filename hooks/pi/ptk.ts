@@ -62,7 +62,7 @@ type StatusContext = {
 // while the probe is in flight. If session_start happens first, retain its
 // context and apply the status as soon as the probe reports a failure.
 // pi.notify is intentionally not used — OMP wipes it on the initial render.
-function registerRtkUnavailableNotice(pi: ExtensionAPI) {
+function registerPtkUnavailableNotice(pi: ExtensionAPI) {
   let reason: string | undefined
   let sessionContext: StatusContext | undefined
 
@@ -92,12 +92,12 @@ function registerRtkUnavailableNotice(pi: ExtensionAPI) {
 }
 
 export default async function (pi: ExtensionAPI) {
-  const reportRtkUnavailable = registerRtkUnavailableNotice(pi)
+  const reportPtkUnavailable = registerPtkUnavailableNotice(pi)
 
   // Probe ptk version at load time; disables extension if missing or too old.
   const ver = await pi.exec("ptk", ["--version"], { timeout: REWRITE_TIMEOUT_MS })
   if (ver.code !== 0) {
-    reportRtkUnavailable("ptk binary not found in PATH")
+    reportPtkUnavailable("ptk binary not found in PATH")
     console.warn("[ptk] ptk binary not found in PATH — extension disabled")
     return
   }
@@ -107,7 +107,7 @@ export default async function (pi: ExtensionAPI) {
   if (parsed) {
     const [major, minor] = parsed
     if (major === 0 && minor < MIN_SUPPORTED_PTK_MINOR) {
-      reportRtkUnavailable(`ptk ${parsed.join(".")} is too old (need >= 0.23.0)`)
+      reportPtkUnavailable(`ptk ${parsed.join(".")} is too old (need >= 0.23.0)`)
       console.warn(`[ptk] ptk ${ver.stdout.trim()} is too old (need >= 0.23.0) — extension disabled`)
       return
     }

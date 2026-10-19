@@ -1,11 +1,11 @@
 ---
 model: haiku
-description: Test RTK command routing without execution (dry-run) - verifies which commands have filters
+description: Test PTK command routing without execution (dry-run) - verifies which commands have filters
 ---
 
 # /test-routing
 
-Vérifie le routing de commandes RTK sans exécution (dry-run). Utile pour tester si une commande a un filtre disponible avant de l'exécuter.
+Vérifie le routing de commandes PTK sans exécution (dry-run). Utile pour tester si une commande a un filtre disponible avant de l'exécuter.
 
 ## Usage
 
@@ -17,58 +17,58 @@ Vérifie le routing de commandes RTK sans exécution (dry-run). Utile pour teste
 
 ```bash
 /test-routing git status
-# Output: ✅ RTK filter available: git status → rtk git status
+# Output: ✅ PTK filter available: git status → ptk git status
 
 /test-routing npm install
-# Output: ⚠️  No RTK filter, would execute raw: npm install
+# Output: ⚠️  No PTK filter, would execute raw: npm install
 
 /test-routing cargo test
-# Output: ✅ RTK filter available: cargo test → rtk cargo test
+# Output: ✅ PTK filter available: cargo test → ptk cargo test
 ```
 
 ## Quand utiliser
 
-- **Avant d'exécuter une commande**: Vérifier si RTK a un filtre
+- **Avant d'exécuter une commande**: Vérifier si PTK a un filtre
 - **Debugging hook integration**: Tester le command routing sans side-effects
-- **Documentation**: Identifier quelles commandes RTK supporte
+- **Documentation**: Identifier quelles commandes PTK supporte
 - **Testing**: Valider routing logic sans exécuter de vraies commandes
 
 ## Implémentation
 
-### Option 1: Check RTK Help Output
+### Option 1: Check PTK Help Output
 
 ```bash
 COMMAND="$1"
 shift
 ARGS="$@"
 
-# Check if RTK has subcommand for this command
-if rtk --help | grep -E "^  $COMMAND" >/dev/null 2>&1; then
-    echo "✅ RTK filter available: $COMMAND $ARGS → rtk $COMMAND $ARGS"
+# Check if PTK has subcommand for this command
+if ptk --help | grep -E "^  $COMMAND" >/dev/null 2>&1; then
+    echo "✅ PTK filter available: $COMMAND $ARGS → ptk $COMMAND $ARGS"
     echo ""
     echo "Expected behavior:"
-    echo "  - Command will be filtered through RTK"
+    echo "  - Command will be filtered through PTK"
     echo "  - Output condensed for token efficiency"
     echo "  - Exit code preserved from original command"
 else
-    echo "⚠️  No RTK filter available, would execute raw: $COMMAND $ARGS"
+    echo "⚠️  No PTK filter available, would execute raw: $COMMAND $ARGS"
     echo ""
     echo "Expected behavior:"
-    echo "  - Command executed without RTK filtering"
+    echo "  - Command executed without PTK filtering"
     echo "  - Full command output (no token savings)"
     echo "  - Original command behavior unchanged"
 fi
 ```
 
-### Option 2: Check RTK Source Code
+### Option 2: Check PTK Source Code
 
 ```bash
 COMMAND="$1"
 shift
 ARGS="$@"
 
-# List of supported RTK commands (from src/main.rs)
-RTK_COMMANDS=(
+# List of supported PTK commands (from src/main.rs)
+PTK_COMMANDS=(
     "git"
     "grep"
     "ls"
@@ -103,8 +103,8 @@ RTK_COMMANDS=(
 )
 
 # Check if command in supported list
-if [[ " ${RTK_COMMANDS[@]} " =~ " ${COMMAND} " ]]; then
-    echo "✅ RTK filter available: $COMMAND $ARGS → rtk $COMMAND $ARGS"
+if [[ " ${PTK_COMMANDS[@]} " =~ " ${COMMAND} " ]]; then
+    echo "✅ PTK filter available: $COMMAND $ARGS → ptk $COMMAND $ARGS"
     echo ""
 
     # Show filter details if available
@@ -127,15 +127,15 @@ if [[ " ${RTK_COMMANDS[@]} " =~ " ${COMMAND} " ]]; then
             ;;
         *)
             echo "Filter: Available for $COMMAND"
-            echo "Token savings: 60-90% (typical)"
+            echo "Token savings: >=20% (floor)"
             ;;
     esac
 else
-    echo "⚠️  No RTK filter available, would execute raw: $COMMAND $ARGS"
+    echo "⚠️  No PTK filter available, would execute raw: $COMMAND $ARGS"
     echo ""
-    echo "Note: You can still use 'rtk proxy $COMMAND $ARGS' to:"
+    echo "Note: You can still use 'ptk bypass $COMMAND $ARGS' to:"
     echo "  - Execute command without filtering"
-    echo "  - Track usage in 'rtk gain --history'"
+    echo "  - Track usage in 'ptk gain --history'"
     echo "  - Measure potential for new filter development"
 fi
 ```
@@ -148,31 +148,31 @@ shift
 ARGS="$@"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🧪 RTK Command Routing Test"
+echo "🧪 PTK Command Routing Test"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Command: $COMMAND $ARGS"
 echo ""
 
-# Check if RTK installed
-if ! command -v rtk >/dev/null 2>&1; then
-    echo "❌ ERROR: RTK not installed"
+# Check if PTK installed
+if ! command -v ptk >/dev/null 2>&1; then
+    echo "❌ ERROR: PTK not installed"
     echo "   Install with: cargo install --path ."
     exit 1
 fi
 
-# Check RTK version
-RTK_VERSION=$(rtk --version 2>/dev/null | awk '{print $2}')
-echo "RTK Version: $RTK_VERSION"
+# Check PTK version
+PTK_VERSION=$(ptk --version 2>/dev/null | awk '{print $2}')
+echo "PTK Version: $PTK_VERSION"
 echo ""
 
 # Check if command has filter
-if rtk --help | grep -E "^  $COMMAND" >/dev/null 2>&1; then
+if ptk --help | grep -E "^  $COMMAND" >/dev/null 2>&1; then
     echo "✅ Filter: Available"
     echo ""
     echo "Routing:"
     echo "  Input:  $COMMAND $ARGS"
-    echo "  Route:  rtk $COMMAND $ARGS"
+    echo "  Route:  ptk $COMMAND $ARGS"
     echo "  Filter: Applied"
     echo ""
 
@@ -191,7 +191,7 @@ if rtk --help | grep -E "^  $COMMAND" >/dev/null 2>&1; then
             echo "Startup Time: <10ms"
             ;;
         *)
-            echo "Expected Token Savings: 60-90%"
+            echo "Expected Token Savings: >=20% (floor)"
             echo "Startup Time: <10ms"
             ;;
     esac
@@ -200,11 +200,11 @@ else
     echo ""
     echo "Routing:"
     echo "  Input:  $COMMAND $ARGS"
-    echo "  Route:  $COMMAND $ARGS (raw, no RTK)"
+    echo "  Route:  $COMMAND $ARGS (raw, no PTK)"
     echo "  Filter: None"
     echo ""
     echo "Alternatives:"
-    echo "  - Use 'rtk proxy $COMMAND $ARGS' to track usage"
+    echo "  - Use 'ptk bypass $COMMAND $ARGS' to track usage"
     echo "  - Consider contributing a filter for this command"
 fi
 
@@ -220,18 +220,18 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 /test-routing git status
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧪 RTK Command Routing Test
+🧪 PTK Command Routing Test
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Command: git status
 
-RTK Version: 0.16.0
+PTK Version: 0.16.0
 
 ✅ Filter: Available
 
 Routing:
   Input:  git status
-  Route:  rtk git status
+  Route:  ptk git status
   Filter: Applied
 
 Expected Token Savings: 60-80%
@@ -246,39 +246,39 @@ Startup Time: <10ms
 /test-routing npm install express
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧪 RTK Command Routing Test
+🧪 PTK Command Routing Test
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Command: npm install express
 
-RTK Version: 0.16.0
+PTK Version: 0.16.0
 
 ⚠️  Filter: Not available
 
 Routing:
   Input:  npm install express
-  Route:  npm install express (raw, no RTK)
+  Route:  npm install express (raw, no PTK)
   Filter: None
 
 Alternatives:
-  - Use 'rtk proxy npm install express' to track usage
+  - Use 'ptk bypass npm install express' to track usage
   - Consider contributing a filter for this command
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### Cas 3: RTK non installé
+### Cas 3: PTK non installé
 
 ```bash
 /test-routing cargo test
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧪 RTK Command Routing Test
+🧪 PTK Command Routing Test
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Command: cargo test
 
-❌ ERROR: RTK not installed
+❌ ERROR: PTK not installed
    Install with: cargo install --path .
 ```
 
@@ -286,11 +286,11 @@ Command: cargo test
 
 ### Use Case 1: Pre-Flight Check
 
-Avant d'exécuter une commande coûteuse, vérifier si RTK a un filtre :
+Avant d'exécuter une commande coûteuse, vérifier si PTK a un filtre :
 
 ```bash
 /test-routing cargo build --all-targets
-# ✅ Filter available → use rtk cargo build
+# ✅ Filter available → use ptk cargo build
 # ⚠️  No filter → use raw cargo build
 ```
 
@@ -339,15 +339,15 @@ Dans Claude Code, cette command permet de :
 
 1. **Vérifier hook integration** : Test si hooks rewrites commands correctement
 2. **Debugging** : Identifier pourquoi certaines commandes ne sont pas filtrées
-3. **Documentation** : Montrer à l'utilisateur quelles commandes RTK supporte
+3. **Documentation** : Montrer à l'utilisateur quelles commandes PTK supporte
 
 **Exemple workflow** :
 
 ```
-User: "Is git status supported by RTK?"
+User: "Is git status supported by PTK?"
 Assistant: "Let me check with /test-routing git status"
 [Runs command]
-Assistant: "Yes! RTK has a filter for git status with 60-80% token savings."
+Assistant: "Yes! PTK has a filter for git status with 60-80% token savings."
 ```
 
 ## Limitations
@@ -358,5 +358,5 @@ Assistant: "Yes! RTK has a filter for git status with 60-80% token savings."
 
 Pour tester le filtre complet, utiliser :
 ```bash
-rtk <cmd>  # Exécution réelle avec filtre
+ptk <cmd>  # Exécution réelle avec filtre
 ```

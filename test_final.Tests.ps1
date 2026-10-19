@@ -89,12 +89,14 @@ function Run-ComparisonTest {
         }
         [System.IO.File]::AppendAllText($benchFile, ($benchItem | ConvertTo-Json -Compress) + "`n")
 
-        $ptkOut | Should -Not -BeNullOrEmpty
-        if ($ExpFb) {
+        if ($nativeChars -eq 0) {
+            # Neither side produced output: a command that matched nothing is
+            # not a failure, and comparing two empty strings proves nothing.
             $status | Should -Be "PASS"
         } else {
-            if ($nativeChars -eq 0) {
-                $ptkOut | Should -Not -BeNullOrEmpty
+            $ptkOut | Should -Not -BeNullOrEmpty
+            if ($ExpFb) {
+                $status | Should -Be "PASS"
             } else {
                 $ptkChars | Should -BeLessOrEqual ([math]::Max([math]::Ceiling($nativeChars * 1.25), $nativeChars + 100))
             }
@@ -136,7 +138,7 @@ Run-ComparisonTest -Category "Get-ChildItem" -TestName "Fallback: -Name Flag" `
     -NativeCommand "Get-ChildItem -Name" -PtkCommand "& '$BinaryPath' get-childitem -Name" -ExpectFallback $true
 
 Run-ComparisonTest -Category "Get-ChildItem" -TestName "Fallback: Pipeline (| Measure)" `
-    -NativeCommand "Get-ChildItem | Measure-Object" -PtkCommand "& '$BinaryPath' run 'Get-ChildItem | Measure-Object'" -ExpectFallback $true
+    -NativeCommand "Get-ChildItem | Measure-Object" -PtkCommand "& '$BinaryPath' run -c 'Get-ChildItem | Measure-Object' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 2. Get-Content (gc)
@@ -158,7 +160,7 @@ Run-ComparisonTest -Category "Get-Content" -TestName "Large File Read (gc README
     -NativeCommand "Get-Content README.md" -PtkCommand "& '$BinaryPath' gc README.md"
 
 Run-ComparisonTest -Category "Get-Content" -TestName "Fallback: Pipeline (| Select-String)" `
-    -NativeCommand "Get-Content Cargo.toml | Select-String name" -PtkCommand "& '$BinaryPath' run 'Get-Content Cargo.toml | Select-String name'" -ExpectFallback $true
+    -NativeCommand "Get-Content Cargo.toml | Select-String name" -PtkCommand "& '$BinaryPath' run -c 'Get-Content Cargo.toml | Select-String name' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 3. Select-String (sls)
@@ -183,7 +185,7 @@ Run-ComparisonTest -Category "Select-String" -TestName "Fallback: -Quiet (Boolea
     -NativeCommand "Select-String -Quiet 'version' Cargo.toml" -PtkCommand "& '$BinaryPath' sls -Quiet 'version' Cargo.toml" -ExpectFallback $true
 
 Run-ComparisonTest -Category "Select-String" -TestName "Fallback: Pipeline Search" `
-    -NativeCommand "Get-ChildItem -Filter *.md | Select-String 'License'" -PtkCommand "& '$BinaryPath' run 'Get-ChildItem -Filter *.md | Select-String License'" -ExpectFallback $true
+    -NativeCommand "Get-ChildItem -Filter *.md | Select-String 'License'" -PtkCommand "& '$BinaryPath' run -c 'Get-ChildItem -Filter *.md | Select-String License' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 4. Get-Process (gps, ps)
@@ -205,7 +207,7 @@ Run-ComparisonTest -Category "Get-Process" -TestName "Alias check (ps)" `
     -NativeCommand "Get-Process" -PtkCommand "& '$BinaryPath' ps"
 
 Run-ComparisonTest -Category "Get-Process" -TestName "Fallback: Pipeline (| Measure)" `
-    -NativeCommand "Get-Process | Measure-Object" -PtkCommand "& '$BinaryPath' run 'Get-Process | Measure-Object'" -ExpectFallback $true
+    -NativeCommand "Get-Process | Measure-Object" -PtkCommand "& '$BinaryPath' run -c 'Get-Process | Measure-Object' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 5. Get-Service (gsv)
@@ -227,7 +229,7 @@ Run-ComparisonTest -Category "Get-Service" -TestName "Alias check (gsv)" `
     -NativeCommand "Get-Service" -PtkCommand "& '$BinaryPath' gsv"
 
 Run-ComparisonTest -Category "Get-Service" -TestName "Fallback: Pipeline (| Select -First 3)" `
-    -NativeCommand "Get-Service | Select-Object -First 3" -PtkCommand "& '$BinaryPath' run 'Get-Service | Select-Object -First 3'" -ExpectFallback $true
+    -NativeCommand "Get-Service | Select-Object -First 3" -PtkCommand "& '$BinaryPath' run -c 'Get-Service | Select-Object -First 3' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 6. Get-NetIPAddress (netip)
@@ -249,7 +251,7 @@ Run-ComparisonTest -Category "Get-NetIPAddress" -TestName "Alias check (netip)" 
     -NativeCommand "Get-NetIPAddress" -PtkCommand "& '$BinaryPath' netip"
 
 Run-ComparisonTest -Category "Get-NetIPAddress" -TestName "Fallback: Pipeline (| Select -First 2)" `
-    -NativeCommand "Get-NetIPAddress | Select-Object -First 2" -PtkCommand "& '$BinaryPath' run 'Get-NetIPAddress | Select-Object -First 2'" -ExpectFallback $true
+    -NativeCommand "Get-NetIPAddress | Select-Object -First 2" -PtkCommand "& '$BinaryPath' run -c 'Get-NetIPAddress | Select-Object -First 2' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 7. New-Item (ni)
@@ -301,7 +303,7 @@ Run-ComparisonTest -Category "WinEvent" -TestName "Alias check (winevent)" `
     -NativeCommand "Get-WinEvent -LogName System -MaxEvents 2" -PtkCommand "& '$BinaryPath' winevent -LogName System -MaxEvents 2"
 
 Run-ComparisonTest -Category "WinEvent" -TestName "Fallback: Pipeline (| Measure)" `
-    -NativeCommand "Get-WinEvent -LogName System -MaxEvents 3 | Measure-Object" -PtkCommand "& '$BinaryPath' run 'Get-WinEvent -LogName System -MaxEvents 3 | Measure-Object'" -ExpectFallback $true
+    -NativeCommand "Get-WinEvent -LogName System -MaxEvents 3 | Measure-Object" -PtkCommand "& '$BinaryPath' run -c 'Get-WinEvent -LogName System -MaxEvents 3 | Measure-Object' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 9. Get-NetTCPConnection & netstat (nettcp, netstat)
@@ -321,11 +323,11 @@ Run-ComparisonTest -Category "Netstat" -TestName "Active Connections (netstat -a
 
 Run-ComparisonTest -Category "Netstat" -TestName "Direct ptk run 'netstat'" `
     -NativeCommand "netstat -an" `
-    -PtkCommand "& '$BinaryPath' run 'netstat -an'"
+    -PtkCommand "& '$BinaryPath' run -c 'netstat -an' --shell pwsh"
 
 Run-ComparisonTest -Category "NetTCP" -TestName "Fallback: Pipeline (| Measure)" `
     -NativeCommand "Get-NetTCPConnection | Measure-Object" `
-    -PtkCommand "& '$BinaryPath' run 'Get-NetTCPConnection | Measure-Object'" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c 'Get-NetTCPConnection | Measure-Object' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 10. Resolve-DnsName (dns)
@@ -349,7 +351,7 @@ Run-ComparisonTest -Category "DNS" -TestName "External lookup (google.com)" `
 
 Run-ComparisonTest -Category "DNS" -TestName "Fallback: Pipeline (| Select)" `
     -NativeCommand "Resolve-DnsName localhost | Select-Object -ExpandProperty IPAddress" `
-    -PtkCommand "& '$BinaryPath' run 'Resolve-DnsName localhost | Select-Object -ExpandProperty IPAddress'" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c 'Resolve-DnsName localhost | Select-Object -ExpandProperty IPAddress' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 11. Test-NetConnection (tnc)
@@ -369,11 +371,11 @@ Run-ComparisonTest -Category "TestNet" -TestName "TCP Port Check (Active Port 13
 
 Run-ComparisonTest -Category "TestNet" -TestName "Direct ptk run 'tnc'" `
     -NativeCommand "Test-NetConnection localhost -Port 135" `
-    -PtkCommand "& '$BinaryPath' run 'tnc localhost -Port 135'"
+    -PtkCommand "& '$BinaryPath' run -c 'tnc localhost -Port 135' --shell pwsh"
 
 Run-ComparisonTest -Category "TestNet" -TestName "Fallback: Pipeline (| Select)" `
     -NativeCommand "Test-NetConnection localhost | Select-Object -ExpandProperty PingSucceeded" `
-    -PtkCommand "& '$BinaryPath' run 'Test-NetConnection localhost | Select-Object -ExpandProperty PingSucceeded'" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c 'Test-NetConnection localhost | Select-Object -ExpandProperty PingSucceeded' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 12. ConvertFrom-Json & ConvertTo-Json
@@ -389,7 +391,7 @@ Run-ComparisonTest -Category "JSON" -TestName "ConvertFrom-Json multi-property" 
 
 Run-ComparisonTest -Category "JSON" -TestName "ConvertTo-Json minification" `
     -NativeCommand "Get-Process -Id 4 | Select-Object Id, ProcessName | ConvertTo-Json" `
-    -PtkCommand "& '$BinaryPath' run 'Get-Process -Id 4 | Select-Object Id, ProcessName | ConvertTo-Json'" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c 'Get-Process -Id 4 | Select-Object Id, ProcessName | ConvertTo-Json' --shell pwsh" -ExpectFallback $true
 
 Run-ComparisonTest -Category "JSON" -TestName "Direct ptk run convertfrom-json" `
     -NativeCommand 'ConvertFrom-Json -InputObject ''{"status": "ok"}''' `
@@ -397,7 +399,7 @@ Run-ComparisonTest -Category "JSON" -TestName "Direct ptk run convertfrom-json" 
 
 Run-ComparisonTest -Category "JSON" -TestName "Fallback: JSON pipeline" `
     -NativeCommand "ConvertFrom-Json -InputObject '{`"id`": 99}' | Select-Object -ExpandProperty id" `
-    -PtkCommand "& '$BinaryPath' run `"ConvertFrom-Json -InputObject '{`"id`": 99}' | Select-Object -ExpandProperty id`"" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c 'ConvertFrom-Json -InputObject ''{`"id`": 99}'' | Select-Object -ExpandProperty id' --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 13. ConvertFrom-Csv & Export-Csv (epcsv)
@@ -406,7 +408,7 @@ Write-Host "[13/14] Testing CSV conversion (ConvertFrom-Csv, Export-Csv)..." -Fo
 
 Run-ComparisonTest -Category "CSV" -TestName "ConvertFrom-Csv string" `
     -NativeCommand "Get-Content '$sampleCsv' | ConvertFrom-Csv" `
-    -PtkCommand "& '$BinaryPath' run 'Get-Content `'$sampleCsv`' | ConvertFrom-Csv'"
+    -PtkCommand "& '$BinaryPath' run -c 'Get-Content ''$sampleCsv'' | ConvertFrom-Csv' --shell pwsh"
 
 Run-ComparisonTest -Category "CSV" -TestName "Export-Csv file creation" `
     -NativeCommand "Get-Process -Id 4 | Select-Object Id, ProcessName | Export-Csv -Path '$csvTmp' -NoTypeInformation; Remove-Item '$csvTmp' -Force" `
@@ -418,11 +420,11 @@ Run-ComparisonTest -Category "CSV" -TestName "Alias check (epcsv)" `
 
 Run-ComparisonTest -Category "CSV" -TestName "Direct ptk run 'ConvertFrom-Csv'" `
     -NativeCommand "Get-Content '$sampleCsv' | ConvertFrom-Csv" `
-    -PtkCommand "& '$BinaryPath' run 'Get-Content `'$sampleCsv`' | ConvertFrom-Csv'"
+    -PtkCommand "& '$BinaryPath' run -c 'Get-Content ''$sampleCsv'' | ConvertFrom-Csv' --shell pwsh"
 
 Run-ComparisonTest -Category "CSV" -TestName "Fallback: CSV pipeline (| Measure)" `
     -NativeCommand "ConvertFrom-Csv -InputObject 'id,val`n1,10`n2,20' | Measure-Object" `
-    -PtkCommand "& '$BinaryPath' run `"ConvertFrom-Csv -InputObject 'id,val``n1,10``n2,20' | Measure-Object`"" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c `"ConvertFrom-Csv -InputObject 'id,val``n1,10``n2,20' | Measure-Object`" --shell pwsh" -ExpectFallback $true
 
 # ---------------------------------------------------------
 # 14. Format-Table & Format-List (ft, fl)
@@ -446,7 +448,7 @@ Run-ComparisonTest -Category "Format" -TestName "Alias check (fl)" `
 
 Run-ComparisonTest -Category "Format" -TestName "Fallback: Formatter pipeline (| Out-String)" `
     -NativeCommand "Get-Process -Id 4 | Format-Table | Out-String" `
-    -PtkCommand "& '$BinaryPath' run 'Get-Process -Id 4 | Format-Table | Out-String'" -ExpectFallback $true
+    -PtkCommand "& '$BinaryPath' run -c 'Get-Process -Id 4 | Format-Table | Out-String' --shell pwsh" -ExpectFallback $true
 
 
     AfterAll {

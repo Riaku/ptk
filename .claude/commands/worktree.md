@@ -1,6 +1,6 @@
 ---
 model: haiku
-description: Git Worktree Setup for RTK (Rust project)
+description: Git Worktree Setup for PTK (Rust project)
 argument-hint: "<branch-name>"
 ---
 
@@ -179,7 +179,7 @@ Run `cargo check` synchronously (blocking). Use when you need to confirm the bui
 
 Files listed in `.worktreeinclude` are copied automatically. If the file doesn't exist, `.env*` files are copied by default.
 
-Example `.worktreeinclude` for RTK:
+Example `.worktreeinclude` for PTK:
 ```
 .env
 .env.local

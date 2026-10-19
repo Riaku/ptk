@@ -94,7 +94,7 @@ export async function vmWaitReady(maxWaitSec = 2400): Promise<boolean> {
 }
 
 /** Transfer PTK source and build in release mode */
-export async function vmBuildRtk(projectRoot: string): Promise<{
+export async function vmBuildPtk(projectRoot: string): Promise<{
   buildTime: number;
   binarySize: number;
   version: string;

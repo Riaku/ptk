@@ -87,6 +87,53 @@ assert_help() {
     assert_contains "$name --help" "Usage:" "$@" --help
 }
 
+# Some subcommands forward --help to the tool they wrap (upstream's
+# `forwards_to_native_tool`), so the wording and the exit code belong to that
+# tool: `npm --help` exits 1 on npm 12. All ptk owes us is that it hands the
+# flag over instead of failing on its own account.
+assert_forwarded_help() {
+    local name="$1"
+    local tool="$2"
+    shift 2
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        skip_test "$name --help" "$tool not installed"
+        return
+    fi
+    local output
+    output=$("$@" --help 2>&1) || true
+    if [ -n "$output" ] && ! printf '%s' "$output" | grep -q 'ptk: Failed to run'; then
+        PASS=$((PASS + 1))
+        printf "  ${GREEN}PASS${NC}  %s --help\n" "$name"
+    else
+        FAIL=$((FAIL + 1))
+        FAILURES+=("$name --help")
+        printf "  ${RED}FAIL${NC}  %s --help\n" "$name"
+        printf "        cmd: %s --help\n" "$*"
+        printf "        out: %s\n" "$(echo "$output" | head -3)"
+    fi
+}
+
+# `ptk rewrite` exits by the hook permission protocol (0 allow, 3 ask/default,
+# 2 deny, 1 defer) so a host cannot auto-approve a command the user never
+# allowed. The rewrite itself is on stdout, and that is what we check here.
+assert_rewrite() {
+    local name="$1"
+    local needle="$2"
+    shift 2
+    local output
+    output=$("$@" 2>&1) || true
+    if printf '%s' "$output" | grep -q "$needle"; then
+        PASS=$((PASS + 1))
+        printf "  ${GREEN}PASS${NC}  %s\n" "$name"
+    else
+        FAIL=$((FAIL + 1))
+        FAILURES+=("$name")
+        printf "  ${RED}FAIL${NC}  %s\n" "$name"
+        printf "        expected: '%s'\n" "$needle"
+        printf "        got: %s\n" "$(echo "$output" | head -3)"
+    fi
+}
+
 skip_test() {
     local name="$1"
     local reason="$2"
@@ -200,9 +247,13 @@ section "GitHub CLI"
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     assert_ok      "ptk gh pr list"           ptk gh pr list
     assert_ok      "ptk gh run list"          ptk gh run list
-    assert_ok      "ptk gh issue list"        ptk gh issue list
+    if gh issue list >/dev/null 2>&1; then
+        assert_ok      "ptk gh issue list"        ptk gh issue list
+    else
+        skip_test "ptk gh issue list" "issues disabled or gh not authenticated"
+    fi
     # pr create/merge/diff/comment/edit are write ops, test help only
-    assert_help    "ptk gh"                   ptk gh
+    assert_forwarded_help "ptk gh" gh ptk gh
 else
     skip_test "gh commands" "gh not authenticated"
 fi
@@ -224,13 +275,15 @@ else
     printf "  ${RED}FAIL${NC}  %s\n" "ptk cargo test"
     printf "        got: %s\n" "$(echo "$output_cargo_test" | head -3)"
 fi
-assert_help    "ptk cargo"                    ptk cargo
+assert_forwarded_help "ptk cargo" cargo ptk cargo
 
 # ── 7. Curl ──────────────────────────────────────────
 
 section "Curl (new)"
 
-assert_contains "ptk curl JSON detect" "string" ptk curl https://mockhttp.org/json
+# mockhttp.org serves a different JSON document on every request, so check
+# that the body arrives as JSON at all rather than pinning a key.
+assert_contains "ptk curl JSON preserved" '{' ptk curl https://mockhttp.org/json
 assert_ok       "ptk curl plain text"          ptk curl https://mockhttp.org/robots.txt
 assert_help     "ptk curl"                     ptk curl
 
@@ -238,16 +291,16 @@ assert_help     "ptk curl"                     ptk curl
 
 section "Npm / Npx (new)"
 
-assert_help    "ptk npm"                      ptk npm
-assert_help    "ptk npx"                      ptk npx
+assert_forwarded_help "ptk npm" npm ptk npm
+assert_forwarded_help "ptk npx" npx ptk npx
 
 # ── 9. Pnpm ─────────────────────────────────────────
 
 section "Pnpm"
 
-assert_help    "ptk pnpm"                     ptk pnpm
-assert_help    "ptk pnpm build"               ptk pnpm build
-assert_help    "ptk pnpm typecheck"           ptk pnpm typecheck
+assert_forwarded_help "ptk pnpm" pnpm ptk pnpm
+assert_forwarded_help "ptk pnpm build" pnpm ptk pnpm build
+assert_forwarded_help "ptk pnpm typecheck" pnpm ptk pnpm typecheck
 
 if command -v pnpm >/dev/null 2>&1; then
     assert_ok  "ptk pnpm help"                ptk pnpm help
@@ -274,8 +327,8 @@ fi
 
 section "Grep (extra args passthrough)"
 
-assert_ok      "ptk grep -i case insensitive" ptk grep "fn" src/ -i
-assert_ok      "ptk grep -A context lines"    ptk grep "fn run" src/ -A 2
+assert_ok      "ptk grep -i case insensitive" ptk grep -r "fn" src/ -i
+assert_ok      "ptk grep -A context lines"    ptk grep -r "fn run" src/ -A 2
 
 # ── 11. Find ─────────────────────────────────────────
 
@@ -293,9 +346,19 @@ TMPJSON=$(mktemp /tmp/ptk-test-XXXXX.json)
 echo '{"name":"test","count":42,"items":[1,2,3]}' > "$TMPJSON"
 
 assert_ok      "ptk json file"                ptk json "$TMPJSON"
-assert_contains "ptk json shows schema"       "string" ptk json "$TMPJSON"
 
-rm -f "$TMPJSON"
+# A document this small is already optimal, and the filter is never allowed to
+# make output worse than its input, so both modes echo it unchanged. The
+# compression (and the type names) only show up on a nested document.
+TMPJSON_NESTED=$(mktemp /tmp/ptk-test-nested-XXXXX.json)
+echo '{"service":{"endpoint":"https://api.example.com/v1/users","timeout":30}}' > "$TMPJSON_NESTED"
+
+assert_contains "ptk json nested compact"     '"endpoint"' ptk json "$TMPJSON_NESTED"
+# `--keys-only` is the rename of `--schema` (upstream 097456e5): values become
+# their type names, so the URL shows as `url` and the number as `int`.
+assert_contains "ptk json --keys-only types"  'url' ptk json "$TMPJSON_NESTED" --keys-only
+
+rm -f "$TMPJSON" "$TMPJSON_NESTED"
 
 # ── 13. Deps ─────────────────────────────────────────
 
@@ -362,7 +425,7 @@ assert_ok      "ptk init --show"              ptk init --show
 section "Wget"
 
 if command -v wget >/dev/null 2>&1; then
-    assert_ok  "ptk wget stdout"              ptk wget https://mockhttp.org/robots.txt -O
+    assert_ok  "ptk wget stdout"              ptk wget https://mockhttp.org/robots.txt -O -
 else
     skip_test "ptk wget" "wget not installed"
 fi
@@ -371,30 +434,30 @@ fi
 
 section "JS Tooling (help only, no project context)"
 
-assert_help    "ptk tsc"                      ptk tsc
-assert_help    "ptk lint"                     ptk lint
-assert_help    "ptk prettier"                 ptk prettier
-assert_help    "ptk next"                     ptk next
-assert_help    "ptk playwright"               ptk playwright
+assert_forwarded_help "ptk tsc" tsc ptk tsc
+assert_forwarded_help "ptk lint" eslint ptk lint
+assert_forwarded_help "ptk prettier" prettier ptk prettier
+assert_forwarded_help "ptk next" next ptk next
+assert_forwarded_help "ptk playwright" playwright ptk playwright
 
 # ── 24. Prisma ───────────────────────────────────────
 
 section "Prisma (help only)"
 
-assert_help    "ptk prisma"                   ptk prisma
+assert_forwarded_help "ptk prisma" prisma ptk prisma
 
 # ── 25. Vitest ───────────────────────────────────────
 
 section "Vitest (help only)"
 
-assert_help    "ptk vitest"                   ptk vitest
+assert_forwarded_help "ptk vitest" vitest ptk vitest
 
 # ── 26. Docker / Kubectl (help only) ────────────────
 
 section "Docker / Kubectl (help only)"
 
-assert_help    "ptk docker"                   ptk docker
-assert_help    "ptk kubectl"                  ptk kubectl
+assert_forwarded_help "ptk docker" docker ptk docker
+assert_forwarded_help "ptk kubectl" kubectl ptk kubectl
 
 # ── 27. Python (conditional) ────────────────────────
 
@@ -474,8 +537,10 @@ fi
 
 section "Global flags"
 
-assert_ok      "ptk -u ls ."                  ptk -u ls .
-assert_ok      "ptk --skip-env npm --help"    ptk --skip-env npm --help
+# `-u` was --ultra-compact's alias upstream and was removed because it ate
+# `git push -u`; the surviving global flag is checked here instead.
+assert_ok      "ptk --skip-env ls ."           ptk --skip-env ls .
+assert_forwarded_help "ptk npm" npm ptk --skip-env npm
 
 # ── 32. CcEconomics ─────────────────────────────────
 
@@ -494,10 +559,10 @@ assert_ok      "ptk learn (no sessions)"      ptk learn --since 0 2>&1 || true
 
 section "Rewrite"
 
-assert_contains "rewrite git status"          "ptk git status"         ptk rewrite "git status"
-assert_contains "rewrite cargo test"          "ptk cargo test"         ptk rewrite "cargo test"
-assert_contains "rewrite compound &&"         "ptk git status"         ptk rewrite "git status && cargo test"
-assert_contains "rewrite pipe preserves"      "| head"                 ptk rewrite "git log | head"
+assert_rewrite  "rewrite git status"          "ptk git status"         ptk rewrite "git status"
+assert_rewrite  "rewrite cargo test"          "ptk cargo test"         ptk rewrite "cargo test"
+assert_rewrite  "rewrite compound &&"         "ptk git status"         ptk rewrite "git status && cargo test"
+assert_rewrite  "rewrite pipe preserves"      "| head"                 ptk rewrite "git log | head"
 
 section "Rewrite (#345: PTK_DISABLED skip)"
 
@@ -506,14 +571,14 @@ assert_fails   "rewrite env PTK_DISABLED skip"                        ptk rewrit
 
 section "Rewrite (#346: 2>&1 preserved)"
 
-assert_contains "rewrite 2>&1 preserved"      "2>&1"                  ptk rewrite "cargo test 2>&1 | head"
+assert_rewrite  "rewrite 2>&1 preserved"      "2>&1"                  ptk rewrite "cargo test 2>&1 | head"
 
 section "Rewrite (#196: gh --json skip)"
 
 assert_fails   "rewrite gh --json skip"                               ptk rewrite "gh pr list --json number"
 assert_fails   "rewrite gh --jq skip"                                 ptk rewrite "gh api /repos --jq .name"
 assert_fails   "rewrite gh --template skip"                           ptk rewrite "gh pr view 1 --template '{{.title}}'"
-assert_contains "rewrite gh normal works"     "ptk gh pr list"        ptk rewrite "gh pr list"
+assert_rewrite  "rewrite gh normal works"     "ptk gh pr list"        ptk rewrite "gh pr list"
 
 # ── 33. Verify ────────────────────────────────────────
 
@@ -525,8 +590,8 @@ assert_ok      "ptk verify"                   ptk verify
 
 section "Proxy"
 
-assert_ok      "ptk proxy echo hello"         ptk proxy echo hello
-assert_contains "ptk proxy passthrough"       "hello" ptk proxy echo hello
+assert_ok      "ptk bypass echo hello"        ptk bypass echo hello
+assert_contains "ptk bypass passthrough"      "hello" ptk bypass echo hello
 
 # ── 35. Discover ──────────────────────────────────────
 
@@ -575,7 +640,11 @@ fi
 
 section "Hook check (#344)"
 
-assert_contains "ptk init --show hook version" "version" ptk init --show
+if [ -f "$HOME/.claude/hooks/ptk-rewrite.sh" ]; then
+    assert_contains "ptk init --show hook version" "version" ptk init --show
+else
+    skip_test "ptk init --show hook version" "no hook installed (run ptk init first)"
+fi
 
 # ══════════════════════════════════════════════════════
 # Report

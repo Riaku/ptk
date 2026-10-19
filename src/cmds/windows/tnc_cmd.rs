@@ -6,6 +6,7 @@
 //! or `[FAIL] <Host>:<Port> -> TcpTestFailed`.
 
 use crate::core::runner::{self, RunOptions};
+use crate::core::shell::display_args;
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -117,13 +118,13 @@ pub fn filter_tnc_output(raw: &str) -> String {
 /// Run `Test-NetConnection` via PowerShell and filter output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_powershell_args("Test-NetConnection", args);
-    let cmd_label = format!("Test-NetConnection {}", args.join(" "));
+    let cmd_label = format!("Test-NetConnection {}", display_args(args));
 
     runner::run_filtered(
         cmd,
         "Test-NetConnection",
         cmd_label.trim(),
-        |raw| filter_tnc_output(raw),
+        filter_tnc_output,
         RunOptions::default(),
     )
 }

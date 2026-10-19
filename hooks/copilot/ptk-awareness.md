@@ -1,6 +1,6 @@
 # PTK — Copilot Integration (VS Code Copilot Chat + Copilot CLI)
 
-**Usage**: Token-optimized CLI proxy (cuts up to 90% of bash output)
+**Usage**: Token-optimized CLI proxy
 
 ## What's automatic
 
@@ -16,8 +16,8 @@ No shell scripts, no `jq` dependency, works on Windows natively.
 ```bash
 ptk gain              # Token savings dashboard for this session
 ptk gain --history    # Per-command history with savings %
-ptk discover          # Scan session history for missed PTK opportunities
-ptk proxy <cmd>       # Run raw (no filtering) but still track it
+ptk discover          # Scan session history for missed ptk opportunities
+ptk bypass <cmd>       # Run raw (no filtering) but still track it
 ```
 
 ## Installation verification
@@ -25,11 +25,8 @@ ptk proxy <cmd>       # Run raw (no filtering) but still track it
 ```bash
 ptk --version   # Should print: ptk X.Y.Z
 ptk gain        # Should show a dashboard (not "command not found")
-which PTK       # Verify correct binary path
+which ptk       # Verify correct binary path
 ```
-
-> ⚠️ **Name collision**: If `ptk gain` fails, you may have `reachingforthejack/PTK`
-> (Rust Type Kit) installed instead. Check `which PTK` and reinstall from Riaku/ptk.
 
 ## How the hook works
 
@@ -46,15 +43,3 @@ which PTK       # Verify correct binary path
 2. `ptk hook` detects Copilot CLI format (`toolName`/`toolArgs` keys)
 3. Returns `permissionDecision: deny` with reason: `"Token savings: use 'ptk git status' instead"`
 4. Copilot reads the reason and re-runs `ptk git status`
-
-When Copilot CLI adds `updatedInput` support, only `ptk hook` needs updating — no config changes.
-
-## Integration comparison
-
-| Tool                  | Mechanism                               | Hook output              | File                               |
-|-----------------------|-----------------------------------------|--------------------------|------------------------------------|
-| Claude Code           | `PreToolUse` hook with `updatedInput`   | Transparent rewrite      | `hooks/ptk-rewrite.sh`             |
-| VS Code Copilot Chat  | `PreToolUse` hook with `updatedInput`   | Transparent rewrite      | `.github/hooks/ptk-rewrite.json`   |
-| GitHub Copilot CLI    | `PreToolUse` deny-with-suggestion       | Denial + retry           | `.github/hooks/ptk-rewrite.json`   |
-| OpenCode              | Plugin `tool.execute.before`            | Transparent rewrite      | `hooks/opencode-PTK.ts`            |
-| (any)                 | Custom instructions                     | Prompt-level guidance    | `.github/copilot-instructions.md`  |

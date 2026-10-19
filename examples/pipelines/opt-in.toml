@@ -1,0 +1,12 @@
+# Turn on more than ptk:default: output compression after every tool call
+# (ptk:posthook adds the PostToolUse hook on the next `ptk init`), and the
+# proxy (ptk:proxy activates the daemon — `ptk init` offers to install and
+# route it).
+#
+# ptk:proxy enables only cache-stable methods: stripping ANSI codes, progress
+# bars and repeated lines (ansi/progress/dedup), and cache-breakpoint
+# alignment. CCR and write-body retirement are not included.
+schema_version = 1
+
+[pipeline]
+extends = ["ptk:posthook", "ptk:proxy"]

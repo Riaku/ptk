@@ -5,6 +5,7 @@ pub mod provider;
 pub mod registry;
 mod report;
 pub mod rules;
+pub(crate) mod shell_wrapper;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -13,11 +14,12 @@ use std::collections::HashMap;
 use provider::{ClaudeProvider, SessionProvider};
 use registry::{
     Classification, ExcludePattern, category_avg_tokens, classify_command, split_command_chain,
-    strip_disabled_prefix,
+    strip_disabled_prefix_for_analytics,
 };
 use report::{DiscoverReport, SupportedEntry, UnsupportedEntry};
 
 use crate::core::tracking::{HookDecisionRecord, Tracker};
+use crate::core::user_dirs;
 use crate::discover::registry::prefix_contains_ptk_disabled;
 use crate::hooks::hook_check::{HookStatus, status as hook_status};
 use crate::hooks::permissions::{self, PermissionVerdict};
@@ -51,7 +53,7 @@ impl Coverage {
 /// Preloaded permission rules, read from disk once per `discover` run instead of
 /// once per command. `check_command_for` re-reads every settings file on disk on
 /// every call; over a large history (tens of thousands of commands) that dominated
-/// runtime (see rtk-ai/rtk#3206 review: 80s vs 2.5s on the measured path).
+/// runtime (see riaku/ptk#3206 review: 80s vs 2.5s on the measured path).
 struct PermissionRules {
     deny: Vec<String>,
     ask: Vec<String>,
@@ -65,7 +67,7 @@ struct PermissionRules {
 /// Grouped into one struct rather than several individual positional params: with
 /// `excluded`/`transparent_prefixes` both `Vec<String>`, a swapped argument order
 /// at a call site would compile silently and misclassify PTK_DISABLED bypass
-/// coverage (code-review finding on rtk-ai/rtk#3206's fixup round).
+/// coverage (code-review finding on riaku/ptk#3206's fixup round).
 ///
 /// `exclude_patterns`/`normalized_transparent_prefixes` are `registry::
 /// rewrite_command`'s exclude-pattern regexes and normalized prefixes,
@@ -73,7 +75,7 @@ struct PermissionRules {
 /// recompilation is exactly the "recompute per command instead of once per run"
 /// class of cost this PR's `PermissionRules`/`hook_status` caching already fixed
 /// elsewhere, left as a hot-loop cost in `estimate_hook_coverage_with_verdict`'s
-/// `registry::rewrite_command` call until now (code-review finding on rtk-ai/rtk#3206's
+/// `registry::rewrite_command` call until now (code-review finding on riaku/ptk#3206's
 /// second fixup round).
 struct CoverageContext {
     hook_log: HashMap<String, HookDecisionRecord>,
@@ -94,7 +96,7 @@ struct CoverageContext {
 /// have been covered absent the bypass, which is the actual question the
 /// PTK_DISABLED= bucket is answering. Consulting the measured log there made that
 /// bucket silently collapse to (near) zero once real `hook_decisions` rows
-/// accumulated (rtk-ai/rtk#3206 review) — the counterfactual can only ever be
+/// accumulated (riaku/ptk#3206 review) — the counterfactual can only ever be
 /// answered by the estimate.
 ///
 /// The caller splits a chained command (`a && b`) into parts and calls this once
@@ -145,9 +147,10 @@ fn hook_coverage(
 /// segment would blind the deny/ask check to sibling segments). `rewrite_cmd` is
 /// passed to `registry::rewrite_command`, which is genuinely best-effort
 /// *per segment* — pass the isolated segment being evaluated. For the PTK_DISABLED=
-/// bypass call site specifically, `rewrite_cmd` must also have the prefix already
-/// *stripped*, since `rewrite_command` itself detects and refuses a raw
-/// `PTK_DISABLED=` prefix (registry.rs #345) — passing it unstripped there would
+/// bypass call site specifically, `rewrite_cmd` must also have its `PTK_DISABLED=`
+/// words removed (`without_ptk_disabled` does it, keeping any wrapper),
+/// since `rewrite_command` itself detects and refuses a raw
+/// `PTK_DISABLED=` prefix (registry.rs #345) — passing it unremoved there would
 /// make every bypassed command register as never-covered regardless of whether
 /// it's otherwise supported, defeating the point of the PTK_DISABLED bucket.
 ///
@@ -155,17 +158,18 @@ fn hook_coverage(
 /// hook installed the answer is always "not covered", so there's no reason to pay
 /// for the permission-verdict lookup, the unattestable-construct scan, or the
 /// registry rewrite check on every single command in the scan (see
-/// rtk-ai/rtk#3206 review: 100s of wasted work on histories with no hook ever
+/// riaku/ptk#3206 review: 100s of wasted work on histories with no hook ever
 /// installed, since that case never had a chance to short-circuit before).
 fn estimate_hook_coverage(permission_cmd: &str, rewrite_cmd: &str, ctx: &CoverageContext) -> bool {
     if !ctx.hook_installed {
         return false;
     }
-    let verdict = permissions::check_command_with_rules(
+    let verdict = permissions::check_command_with_rules_and_prefixes(
         permission_cmd,
         &ctx.rules.deny,
         &ctx.rules.ask,
         &ctx.rules.allow,
+        &ctx.normalized_transparent_prefixes,
     );
     estimate_hook_coverage_with_verdict(permission_cmd, rewrite_cmd, verdict, ctx)
 }
@@ -183,7 +187,7 @@ fn estimate_hook_coverage_with_verdict(
     ctx: &CoverageContext,
 ) -> bool {
     ctx.hook_installed
-        && verdict != PermissionVerdict::Deny
+        && !matches!(verdict, PermissionVerdict::Deny | PermissionVerdict::Defer)
         && !lexer::contains_unattestable_construct(permission_cmd)
         && registry::rewrite_command_precompiled(
             rewrite_cmd,
@@ -206,32 +210,99 @@ fn estimate_hook_coverage_with_verdict(
 /// the hook stepped aside and says nothing about the counterfactual this function
 /// answers. Consulting the measured log there made the PTK_DISABLED bucket
 /// silently collapse to (near) zero once real `hook_decisions` rows accumulated
-/// (rtk-ai/rtk#3206 review) — only the estimate can ever answer this.
+/// (riaku/ptk#3206 review) — only the estimate can ever answer this.
 ///
 /// `raw_cmd` must be the *full, unsplit* original command line
 /// (`ExtractedCommand::command`), prefix and any sibling chain segments intact —
 /// what the real hook's permission check would have seen (see `hook_coverage`'s
 /// doc comment for why an isolated segment would blind the deny/ask check to
-/// siblings). `stripped_cmd` is the isolated, prefix-*removed* segment being
-/// evaluated, which is what `registry::rewrite_command` needs since it refuses a
-/// raw `PTK_DISABLED=`-prefixed string on its own — see `estimate_hook_coverage`'s
-/// doc comment for the full reasoning.
+/// siblings). `unbypassed_cmd` is the segment as [`without_ptk_disabled`]
+/// rebuilds it: `docker ps` rewrites by default, while `sudo docker ps` only does when
+/// `sudo` is in `hooks.transparent_prefixes`, so asking about the peeled command
+/// alone would report savings the hook never offered.
 fn would_be_covered_without_bypass(
     raw_cmd: &str,
-    stripped_cmd: &str,
+    unbypassed_cmd: &str,
     ctx: &CoverageContext,
 ) -> bool {
-    estimate_hook_coverage(raw_cmd, stripped_cmd, ctx)
+    estimate_hook_coverage(raw_cmd, unbypassed_cmd, ctx)
 }
 
-/// Whether an already-`ptk`-prefixed command counts as coverage. `ptk proxy <cmd>`
+/// The segment `strip_disabled_prefix_for_analytics` split into `env_prefix` and
+/// `actual_cmd`, with its `PTK_DISABLED=` words removed and every other word kept
+/// verbatim, wrapper included. Words are split the way the rest of discover splits
+/// them (`lexer::tokenize` + `coalesce_words`), so a quoted or expanded value
+/// (`PTK_DISABLED='1 2'`, `PTK_DISABLED=$CI`) goes as a whole.
+fn without_ptk_disabled(env_prefix: &str, actual_cmd: &str) -> String {
+    let starts: Vec<usize> = lexer::coalesce_words(env_prefix, &lexer::tokenize(env_prefix))
+        .iter()
+        .map(|&(_, start)| start)
+        .collect();
+    let mut line = String::with_capacity(env_prefix.len() + actual_cmd.len() + 1);
+    for (i, &start) in starts.iter().enumerate() {
+        let end = starts.get(i + 1).copied().unwrap_or(env_prefix.len());
+        let word = &env_prefix[start..end];
+        if !word.starts_with("PTK_DISABLED=") {
+            line.push_str(word);
+        }
+    }
+    if !line.is_empty() && !line.ends_with(char::is_whitespace) {
+        line.push(' ');
+    }
+    line.push_str(actual_cmd);
+    line
+}
+
+/// What a segment carrying `PTK_DISABLED=` contributes to the report.
+#[derive(Debug, PartialEq)]
+enum DisabledSegment {
+    /// The hook would have rewritten the line without the assignment: lost savings.
+    Bypass,
+    /// The assignment cost nothing. The line as typed without it is classified like
+    /// any other command, so `sudo PTK_DISABLED=1 docker ps` is an unhandled `sudo`
+    /// line rather than hook coverage of `docker ps`.
+    Unbypassed(String),
+    /// `classify_command` does not recognise the peeled command; the segment is left
+    /// out of the report.
+    Unhandled,
+}
+
+fn judge_disabled_segment(
+    raw_cmd: &str,
+    env_prefix: &str,
+    actual_cmd: &str,
+    ctx: &CoverageContext,
+) -> DisabledSegment {
+    if !matches!(
+        classify_command(actual_cmd),
+        Classification::Supported { .. }
+    ) {
+        return DisabledSegment::Unhandled;
+    }
+    let line = without_ptk_disabled(env_prefix, actual_cmd);
+    if would_be_covered_without_bypass(raw_cmd, &line, ctx) {
+        DisabledSegment::Bypass
+    } else {
+        DisabledSegment::Unbypassed(line)
+    }
+}
+
+/// Whether an already-`ptk`-prefixed command counts as coverage. `ptk bypass <cmd>`
 /// deliberately runs the raw command unfiltered, so it must not count — that would
 /// let the audit flatter itself via its own escape hatch. This is ground truth read
 /// directly from the transcript (the model really did invoke `ptk`), not a guess.
-pub(crate) fn is_already_rtk(cmd: &str) -> bool {
+pub(crate) fn is_already_ptk(cmd: &str) -> bool {
     let trimmed = cmd.trim();
-    trimmed.starts_with("ptk ") && !trimmed.starts_with("ptk proxy")
+    trimmed.starts_with("ptk ")
+        && !UNFILTERED_ESCAPE_HATCHES
+            .iter()
+            .any(|hatch| trimmed.starts_with(hatch))
 }
+
+/// Spellings of the unfiltered escape hatch. `ptk proxy` is the deprecated
+/// alias of `ptk bypass` and runs exactly as unfiltered, so a transcript
+/// written before the rename must not read as covered either.
+const UNFILTERED_ESCAPE_HATCHES: &[&str] = &["ptk bypass", "ptk proxy"];
 
 /// Aggregation bucket for supported commands.
 struct SupportedBucket {
@@ -266,19 +337,24 @@ pub fn run(
     let provider = ClaudeProvider;
 
     // Determine project filter
-    let project_filter = if all {
-        None
+    let scope = if all {
+        report::ScanScope::AllProjects
     } else if let Some(p) = project {
-        Some(p.to_string())
+        report::ScanScope::ProjectFilter(p.to_string())
     } else {
         // Default: current working directory
-        let cwd = std::env::current_dir()?;
+        let cwd = user_dirs::current_dir()?;
         let cwd_str = cwd.to_string_lossy().to_string();
-        let encoded = ClaudeProvider::encode_project_path(&cwd_str);
-        Some(encoded)
+        report::ScanScope::CurrentProject(ClaudeProvider::encode_project_path(&cwd_str))
+    };
+    let project_filter = match &scope {
+        report::ScanScope::AllProjects => None,
+        report::ScanScope::ProjectFilter(f) | report::ScanScope::CurrentProject(f) => {
+            Some(f.as_str())
+        }
     };
 
-    let sessions = provider.discover_sessions(project_filter.as_deref(), Some(since_days))?;
+    let sessions = provider.discover_sessions(project_filter, Some(since_days))?;
 
     if verbose > 0 {
         eprintln!("Scanning {} session files...", sessions.len());
@@ -351,7 +427,7 @@ pub fn run(
     };
 
     let mut total_commands: usize = 0;
-    let mut already_rtk: usize = 0;
+    let mut already_ptk: usize = 0;
     let mut already_ptk_estimated: usize = 0;
     let mut parse_errors: usize = 0;
     let mut ptk_disabled_count: usize = 0;
@@ -378,42 +454,36 @@ pub fn run(
                 total_commands += 1;
 
                 // Detect PTK_DISABLED= bypass before classification
-                let (env_prefix, actual_cmd) = strip_disabled_prefix(part);
+                let (env_prefix, actual_cmd) = strip_disabled_prefix_for_analytics(part);
+                let unbypassed;
                 let part = if prefix_contains_ptk_disabled(env_prefix) {
-                    match classify_command(actual_cmd) {
-                        Classification::Supported { .. } => {
-                            // Only count as a "bypass" if the hook would actually have
-                            // covered it absent the bypass — otherwise PTK_DISABLED=
-                            // bypassed nothing (hook wasn't installed / excluded / would
-                            // defer / would deny), and flagging it as a "bypass" would be
-                            // false advice. See `would_be_covered_without_bypass`'s doc
-                            // comment for why this must never go through `hook_coverage`'s
-                            // measured-log path.
-                            if would_be_covered_without_bypass(
-                                &ext_cmd.command,
-                                actual_cmd,
-                                &coverage_ctx,
-                            ) {
-                                ptk_disabled_count += 1;
-                                ptk_disabled_estimated += 1;
-                                let display = truncate_command(actual_cmd);
-                                *ptk_disabled_cmds.entry(display).or_insert(0) += 1;
-                                continue;
-                            }
-                            // Genuinely never had a chance regardless of the bypass (no
-                            // hook installed / excluded by config / etc.) — a real
-                            // missed-savings opportunity like any other command, not a
-                            // "bypass" of anything. Fall through to the normal
-                            // classification below (using the env-stripped command)
-                            // instead of vanishing from the whole report — previously
-                            // this case was counted only in `total_commands` and nowhere
-                            // else (rtk-ai/rtk#3206 review).
-                            actual_cmd
+                    // A bypass counts only if the hook would have covered the line
+                    // without it — otherwise PTK_DISABLED= bypassed nothing (hook not
+                    // installed / excluded / would defer / would deny / the wrapper is
+                    // not rewritable), and flagging it would be false advice. See
+                    // `would_be_covered_without_bypass`'s doc comment for why this must
+                    // never go through `hook_coverage`'s measured-log path. A segment
+                    // that bypassed nothing falls through to the normal classification
+                    // as typed without the assignment, instead of vanishing from the
+                    // report (riaku/ptk#3206 review).
+                    match judge_disabled_segment(
+                        &ext_cmd.command,
+                        env_prefix,
+                        actual_cmd,
+                        &coverage_ctx,
+                    ) {
+                        DisabledSegment::Bypass => {
+                            ptk_disabled_count += 1;
+                            ptk_disabled_estimated += 1;
+                            let display = truncate_command(actual_cmd);
+                            *ptk_disabled_cmds.entry(display).or_insert(0) += 1;
+                            continue;
                         }
-                        // Unsupported/Ignored under PTK_DISABLED= isn't interesting
-                        // either way — ptk was never going to touch it regardless of
-                        // the bypass.
-                        _ => continue,
+                        DisabledSegment::Unbypassed(line) => {
+                            unbypassed = line;
+                            unbypassed.as_str()
+                        }
+                        DisabledSegment::Unhandled => continue,
                     }
                 } else {
                     part
@@ -436,7 +506,7 @@ pub fn run(
                         if coverage.is_covered() {
                             // Hook already routed this through PTK at runtime — it's
                             // coverage, not a missed opportunity.
-                            already_rtk += 1;
+                            already_ptk += 1;
                             if coverage.is_estimated() {
                                 already_ptk_estimated += 1;
                             }
@@ -493,9 +563,9 @@ pub fn run(
                     Classification::Ignored => {
                         // Ground truth from the transcript itself — the model really
                         // did invoke `ptk` directly (excluding the deliberate
-                        // unfiltered `ptk proxy` escape hatch).
-                        if is_already_rtk(part) {
-                            already_rtk += 1;
+                        // unfiltered `ptk bypass` escape hatch).
+                        if is_already_ptk(part) {
+                            already_ptk += 1;
                         }
                         // Otherwise just skip
                     }
@@ -519,16 +589,16 @@ pub fn run(
                         let cmd = name[..colon_pos].to_string();
                         let status_str = &name[colon_pos + 1..];
                         let status = match status_str {
-                            "Passthrough" => report::RtkStatus::Passthrough,
-                            "NotSupported" => report::RtkStatus::NotSupported,
-                            _ => report::RtkStatus::Existing,
+                            "Passthrough" => report::PtkStatus::Passthrough,
+                            "NotSupported" => report::PtkStatus::NotSupported,
+                            _ => report::PtkStatus::Existing,
                         };
                         (cmd, status)
                     } else {
-                        (name, report::RtkStatus::Existing)
+                        (name, report::PtkStatus::Existing)
                     }
                 })
-                .unwrap_or_else(|| (String::new(), report::RtkStatus::Existing));
+                .unwrap_or_else(|| (String::new(), report::PtkStatus::Existing));
 
             // Derive the effective savings rate from accumulated totals rather than
             // using the first-seen sub-command's rate. This gives a weighted average
@@ -579,8 +649,9 @@ pub fn run(
 
     let report = DiscoverReport {
         sessions_scanned: sessions.len(),
+        scope,
         total_commands,
-        already_rtk,
+        already_ptk,
         already_ptk_estimated,
         measured_since: measured_since.map(|ts| ts.format("%Y-%m-%d").to_string()),
         since_days,
@@ -624,7 +695,7 @@ mod tests {
     use super::*;
     use crate::core::tracking::HookOutcome;
 
-    // rtk-ai/rtk#3148: hook-rewritten commands were counted as missed savings
+    // riaku/ptk#3148: hook-rewritten commands were counted as missed savings
     // because transcripts record the pre-rewrite (raw) form of the command.
     // Real hook decisions are logged (`hook_decisions`, keyed by `tool_use_id`)
     // now so coverage is measured, not guessed; `estimate_hook_coverage`/
@@ -669,6 +740,22 @@ mod tests {
     }
 
     #[test]
+    fn test_estimate_hook_coverage_false_for_deferred_wrapper() {
+        assert!(!estimate_hook_coverage_with_verdict(
+            "env bash -c 'git push'",
+            "env bash -c 'git push'",
+            PermissionVerdict::Defer,
+            &test_ctx(true),
+        ));
+        assert!(estimate_hook_coverage_with_verdict(
+            "env bash -c 'git push'",
+            "env bash -c 'git push'",
+            PermissionVerdict::Ask,
+            &test_ctx(true),
+        ));
+    }
+
+    #[test]
     fn test_estimate_hook_coverage_true_for_rewritable_command() {
         let ctx = test_ctx(true);
         assert!(estimate_hook_coverage_with_verdict(
@@ -683,6 +770,86 @@ mod tests {
             PermissionVerdict::Allow,
             &ctx,
         ));
+    }
+
+    #[test]
+    fn test_without_ptk_disabled_keeps_every_other_word() {
+        for (env_prefix, expected) in [
+            ("PTK_DISABLED=1 ", "docker ps"),
+            ("sudo PTK_DISABLED=1 ", "sudo docker ps"),
+            ("PTK_DISABLED=1 sudo -E ", "sudo -E docker ps"),
+            ("FOO=1 PTK_DISABLED=true ", "FOO=1 docker ps"),
+            ("FOO='a  b' PTK_DISABLED=1 ", "FOO='a  b' docker ps"),
+            ("PTK_DISABLED='1 2' ", "docker ps"),
+            ("PTK_DISABLED=$CI ", "docker ps"),
+            ("sudo", "sudo docker ps"),
+        ] {
+            assert_eq!(
+                without_ptk_disabled(env_prefix, "docker ps"),
+                expected,
+                "{env_prefix:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_disabled_segment_is_judged_as_typed_without_the_bypass() {
+        // The analytics peel strips `sudo` so the bypass can be *detected*, but the
+        // counterfactual ("would the hook have rewritten this without the
+        // PTK_DISABLED=") keeps the wrapper. `docker ps` always rewrites; `sudo
+        // docker ps` does not (#146 / test_rewrite_sudo_passthrough), so a
+        // sudo-wrapped bypass recovers no savings: it is judged as the line
+        // without the assignment, not as a bypass.
+        fn judge(raw: &str, ctx: &CoverageContext) -> DisabledSegment {
+            let (env_prefix, actual_cmd) = strip_disabled_prefix_for_analytics(raw);
+            judge_disabled_segment(raw, env_prefix, actual_cmd, ctx)
+        }
+        let unbypassed = |line: &str| DisabledSegment::Unbypassed(line.to_string());
+        let ctx = test_ctx(true);
+        assert_eq!(
+            judge("sudo PTK_DISABLED=1 docker ps", &ctx),
+            unbypassed("sudo docker ps")
+        );
+        assert_eq!(
+            judge("PTK_DISABLED=1 env -i git status", &ctx),
+            unbypassed("env -i git status")
+        );
+        // The stripped segment alone would say yes.
+        assert!(estimate_hook_coverage(
+            "sudo PTK_DISABLED=1 docker ps",
+            "docker ps",
+            &ctx
+        ));
+        // …and it becomes a real bypass once the user declares sudo transparent.
+        let mut ctx_sudo = test_ctx(true);
+        ctx_sudo.normalized_transparent_prefixes = vec!["sudo".to_string()];
+        assert_eq!(
+            judge("sudo PTK_DISABLED=1 docker ps", &ctx_sudo),
+            DisabledSegment::Bypass
+        );
+        assert_eq!(
+            judge("PTK_DISABLED=1 sudo docker ps", &ctx_sudo),
+            DisabledSegment::Bypass
+        );
+        // Only the PTK_DISABLED= word is removed, whole: a bare bypass, one next
+        // to another assignment, and a quoted or expanded value are all bypasses.
+        for raw in [
+            "PTK_DISABLED=1 docker ps",
+            "FOO=1 PTK_DISABLED=true cargo test",
+            "PTK_DISABLED='1 2' docker ps",
+            "PTK_DISABLED=$CI docker ps",
+        ] {
+            assert_eq!(judge(raw, &ctx), DisabledSegment::Bypass, "{raw}");
+        }
+        // No hook installed: nothing was bypassed; the command is a plain miss.
+        assert_eq!(
+            judge("PTK_DISABLED=1 docker ps", &test_ctx(false)),
+            unbypassed("docker ps")
+        );
+        assert_eq!(
+            judge("PTK_DISABLED=1 frobnicate x", &ctx),
+            DisabledSegment::Unhandled
+        );
     }
 
     #[test]
@@ -741,7 +908,7 @@ mod tests {
 
         // Sanity check: the same deny rule does NOT match the stripped form alone —
         // if `estimate_hook_coverage` regressed to checking permissions against
-        // `stripped_cmd` instead of `raw_cmd`, this assertion would start failing
+        // `rewrite_cmd` instead of `permission_cmd`, this assertion would start failing
         // (the bug would make it come back true instead of false above).
         assert!(estimate_hook_coverage("git status", "git status", &ctx));
     }
@@ -777,19 +944,19 @@ mod tests {
 
     #[test]
     fn test_is_already_ptk_plain_rewrite() {
-        assert!(is_already_rtk("ptk grep -n foo bar.py"));
+        assert!(is_already_ptk("ptk grep -n foo bar.py"));
     }
 
     #[test]
-    fn test_is_already_ptk_excludes_proxy_escape_hatch() {
-        // ptk#3148 secondary finding: `ptk proxy` deliberately bypasses filtering,
+    fn test_is_already_ptk_excludes_bypass_escape_hatch() {
+        // ptk#3148 secondary finding: `ptk bypass` deliberately bypasses filtering,
         // so it must not count as coverage.
-        assert!(!is_already_rtk("ptk proxy grep -n foo bar.py"));
+        assert!(!is_already_ptk("ptk bypass grep -n foo bar.py"));
     }
 
     #[test]
     fn test_is_already_ptk_false_for_unrelated_command() {
-        assert!(!is_already_rtk("grep -n foo bar.py"));
+        assert!(!is_already_ptk("grep -n foo bar.py"));
     }
 
     #[test]

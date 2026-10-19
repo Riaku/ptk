@@ -1,12 +1,12 @@
 ---
 model: sonnet
-description: RTK Code Review — Review locale pre-PR avec auto-fix
+description: PTK Code Review — Review locale pre-PR avec auto-fix
 argument-hint: "[--fix] [file-pattern]"
 ---
 
-# RTK Code Review
+# PTK Code Review
 
-Review locale de la branche courante avant création de PR. Applique les critères de qualité RTK.
+Review locale de la branche courante avant création de PR. Applique les critères de qualité PTK.
 
 **Principe**: Preview local → corriger → puis créer PR propre.
 
@@ -63,12 +63,12 @@ git diff "$BASE_BRANCH"...HEAD --stat
 | `src/main.rs`                  | Command routing + Commands enum            |
 | `src/core/tracking.rs`         | SQLite patterns + DB path config           |
 | `src/core/config.rs`           | Configuration system                       |
-| `src/hooks/init.rs`            | Init patterns + hook installation          |
+| `src/hooks/init/`              | Init patterns + hook installation          |
 | `.github/workflows/`           | CI/CD multi-platform build targets         |
 | `tests/` ou `fixtures/`        | Testing Strategy (CLAUDE.md)               |
 | `Cargo.toml`                   | Dependencies + build optimizations         |
 
-### Règles clés RTK
+### Règles clés PTK
 
 **Error Handling**:
 - `anyhow::Result` pour tout le CLI (jamais `std::io::Result` nu)
@@ -84,7 +84,7 @@ git diff "$BASE_BRANCH"...HEAD --stat
 **Tests**:
 - `#[cfg(test)] mod tests` embarqué dans chaque module
 - Fixtures réelles dans `tests/fixtures/<cmd>_raw.txt`
-- `count_tokens()` pour vérifier savings ≥60%
+- `count_tokens()` pour vérifier savings ≥20%
 - `assert_snapshot!` (insta) pour output format
 
 **Module**:
@@ -93,7 +93,7 @@ git diff "$BASE_BRANCH"...HEAD --stat
 - `strip_ansi()` depuis `utils.rs` — pas re-implémenté
 
 **Filtres**:
-- Token savings ≥60% obligatoire (release blocker)
+- Token savings ≥20% obligatoire (release blocker)
 - Fallback: si filter échoue → raw command exécutée
 - Pas d'output ASCII art, pas de verbose metadata inutile
 
@@ -105,7 +105,7 @@ git diff "$BASE_BRANCH"...HEAD --stat
 - Pattern regex fixe recompilé dans une fonction
 - `?` sans `.context()` — erreur sans description
 - Dépendance async ajoutée (tokio, async-std, futures)
-- Token savings <60% pour un nouveau filtre
+- Token savings <20% pour un nouveau filtre
 - Pas de fallback vers commande brute sur échec de filtre
 - `panic!()` en production (hors tests)
 - Exit code non propagé sur commande sous-jacente
@@ -122,7 +122,7 @@ git diff "$BASE_BRANCH"...HEAD --stat
 - Fonction >50 lignes (split recommandé)
 - Nesting >3 niveaux (early returns)
 - `clone()` inutile (borrow possible)
-- Output format inconsistant avec les autres filtres RTK
+- Output format inconsistant avec les autres filtres PTK
 - Test avec données synthétiques au lieu de vraie fixture
 - ANSI codes non strippés dans le filtre
 - `println!` en production (debug artifact)
@@ -142,7 +142,7 @@ git diff "$BASE_BRANCH"...HEAD --stat
 ### Format compact (défaut)
 
 ```markdown
-## 🔍 Review RTK
+## 🔍 Review PTK
 
 | 🔴  | 🟡  |
 | :-: | :-: |
@@ -208,7 +208,7 @@ Glob tests/fixtures/<cmd>_raw.txt
 
 **NE PAS signaler**:
 - `unwrap()` dans `#[cfg(test)] mod tests` → autorisé (avec `expect()` préféré)
-- `LazyLock<Regex>` avec `unwrap()` dans l'initialiseur → pattern établi RTK
+- `LazyLock<Regex>` avec `unwrap()` dans l'initialiseur → pattern établi PTK
 - Variables `_unused` → peut être intentionnel (warn suppression)
 
 ## Mode Auto (--auto)
