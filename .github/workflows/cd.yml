@@ -23,7 +23,9 @@ jobs:
     # other than the trunk. A push to main tags a release instead, so the two
     # paths can never both claim the same commit.
     if: >-
-      github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+      github.event_name == 'workflow_dispatch'
+      && github.ref != 'refs/heads/main'
+      && !startsWith(github.ref, 'refs/pull/')
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
@@ -89,12 +91,18 @@ jobs:
 
   release:
     name: Tag the release
-    # A push to main is the release trigger. The version-bump commit this job pushes
-    # must not start another release, so its own message skips the job; nothing else
-    # filters here, because "we forgot to re-run" is how a release goes missing.
+    # A push to main is the only trigger: a merged change ships, and nothing else does. Not a
+    # pull request (the head of an unmerged branch must never publish), not a manual dispatch
+    # on main (that would cut a version no merge produced — release.yml can republish an
+    # existing tag when a build needs redoing).
+    #
+    # The version-bump commit this job pushes must not start another release, so its subject
+    # skips the job. Only the subject: a merge whose *body* quotes `chore(release): vX.Y.Z`
+    # is ordinary work, and matching the whole message silently skipped a release once.
     if: >-
-      github.ref == 'refs/heads/main'
-      && !contains(github.event.head_commit.message, 'chore(release):')
+      github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && !startsWith(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
     outputs:
       tagged: ${{ steps.tag.outputs.tagged }}

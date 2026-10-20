@@ -74,13 +74,13 @@ Trigger: workflow_dispatch from any branch except main | Concurrency: cancel-in-
 
 ## Merge to main — stable release (cd.yml)
 
-Trigger: push to main, or a manual dispatch on main | Concurrency: never cancelled
+Trigger: push to main only (never a pull request, never a dispatch) | Concurrency: never cancelled
 
 No release pull request: the tag is created on the commit that landed.
 
 ```
      ┌──────────────────────────┐
-     │ push to main / dispatch   │
+     │ push to main (merge only) │
      └────────────┬─────────────┘
                   │
      ┌────────────▼─────────────────┐
