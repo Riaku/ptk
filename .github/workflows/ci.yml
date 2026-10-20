@@ -310,8 +310,11 @@ jobs:
       - name: Assert pwsh 7+ for the Windows-filter benchmark rows
         run: |
           command -v pwsh || { echo "pwsh is missing on this runner"; exit 1; }
+          # .PSVersion is a SemanticVersion on PS 7+, which has no .Version property;
+          # $null -lt 7 is true in PowerShell, so the obvious `.Version.Major` spelling
+          # throws on a perfectly good runner.
           pwsh -NoProfile -NonInteractive -Command \
-            'if ($PSVersionTable.PSVersion.Version.Major -lt 7) { throw "pwsh 7+ required" }'
+            'if ($PSVersionTable.PSVersion.Major -lt 7) { throw "pwsh 7+ required, found $($PSVersionTable.PSVersion)" }'
 
       - name: Run benchmark
         env:
@@ -340,7 +343,7 @@ jobs:
         run: cargo build --release
 
       - name: Assert PowerShell 7+
-        run: pwsh -NoProfile -NonInteractive -Command 'if ($PSVersionTable.PSVersion.Version.Major -lt 7) { throw "pwsh 7+ required" }'
+        run: pwsh -NoProfile -NonInteractive -Command 'if ($PSVersionTable.PSVersion.Major -lt 7) { throw "pwsh 7+ required, found $($PSVersionTable.PSVersion)" }'
 
       - name: Run benchmark
         env:
