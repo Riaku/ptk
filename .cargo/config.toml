@@ -4,3 +4,7 @@
 # frames, main thread).
 [env]
 RUST_MIN_STACK = "8388608"
+
+[alias]
+build-fast = "build --profile release-fast"
+test-fast = "test -p ptk --lib"
