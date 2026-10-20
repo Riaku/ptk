@@ -7,6 +7,11 @@
 )]
 //! Windows CMD and PowerShell command execution and filtering modules.
 
+/// CMD-to-PowerShell argument translation for the commands PowerShell Core
+/// actually resolves off Windows (`dir`, `type`). Windows has `cmd.exe`, so the
+/// module is unused there and gated to keep it out of the Windows build.
+#[cfg(not(windows))]
+pub mod cmd_fallback;
 pub mod dir_cmd;
 pub mod dns_cmd;
 pub mod event_cmd;

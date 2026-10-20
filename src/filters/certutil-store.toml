@@ -1,5 +1,6 @@
 [filters.certutil-store]
 description = "Compact certutil store/dump - certificate subject, issuer and expiry only"
+windows_only = true
 match_command = "^certutil\\s+-(?:store|dump)\\b"
 strip_ansi = true
 keep_lines_matching = [

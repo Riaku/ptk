@@ -1,5 +1,6 @@
 [filters.winget-install]
 description = "Compact winget install/upgrade output - drop progress and license noise"
+windows_only = true
 match_command = "^winget\\s+(install|upgrade|uninstall|download)\\b"
 strip_ansi = true
 strip_lines_matching = [

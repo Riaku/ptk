@@ -1,5 +1,6 @@
 [filters.ipconfig]
 description = "Compact ipconfig output - adapters, IPv4, gateway and DNS only"
+windows_only = true
 match_command = "^ipconfig(?:\\s+/+all)?\\s*$"
 strip_ansi = true
 keep_lines_matching = [

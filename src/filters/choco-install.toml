@@ -1,5 +1,6 @@
 [filters.choco-install]
 description = "Compact choco install/upgrade output - strip banners, prompts and progress noise"
+windows_only = true
 match_command = "^choco(?:latey)?\\s+(install|upgrade|uninstall|pin)\\b"
 strip_ansi = true
 strip_lines_matching = [

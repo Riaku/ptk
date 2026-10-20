@@ -1,5 +1,6 @@
 [filters.winget-list]
 description = "Compact winget list/show output - drop table rules, collapse padding, cap long lists"
+windows_only = true
 match_command = "^winget\\s+(list|ls|show)\\b"
 strip_ansi = true
 strip_lines_matching = [

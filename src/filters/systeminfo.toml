@@ -1,5 +1,6 @@
 [filters.systeminfo]
 description = "Compact systeminfo - OS, hardware, domain and hotfixes only"
+windows_only = true
 match_command = "^systeminfo\\b"
 strip_ansi = true
 keep_lines_matching = [

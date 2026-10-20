@@ -3,8 +3,11 @@
 //! Strips Windows volume serial headers, directory metadata headers,
 //! and footer byte counts, formatting output into a dense, LLM-friendly list.
 
+#[cfg(windows)]
 use crate::core::runner::{self, RunOptions};
+#[cfg(windows)]
 use crate::core::shell::display_args;
+#[cfg(windows)]
 use crate::core::windows_shell;
 use anyhow::Result;
 
@@ -125,7 +128,8 @@ fn format_size(bytes: u64) -> String {
     }
 }
 
-/// Run `dir` with args via `cmd.exe` and filter its output.
+/// Run `dir` via `cmd.exe` and filter its output.
+#[cfg(windows)]
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_cmd("dir", args);
     let cmd_label = format!("dir {}", display_args(args));
@@ -137,6 +141,19 @@ pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
         filter_dir_output,
         RunOptions::default(),
     )
+}
+
+/// Run `dir` off Windows, where there is no `cmd.exe` to spawn.
+///
+/// The `Get-ChildItem` twin is already implemented and filtered, so CMD's
+/// argument grammar is translated onto it rather than dying on a missing
+/// binary. PowerShell Core resolves `dir` as an alias for `Get-ChildItem`, which
+/// is what makes this a faithful substitute instead of an invented command.
+#[cfg(not(windows))]
+pub fn run(args: &[String], verbose: u8) -> Result<i32> {
+    let t = crate::cmds::windows::cmd_fallback::dir_to_get_child_item(args);
+    crate::cmds::windows::cmd_fallback::warn_dropped("dir", &t.dropped);
+    crate::cmds::windows::gci_cmd::run(&t.args, verbose)
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 [filters.scoop-install]
 description = "Compact scoop install/update output - strip download, extract and repo noise"
+windows_only = true
 match_command = "^scoop\\s+(install|update|upgrade|uninstall)\\b"
 strip_ansi = true
 strip_lines_matching = [

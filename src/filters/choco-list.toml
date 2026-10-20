@@ -1,5 +1,6 @@
 [filters.choco-list]
 description = "Compact choco list/outdated output - strip banner and padding"
+windows_only = true
 match_command = "^choco(?:latey)?\\s+(list|outdated)\\b"
 strip_ansi = true
 strip_lines_matching = [

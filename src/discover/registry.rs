@@ -256,8 +256,15 @@ pub fn classify_command(cmd: &str) -> Classification {
         }
     }
 
-    // Fast check with RegexSet — take the last (most specific) match
-    let matches: Vec<usize> = REGEX_SET.matches(cmd_clean).into_iter().collect();
+    // Fast check with RegexSet — take the last (most specific) match.
+    // Windows-only rules are dropped here off Windows: their target binary does
+    // not exist, so rewriting would send the agent into the exec fallback and
+    // report a failure the native shell would have reported more honestly.
+    let matches: Vec<usize> = REGEX_SET
+        .matches(cmd_clean)
+        .into_iter()
+        .filter(|&i| cfg!(windows) || !RULES[i].windows_only)
+        .collect();
     if let Some(&idx) = matches.last() {
         let rule = &RULES[idx];
 
@@ -3682,6 +3689,25 @@ mod tests {
         );
     }
 
+    /// True when `ptk_tool`'s rule is Windows-only and we are not on Windows, in
+    /// which case the command must pass through unrewritten rather than become
+    /// a `ptk <tool>` invocation that dies on a missing binary.
+    fn gated_off_windows(ptk_tool: &str) -> bool {
+        !cfg!(windows)
+            && RULES
+                .iter()
+                .any(|r| r.ptk_cmd == ptk_tool && r.windows_only)
+    }
+
+    /// The `ptk <tool>` prefix of an expected rewrite target.
+    fn ptk_tool_of(expected: &str) -> String {
+        expected
+            .split_whitespace()
+            .take(2)
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
     #[test]
     fn test_rewrite_windows_diagnostics() {
         for (cmd, expected) in [
@@ -3701,11 +3727,19 @@ mod tests {
                 r"ptk reg query HKCU\Environment",
             ),
         ] {
-            assert_eq!(
-                rewrite_command_no_prefixes(cmd, &[]),
-                Some(expected.into()),
-                "{cmd}"
-            );
+            if gated_off_windows(&ptk_tool_of(expected)) {
+                assert_eq!(
+                    rewrite_command_no_prefixes(cmd, &[]),
+                    None,
+                    "{cmd} must stay native off Windows"
+                );
+            } else {
+                assert_eq!(
+                    rewrite_command_no_prefixes(cmd, &[]),
+                    Some(expected.into()),
+                    "{cmd}"
+                );
+            }
         }
     }
 
@@ -3719,11 +3753,19 @@ mod tests {
             ("scoop status", "ptk scoop status"),
             ("scoop update", "ptk scoop update"),
         ] {
-            assert_eq!(
-                rewrite_command_no_prefixes(cmd, &[]),
-                Some(expected.into()),
-                "{cmd}"
-            );
+            if gated_off_windows(&ptk_tool_of(expected)) {
+                assert_eq!(
+                    rewrite_command_no_prefixes(cmd, &[]),
+                    None,
+                    "{cmd} must stay native off Windows"
+                );
+            } else {
+                assert_eq!(
+                    rewrite_command_no_prefixes(cmd, &[]),
+                    Some(expected.into()),
+                    "{cmd}"
+                );
+            }
         }
     }
 
@@ -4070,6 +4112,13 @@ mod tests {
         ];
 
         for (command, expected_ptk_command) in valid_commands {
+            if gated_off_windows(expected_ptk_command) {
+                assert!(
+                    !matches!(classify_command(command), Classification::Supported { .. }),
+                    "{command} must not classify as Supported off Windows"
+                );
+                continue;
+            }
             match classify_command(command) {
                 Classification::Supported { ptk_equivalent, .. } => {
                     assert_eq!(ptk_equivalent, expected_ptk_command, "{command}");
