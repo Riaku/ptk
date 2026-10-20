@@ -386,7 +386,9 @@ fn job_block<'a>(workflow: &'a str, job: &str) -> &'a str {
     let mut start = None;
     let mut end = workflow.len();
     for line in workflow.split_inclusive('\n') {
-        let bare = line.trim_end_matches('\n');
+        // Windows checkouts end every line with \r\n, so a literal comparison of the header
+        // fails there while passing everywhere else.
+        let bare = line.trim_end_matches(['\r', '\n']);
         if start.is_none() {
             if bare == header {
                 start = Some(offset);
@@ -399,6 +401,22 @@ fn job_block<'a>(workflow: &'a str, job: &str) -> &'a str {
     }
     let start = start.unwrap_or_else(|| panic!("workflow must keep a `{job}` job"));
     &workflow[start..end]
+}
+
+#[test]
+fn the_job_scraper_tolerates_crlf_checkouts() {
+    let crlf = "on:\n  push:\n\n  release:\n    if: github.ref == 'refs/heads/main'\n\n  other:\n    y: 1\n"
+        .replace('\n', "\r\n");
+    let block = job_block(&crlf, "release");
+    assert!(
+        block.contains("github.ref"),
+        "the scraper must find the job in a CRLF file: Windows checkouts use CRLF, and this \
+         failed on both Windows legs before the fix"
+    );
+    assert!(
+        !block.contains("y: 1"),
+        "the block must stop at the next job, or every guard reads unrelated text:\n{block}"
+    );
 }
 
 #[test]
