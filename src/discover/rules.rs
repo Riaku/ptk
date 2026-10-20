@@ -805,6 +805,94 @@ pub const RULES: &[PtkRule] = &[
         ..PtkRule::DEFAULT
     },
     PtkRule {
+        pattern: r"^choco(?:latey)?\s+(list|outdated|search|find|info|install|upgrade|uninstall|pin)\b",
+        ptk_cmd: "ptk choco",
+        rewrite_prefixes: &["choco", "chocolatey"],
+        category: "PackageManager",
+        savings_pct: 60.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^scoop\s+(list|status|search|info|install|update|upgrade|uninstall)\b",
+        ptk_cmd: "ptk scoop",
+        rewrite_prefixes: &["scoop"],
+        category: "PackageManager",
+        savings_pct: 60.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^winget\s+(list|ls|show|upgrade|search|find|install|uninstall|download)\b",
+        ptk_cmd: "ptk winget",
+        rewrite_prefixes: &["winget"],
+        category: "PackageManager",
+        savings_pct: 65.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^ipconfig(?:\s+/+all)?\s*$",
+        ptk_cmd: "ptk ipconfig",
+        rewrite_prefixes: &["ipconfig"],
+        category: "Network",
+        savings_pct: 70.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^systeminfo\b",
+        ptk_cmd: "ptk systeminfo",
+        rewrite_prefixes: &["systeminfo"],
+        category: "System",
+        savings_pct: 85.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^tasklist\b",
+        ptk_cmd: "ptk tasklist",
+        rewrite_prefixes: &["tasklist"],
+        category: "System",
+        savings_pct: 65.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^robocopy\b",
+        ptk_cmd: "ptk robocopy",
+        rewrite_prefixes: &["robocopy"],
+        category: "Files",
+        savings_pct: 75.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^certutil\s+-(?:store|dump|hashfile)\b",
+        ptk_cmd: "ptk certutil",
+        rewrite_prefixes: &["certutil"],
+        category: "System",
+        savings_pct: 60.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^ping\b",
+        ptk_cmd: "ptk ping",
+        rewrite_prefixes: &["ping"],
+        category: "Network",
+        savings_pct: 60.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^schtasks\s+/+query\b",
+        ptk_cmd: "ptk schtasks",
+        rewrite_prefixes: &["schtasks"],
+        category: "System",
+        savings_pct: 70.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
+        pattern: r"^reg\s+query\b",
+        ptk_cmd: "ptk reg",
+        rewrite_prefixes: &["reg"],
+        category: "System",
+        savings_pct: 75.0,
+        ..PtkRule::DEFAULT
+    },
+    PtkRule {
         pattern: r"^composer\s+(install|update|require)\b",
         ptk_cmd: "ptk composer",
         pipeline_safety: PipelineSafety::ProducerOnly,

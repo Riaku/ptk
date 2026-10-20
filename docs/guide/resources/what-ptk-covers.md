@@ -63,6 +63,32 @@ PTK reduces **bash output bytes** — the only thing it controls. Those bytes ar
 | `prisma migrate` | Migration status only |
 | `playwright test` | Failures + trace links only |
 
+## Windows package managers
+
+| Command | What changes |
+|---------|--------------|
+| `winget list` / `show` | Column padding collapsed, long lists capped |
+| `winget upgrade` / `install` | Progress, license and installer noise stripped |
+| `winget search` | Column padding collapsed, results capped |
+| `choco list` / `outdated` | Chocolatey banner stripped |
+| `choco search` / `info` | Banner and search header stripped |
+| `choco install` / `upgrade` | Elevation banner and progress stripped |
+| `scoop list` / `status` | App table padding collapsed, long lists capped |
+| `scoop install` / `update` | Download, extract and repo noise stripped |
+
+## Windows diagnostics
+
+| Command | What changes |
+|---------|--------------|
+| `ipconfig /all` | Adapters, IPv4, gateway and DNS only |
+| `systeminfo` | OS, hardware, domain and hotfixes only |
+| `tasklist` | Image name, PID and memory only |
+| `robocopy` | Source/dest, summary and failures only |
+| `certutil -store` / `-dump` / `-hashfile` | Certificate identity or file hash only |
+| `ping` | Target, packet loss and RTT summary only |
+| `schtasks /query` | Task name, next run and status only |
+| `reg query` | Indentation stripped, recursive output capped |
+
 ## Python
 
 | Command | What changes |

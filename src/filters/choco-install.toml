@@ -1,0 +1,81 @@
+[filters.choco-install]
+description = "Compact choco install/upgrade output - strip banners, prompts and progress noise"
+match_command = "^choco(?:latey)?\\s+(install|upgrade|uninstall|pin)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^Chocolatey v[\\d.]+\\s*$",
+  "^Chocolatey detected you are not running from an elevated command shell\\s*$",
+  "^\\s*\\(cmd/powershell\\)\\.\\s*$",
+  "^\\s*You may experience errors.*$",
+  "^\\s*require admin rights.*$",
+  "^\\s*elevated shell.*$",
+  "^\\s*that you do so with.*$",
+  "^\\s*attempting to use Chocolatey.*$",
+  "^\\s*must select a different location.*$",
+  "^\\s*location\\. See\\s*$",
+  "^\\s*https://docs\\.chocolatey\\.org/en-us/choco/setup.*$",
+  "^\\s*for details\\.\\s*$",
+  "^\\s*For the question below.*$",
+  "^\\s*Do you want to continue.*$",
+  "^\\s*Timeout or your choice.*$",
+  "^\\s*_ Chocolatey:.*_\\s*$",
+  "^\\s*Downloading package from source.*$",
+  "^\\s*\\[NuGet\\].*$",
+  "^By installing, you accept licenses.*$",
+  "^\\s*Progress:.*$",
+  "^\\s*\\d+%.*$",
+  "^\\s*See the log for details.*$",
+  "^\\s*Enjoy using Chocolatey.*$",
+  "^\\s*experience to the next level at\\s*$",
+  "^\\s*https://chocolatey\\.org/compare\\s*$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 80
+on_empty = "choco: ok"
+
+[[tests.choco-install]]
+name = "strips banner, prompt and progress"
+input = """
+Chocolatey v2.5.1
+Chocolatey detected you are not running from an elevated command shell
+ (cmd/powershell).
+_ Chocolatey:ChocolateyInstallCommand - Noop Mode _
+Installing the following packages:
+git
+By installing, you accept licenses for the packages.
+Progress: Downloading git 2.55.0.5... 100%
+[Approved] git v2.55.0.5
+The install of git was successful.
+Chocolatey installed 1/1 packages.
+"""
+expected = """
+Installing the following packages:
+git
+[Approved] git v2.55.0.5
+The install of git was successful.
+Chocolatey installed 1/1 packages.
+"""
+
+[[tests.choco-install]]
+name = "all noise collapses to ok"
+input = """
+Chocolatey v2.5.1
+Progress: Downloading git 2.55.0.5... 100%
+"""
+expected = "choco: ok"
+
+[[tests.choco-install]]
+name = "failure lines are preserved"
+input = """
+Chocolatey v2.5.1
+ERROR: The running command stopped because the preference variable "ErrorActionPreference" is set to Stop.
+The install of git was NOT successful.
+"""
+expected = """
+ERROR: The running command stopped because the preference variable "ErrorActionPreference" is set to Stop.
+The install of git was NOT successful.
+"""

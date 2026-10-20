@@ -1,0 +1,55 @@
+[filters.reg-query]
+description = "Compact reg query - strip indentation and cap recursive listings"
+match_command = "^reg\\s+query\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+]
+replace = [
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 200
+on_empty = "reg: no values"
+
+[[tests.reg-query]]
+name = "strips value indentation"
+input = """
+HKEY_CURRENT_USER\\Environment
+    ChocolateyLastPathUpdate    REG_SZ    134047959857706849
+    OneDrive    REG_EXPAND_SZ    C:\\Users\\ReRet\\OneDrive
+    Path    REG_EXPAND_SZ    C:\\Tools;C:\\Windows
+"""
+expected = """
+HKEY_CURRENT_USER\\Environment
+ChocolateyLastPathUpdate    REG_SZ    134047959857706849
+OneDrive    REG_EXPAND_SZ    C:\\Users\\ReRet\\OneDrive
+Path    REG_EXPAND_SZ    C:\\Tools;C:\\Windows
+"""
+
+[[tests.reg-query]]
+name = "errors are preserved"
+input = """
+ERROR: The system was unable to find the specified registry key or value.
+"""
+expected = """
+ERROR: The system was unable to find the specified registry key or value.
+"""
+
+[[tests.reg-query]]
+name = "recursive keys stay readable"
+input = """
+HKEY_LOCAL_MACHINE\\SOFTWARE\\Vendor
+    InstallDir    REG_SZ    C:\\Program Files\\Vendor
+    Version    REG_SZ    1.2.3
+
+HKEY_LOCAL_MACHINE\\SOFTWARE\\Vendor\\Sub
+    Enabled    REG_DWORD    0x1
+"""
+expected = """
+HKEY_LOCAL_MACHINE\\SOFTWARE\\Vendor
+InstallDir    REG_SZ    C:\\Program Files\\Vendor
+Version    REG_SZ    1.2.3
+HKEY_LOCAL_MACHINE\\SOFTWARE\\Vendor\\Sub
+Enabled    REG_DWORD    0x1
+"""

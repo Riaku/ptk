@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-# Use local release build if available, otherwise fall back to installed ptk
-if [ -f "./target/release/ptk" ]; then
+if [ -n "${PTK_BIN:-}" ]; then
+  PTK="$PTK_BIN"
+elif [ -f "./target/release/ptk" ]; then
   PTK="$(cd "$(dirname ./target/release/ptk)" && pwd)/$(basename ./target/release/ptk)"
 elif [ -f "./target/release/ptk.exe" ]; then
   # Windows runners build ptk.exe; without this the windows-latest job falls through
@@ -948,6 +949,48 @@ if [ "$WIN_MODE" = 1 ]; then
   bench_win "resolve-dns"   "Resolve-DnsName localhost"                    "$PTK resolve-dns localhost"
   bench_win "tnc"           "Test-NetConnection localhost -Port 135"        "$PTK tnc localhost -Port 135"
   bench_win "winevent"      "Get-WinEvent -LogName System -MaxEvents 20"    "$PTK winevent -LogName System -MaxEvents 20"
+fi
+
+# ===================
+# Package managers (optional - only present on some Windows hosts)
+# ===================
+section "package managers"
+if command -v winget &>/dev/null; then
+  bench "winget list" "winget list" "$PTK winget list"
+  bench "winget upgrade" "winget upgrade --accept-source-agreements --disable-interactivity" "$PTK winget upgrade --accept-source-agreements --disable-interactivity"
+  bench "winget search" "winget search git --accept-source-agreements --disable-interactivity" "$PTK winget search git --accept-source-agreements --disable-interactivity"
+else
+  echo "⏭️  winget (not installed, skipped)"
+fi
+if command -v choco &>/dev/null; then
+  bench "choco list" "choco list" "$PTK choco list"
+  bench "choco outdated" "choco outdated" "$PTK choco outdated"
+else
+  echo "⏭️  choco (not installed, skipped)"
+fi
+if command -v scoop &>/dev/null; then
+  bench "scoop list" "scoop list" "$PTK scoop list"
+  bench "scoop status" "scoop status" "$PTK scoop status"
+else
+  echo "⏭️  scoop (not installed, skipped)"
+fi
+
+# ===================
+# Windows system + network diagnostics
+# ===================
+section "windows: system + network"
+if command -v systeminfo &>/dev/null; then
+  bench "ipconfig /all" "ipconfig //all" "$PTK ipconfig //all"
+  bench "systeminfo" "systeminfo" "$PTK systeminfo"
+  bench "tasklist" "tasklist" "$PTK tasklist"
+  bench "robocopy list" "robocopy src/cmds/windows src/cmds/windows //L" "$PTK robocopy src/cmds/windows src/cmds/windows //L"
+  bench "certutil store" "certutil -store root" "$PTK certutil -store root"
+  bench "certutil hash" "certutil -hashfile Cargo.toml SHA256" "$PTK certutil -hashfile Cargo.toml SHA256"
+  bench "ping localhost" "ping -n 4 127.0.0.1" "$PTK ping -n 4 127.0.0.1"
+  bench "schtasks query" "MSYS_NO_PATHCONV=1 schtasks /query /fo TABLE" "MSYS_NO_PATHCONV=1 $PTK schtasks /query /fo TABLE"
+  bench "reg query env" "reg query HKCU\\Environment" "$PTK reg query HKCU\\Environment"
+else
+  echo "⏭️  Windows diagnostics (not on this host, skipped)"
 fi
 
 # ===================

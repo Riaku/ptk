@@ -1,0 +1,82 @@
+[filters.robocopy]
+description = "Compact robocopy - source/dest, summary and failures only"
+match_command = "^robocopy\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "^\\s*ROBOCOPY\\s+::",
+  "^\\s*Started :",
+  "^\\s*Ended :",
+  "^\\s*Source :",
+  "^\\s*Dest :",
+  "^\\s*Total\\s+Copied\\s+Skipped\\s+Mismatch\\s+FAILED\\s+Extras",
+  "^\\s*Dirs :\\s+\\d",
+  "^\\s*Files :\\s+\\d",
+  "^\\s*Bytes :\\s+\\d",
+  "^\\s*Times :\\s+\\d",
+  "^\\s*Speed :",
+  "(?i)FAILED|ERROR|denied|not found|invalid|cannot|unable|being used",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 40
+on_empty = "robocopy: ok"
+
+[[tests.robocopy]]
+name = "keeps summary and drops per-file lines"
+input = """
+-------------------------------------------------------------------------------
+   ROBOCOPY     ::     Robust File Copy for Windows
+-------------------------------------------------------------------------------
+
+  Started : October 19, 2026 8:10:58 PM
+  Source : C:\\src\\
+    Dest : C:\\dst\\
+
+  Files : file1.txt
+          file2.txt
+   New File                     202    file1.txt
+   New File                     202    file2.txt
+100%
+
+------------------------------------------------------------------------------
+               Total    Copied   Skipped  Mismatch    FAILED    Extras
+    Dirs :         1         0         1         0         0         0
+   Files :         2         2         0         0         0         0
+   Bytes :       404       404         0         0         0         0
+   Times :   0:00:00   0:00:00                       0:00:00   0:00:00
+   Speed :             202,000 Bytes/sec.
+  Ended : October 19, 2026 8:10:58 PM
+"""
+expected = """
+ROBOCOPY :: Robust File Copy for Windows
+Started : October 19, 2026 8:10:58 PM
+Source : C:\\src\\
+Dest : C:\\dst\\
+Total Copied Skipped Mismatch FAILED Extras
+Dirs : 1 0 1 0 0 0
+Files : 2 2 0 0 0 0
+Bytes : 404 404 0 0 0 0
+Times : 0:00:00 0:00:00 0:00:00 0:00:00
+Speed : 202,000 Bytes/sec.
+Ended : October 19, 2026 8:10:58 PM
+"""
+
+[[tests.robocopy]]
+name = "failures are preserved"
+input = """
+   ROBOCOPY     ::     Robust File Copy for Windows
+  Started : October 19, 2026 8:10:58 PM
+   ERROR 32 (0x00000020) Copying File C:\\src\\locked.txt
+The process cannot access the file because it is being used by another process.
+  Ended : October 19, 2026 8:10:58 PM
+"""
+expected = """
+ROBOCOPY :: Robust File Copy for Windows
+Started : October 19, 2026 8:10:58 PM
+ERROR 32 (0x00000020) Copying File C:\\src\\locked.txt
+The process cannot access the file because it is being used by another process.
+Ended : October 19, 2026 8:10:58 PM
+"""

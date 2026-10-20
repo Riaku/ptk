@@ -887,6 +887,43 @@ Auto-detects `uv` when available and uses it instead of `pip`.
 
 ---
 
+### `ptk winget`, `ptk choco`, `ptk scoop` -- Windows package managers
+
+These are TOML-filtered passthroughs, so the hook rewrites the native command
+automatically:
+
+| Command | Description |
+|---------|-------------|
+| `ptk winget list` / `show` | Collapse column padding, cap long lists |
+| `ptk winget upgrade` / `install` | Strip progress, license and installer noise |
+| `ptk winget search` | Collapse padding, cap result rows |
+| `ptk choco list` / `outdated` | Strip the Chocolatey banner |
+| `ptk choco search` / `info` | Strip banner and search header |
+| `ptk choco install` / `upgrade` | Strip elevation banner and progress |
+| `ptk scoop list` / `status` | Collapse app table, cap long lists |
+| `ptk scoop install` / `update` | Strip download, extract and repo noise |
+
+---
+
+### `ptk ipconfig`, `ptk systeminfo`, `ptk tasklist`, ... -- Windows diagnostics
+
+| Command | Description |
+|---------|-------------|
+| `ptk ipconfig /all` | Adapters, IPv4, gateway and DNS only |
+| `ptk systeminfo` | OS, hardware, domain and hotfixes only |
+| `ptk tasklist` | Image name, PID and memory only |
+| `ptk robocopy ...` | Source/dest, summary and failures only |
+| `ptk certutil -store` / `-hashfile` | Certificate identity or file hash only |
+| `ptk ping ...` | Target, packet loss and RTT summary only |
+| `ptk schtasks /query` | Task name, next run and status only |
+| `ptk reg query ...` | Indentation stripped, recursive output capped |
+
+In Git Bash, MSYS rewrites multi-letter slash options before the native
+executable sees them. Use `ptk ipconfig //all` and `ptk schtasks //query`, or set
+`MSYS_NO_PATHCONV=1`. Bash is not involved when these are called from PowerShell.
+
+---
+
 ### `ptk deps` -- Dependency summary
 
 **Purpose:** Compact summary of project dependencies.

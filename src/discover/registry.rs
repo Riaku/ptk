@@ -3683,6 +3683,51 @@ mod tests {
     }
 
     #[test]
+    fn test_rewrite_windows_diagnostics() {
+        for (cmd, expected) in [
+            ("ipconfig /all", "ptk ipconfig /all"),
+            ("ipconfig //all", "ptk ipconfig //all"),
+            ("systeminfo", "ptk systeminfo"),
+            ("tasklist", "ptk tasklist"),
+            ("robocopy src dst /E", "ptk robocopy src dst /E"),
+            ("certutil -store root", "ptk certutil -store root"),
+            ("ping -n 4 127.0.0.1", "ptk ping -n 4 127.0.0.1"),
+            (
+                "schtasks //query /fo TABLE",
+                "ptk schtasks //query /fo TABLE",
+            ),
+            (
+                r"reg query HKCU\Environment",
+                r"ptk reg query HKCU\Environment",
+            ),
+        ] {
+            assert_eq!(
+                rewrite_command_no_prefixes(cmd, &[]),
+                Some(expected.into()),
+                "{cmd}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_rewrite_windows_package_managers() {
+        for (cmd, expected) in [
+            ("winget list", "ptk winget list"),
+            ("winget upgrade --all", "ptk winget upgrade --all"),
+            ("choco list", "ptk choco list"),
+            ("chocolatey list", "ptk choco list"),
+            ("scoop status", "ptk scoop status"),
+            ("scoop update", "ptk scoop update"),
+        ] {
+            assert_eq!(
+                rewrite_command_no_prefixes(cmd, &[]),
+                Some(expected.into()),
+                "{cmd}"
+            );
+        }
+    }
+
+    #[test]
     fn test_rewrite_toml_absolute_path() {
         assert_eq!(
             rewrite_command_no_prefixes("/usr/bin/jj log", &[]),
@@ -3960,6 +4005,10 @@ mod tests {
             "shopify themepark",
             "terraform planner",
             "trunk builder",
+            "ipconfig /flushdns",
+            "schtasks /run /tn foo",
+            "certutil -addstore root file.cer",
+            r"reg add HKCU\Software\Foo",
         ];
 
         for command in false_positives {
@@ -4005,6 +4054,19 @@ mod tests {
             ("shopify theme push", "ptk shopify"),
             ("terraform plan", "ptk terraform"),
             ("trunk build", "ptk trunk"),
+            ("winget list", "ptk winget"),
+            ("choco outdated", "ptk choco"),
+            ("chocolatey list", "ptk choco"),
+            ("scoop status", "ptk scoop"),
+            ("ipconfig /all", "ptk ipconfig"),
+            ("ipconfig //all", "ptk ipconfig"),
+            ("systeminfo", "ptk systeminfo"),
+            ("tasklist", "ptk tasklist"),
+            ("robocopy src dst /E", "ptk robocopy"),
+            ("certutil -store root", "ptk certutil"),
+            ("ping -n 4 127.0.0.1", "ptk ping"),
+            ("schtasks //query /fo TABLE", "ptk schtasks"),
+            (r"reg query HKCU\Environment", "ptk reg"),
         ];
 
         for (command, expected_ptk_command) in valid_commands {

@@ -1,0 +1,39 @@
+[filters.winget-search]
+description = "Compact winget search output - drop table rules, collapse padding, cap results"
+match_command = "^winget\\s+(search|find)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^-{5,}\\s*$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+truncate_lines_at = 160
+max_lines = 80
+match_output = [
+  { pattern = "No package found matching input criteria", message = "winget: no matching package" },
+]
+on_empty = "winget: no results"
+
+[[tests.winget-search]]
+name = "collapses result table"
+input = """
+Name                Id                  Version    Match        Source
+--------------------------------------------------------------------------
+Git                 Git.Git             2.55.0.5                winget
+git-crypt           AGWA.git-crypt      0.7.0      Tag: git     winget
+"""
+expected = """
+Name Id Version Match Source
+Git Git.Git 2.55.0.5 winget
+git-crypt AGWA.git-crypt 0.7.0 Tag: git winget
+"""
+
+[[tests.winget-search]]
+name = "no match short-circuits"
+input = """
+No package found matching input criteria.
+"""
+expected = "winget: no matching package"

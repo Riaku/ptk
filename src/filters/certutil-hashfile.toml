@@ -1,0 +1,36 @@
+[filters.certutil-hashfile]
+description = "Compact certutil hashfile - header and hash only"
+match_command = "^certutil\\s+-hashfile\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "hash of ",
+  "^[A-Fa-f0-9]{32,}$",
+  "(?i)ERROR|access is denied|not found|invalid",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+on_empty = "certutil: hash unavailable"
+
+[[tests.certutil-hashfile]]
+name = "keeps file header and hash"
+input = """
+SHA256 hash of Cargo.toml:
+e39adc2d1803f8bd6f819a5a8410fa3257465d6ea56c1201ba11125bffd08713
+CertUtil: -hashfile command completed successfully.
+"""
+expected = """
+SHA256 hash of Cargo.toml:
+e39adc2d1803f8bd6f819a5a8410fa3257465d6ea56c1201ba11125bffd08713
+"""
+
+[[tests.certutil-hashfile]]
+name = "errors are preserved"
+input = """
+CertUtil: -hashfile command FAILED: 0x80070002 (WIN32: 2 ERROR_FILE_NOT_FOUND)
+"""
+expected = """
+CertUtil: -hashfile command FAILED: 0x80070002 (WIN32: 2 ERROR_FILE_NOT_FOUND)
+"""

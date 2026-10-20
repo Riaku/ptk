@@ -1,0 +1,94 @@
+[filters.choco-list]
+description = "Compact choco list/outdated output - strip banner and padding"
+match_command = "^choco(?:latey)?\\s+(list|outdated)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^Chocolatey v[\\d.]+\\s*$",
+  "^Outdated Packages\\s*$",
+  "^\\s*Output is Id \\| Version \\| Available Version \\| Pinned\\s*$",
+  "^Did you know the proceeds.*$",
+  "^\\s*licensed editions\\).*$",
+  "^\\s*Your support ensures.*$",
+  "^\\s*plus it nets you.*$",
+  "^\\s*Enjoy using Chocolatey\\?.*$",
+  "^\\s*experience to the next level at\\s*$",
+  "^\\s*https://chocolatey\\.org/compare\\s*$",
+  "^\\d+ packages installed\\.$",
+  "^Chocolatey has determined \\d+ package\\(s\\) are outdated\\.$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 80
+match_output = [
+  { pattern = "0 packages installed", message = "choco: no packages" },
+  { pattern = "0 package\\(s\\) are outdated", message = "choco: up to date" },
+]
+on_empty = "choco: no packages"
+
+[[tests.choco-list]]
+name = "list strips the version banner"
+input = """
+Chocolatey v2.5.1
+chocolatey 2.5.1
+1 packages installed.
+"""
+expected = """
+chocolatey 2.5.1
+"""
+
+[[tests.choco-list]]
+name = "outdated keeps rows"
+input = """
+Chocolatey v2.5.1
+Outdated Packages
+ Output is Id | Version | Available Version | Pinned
+
+chocolatey|2.5.1|2.7.4|false
+
+Chocolatey has determined 1 package(s) are outdated. 
+Did you know the proceeds of Pro (and some proceeds from other
+ licensed editions) go into bettering the community infrastructure?
+ Your support ensures an active community, keeps Chocolatey tip-top,
+ plus it nets you some awesome features!
+ https://chocolatey.org/compare
+"""
+expected = """
+chocolatey|2.5.1|2.7.4|false
+"""
+
+[[tests.choco-list]]
+name = "outdated strips the other promo variant"
+input = """
+Chocolatey v2.5.1
+Outdated Packages
+ Output is Id | Version | Available Version | Pinned
+
+chocolatey|2.5.1|2.7.4|false
+
+Chocolatey has determined 1 package(s) are outdated. 
+Enjoy using Chocolatey? Explore more amazing features to take your
+experience to the next level at
+ https://chocolatey.org/compare
+"""
+expected = """
+chocolatey|2.5.1|2.7.4|false
+"""
+
+[[tests.choco-list]]
+name = "no packages short-circuits"
+input = """
+Chocolatey v2.5.1
+0 packages installed.
+"""
+expected = "choco: no packages"
+
+[[tests.choco-list]]
+name = "nothing outdated short-circuits"
+input = """
+Chocolatey v2.5.1
+Chocolatey has determined 0 package(s) are outdated.
+"""
+expected = "choco: up to date"

@@ -119,6 +119,14 @@ codegen-units = 1
 # costs more.
 strip = true
 
+[profile.release-fast]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+
+[profile.test]
+debug = 0
+
 [lints.rust]
 unsafe_code = "deny"
 warnings = "deny"

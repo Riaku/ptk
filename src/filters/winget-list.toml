@@ -1,0 +1,51 @@
+[filters.winget-list]
+description = "Compact winget list/show output - drop table rules, collapse padding, cap long lists"
+match_command = "^winget\\s+(list|ls|show)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^-{5,}\\s*$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+truncate_lines_at = 160
+max_lines = 120
+on_empty = "winget: no packages"
+
+[[tests.winget-list]]
+name = "collapses table padding and drops the rule"
+input = """
+Name                          Id                    Version   Available   Source
+-----------------------------------------------------------------------------
+Git                           Git.Git               2.55.0.3  2.55.0.5    winget
+7-Zip 26.02 (x64)             7zip.7zip             26.02     26.04       winget
+"""
+expected = """
+Name Id Version Available Source
+Git Git.Git 2.55.0.3 2.55.0.5 winget
+7-Zip 26.02 (x64) 7zip.7zip 26.02 26.04 winget
+"""
+
+[[tests.winget-list]]
+name = "empty result"
+input = """
+
+"""
+expected = "winget: no packages"
+
+[[tests.winget-list]]
+name = "show keeps key-value lines"
+input = """
+Found 7-Zip [7zip.7zip]
+Version: 26.04
+Publisher:    Igor Pavlov
+Publisher Url: https://7-zip.org/
+"""
+expected = """
+Found 7-Zip [7zip.7zip]
+Version: 26.04
+Publisher: Igor Pavlov
+Publisher Url: https://7-zip.org/
+"""

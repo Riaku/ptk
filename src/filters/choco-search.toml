@@ -1,0 +1,56 @@
+[filters.choco-search]
+description = "Compact choco search/info output - strip banner, collapse padding, cap results"
+match_command = "^choco(?:latey)?\\s+(search|find|info)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^Chocolatey v[\\d.]+\\s*$",
+  "^Searching for .*$",
+  "^-{5,}\\s*$",
+  "^Did you know the proceeds.*$",
+  "^\\s*licensed editions\\).*$",
+  "^\\s*Your support ensures.*$",
+  "^\\s*plus it nets you.*$",
+  "^\\s*Enjoy using Chocolatey\\?.*$",
+  "^\\s*experience to the next level at\\s*$",
+  "^\\s*https://chocolatey\\.org/compare\\s*$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+truncate_lines_at = 160
+max_lines = 80
+match_output = [
+  { pattern = "0 packages found\\.", message = "choco: no results" },
+]
+on_empty = "choco: no results"
+
+[[tests.choco-search]]
+name = "collapses result rows"
+input = """
+Chocolatey v2.5.1
+Searching for git
+git 2.55.0.5 [Approved]
+git.install 2.55.0.5 [Approved]
+2 packages found.
+Did you know the proceeds of Pro (and some proceeds from other
+ licensed editions) go into bettering the community infrastructure?
+ Your support ensures an active community, keeps Chocolatey tip-top,
+ plus it nets you some awesome features!
+ https://chocolatey.org/compare
+"""
+expected = """
+git 2.55.0.5 [Approved]
+git.install 2.55.0.5 [Approved]
+2 packages found.
+"""
+
+[[tests.choco-search]]
+name = "no results short-circuits"
+input = """
+Chocolatey v2.5.1
+Searching for nonexistent-package
+0 packages found.
+"""
+expected = "choco: no results"

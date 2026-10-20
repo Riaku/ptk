@@ -19,6 +19,7 @@ pub mod nettcp_cmd;
 pub mod new_item_cmd;
 pub mod process_cmd;
 pub mod service_cmd;
+pub mod tasklist_cmd;
 pub mod tnc_cmd;
 pub mod type_cmd;
 
@@ -63,6 +64,10 @@ pub fn run_smart_command(raw: &str, verbose: u8) -> Result<i32> {
 
     if first_token == "gci" || first_token == "get-childitem" {
         return gci_cmd::run(&args, verbose);
+    }
+
+    if first_token == "tasklist" {
+        return tasklist_cmd::run(&args, verbose);
     }
 
     if first_token == "type" {
