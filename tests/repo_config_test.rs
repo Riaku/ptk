@@ -271,3 +271,29 @@ fn no_workflow_diffs_against_a_ref_that_does_not_exist() {
         offenders.join("\n")
     );
 }
+
+/// The workflow is one checkout per job, so an ungated job is minutes of runner time
+/// spent on changes that cannot affect it. Both properties are easy to lose in a
+/// rewrite and invisible when lost.
+#[test]
+fn ci_cancels_superseded_runs_and_gates_the_expensive_jobs() {
+    let ci = repo_file(".github/workflows/ci.yml");
+    assert!(
+        ci.contains("cancel-in-progress: true"),
+        "a superseded push must cancel the run it replaced"
+    );
+    assert!(
+        ci.contains("benchmark-windows:") && ci.contains("needs.changes.outputs.windows == 'true'"),
+        "the 14-minute Windows benchmark must be gated on Windows-filter changes"
+    );
+    assert!(
+        ci.contains("needs.changes.outputs.code == 'true'"),
+        "the compile-and-benchmark jobs must be gated on code changes"
+    );
+    // A tests/ change must be treated as code, or the suite a PR is judged by changes
+    // shape and the gated jobs skip the very tests that were edited.
+    assert!(
+        ci.contains("|tests/|"),
+        "the code filter must include tests/"
+    );
+}
