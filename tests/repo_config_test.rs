@@ -195,6 +195,78 @@ fn dependency_updates_land_on_the_trunk() {
 
 /// Every documented way to install the fork fetches a script or a branch of this
 /// repository by name. A stale branch name there is a 404 for a new user.
+/// The fork ships one README. Translations drift silently — they still advertise
+/// commands that were renamed and install lines pointing at branches that are gone —
+/// so a reader who lands on one gets confidently wrong documentation.
+#[test]
+fn only_the_default_readme_ships() {
+    let root = repo_root();
+    let mut translations: Vec<String> = fs::read_dir(&root)
+        .expect("read the repository root")
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| {
+            let lower = name.to_ascii_lowercase();
+            lower.starts_with("readme_") && lower.ends_with(".md")
+        })
+        .collect();
+    translations.sort();
+    assert!(
+        translations.is_empty(),
+        "translated READMEs must not ship: {translations:?}"
+    );
+
+    let readme = repo_file("README.md");
+    let stale_links: Vec<&str> = readme
+        .lines()
+        .filter(|line| line.to_ascii_lowercase().contains("readme_"))
+        .collect();
+    assert!(
+        stale_links.is_empty(),
+        "README.md still links to deleted translations: {stale_links:?}"
+    );
+}
+
+/// There is no container build any more. The Dockerfile existed to run the test suite in
+/// a rust image with mingw installed; CI covers that leg on a real Windows runner, so the
+/// image was a second, slower path to the same answer that nothing kept working.
+#[test]
+fn there_is_no_container_build() {
+    let root = repo_root();
+    for rel in [
+        "Dockerfile.build",
+        "Dockerfile",
+        "scripts/test-docker.sh",
+        "scripts/test-docker.ps1",
+    ] {
+        assert!(
+            !root.join(rel).exists(),
+            "{rel} must not exist: the container build was removed"
+        );
+    }
+
+    // Only the build itself is forbidden. A fixture named Dockerfile.bad is not a build:
+    // scripts/benchmark feeds one to hadolint to exercise the hadolint filter.
+    let mut referencing = Vec::new();
+    for dir in [".github/workflows", "scripts"] {
+        for (rel, body) in repo_files_under(dir, &["yml", "yaml", "sh", "ps1"]) {
+            for (n, line) in body.lines().enumerate() {
+                let builds = line.contains("test-docker")
+                    || line.contains("Dockerfile.build")
+                    || line.contains("docker build")
+                    || line.contains("-f Dockerfile");
+                if builds {
+                    referencing.push(format!("{rel}:{}: {}", n + 1, line.trim()));
+                }
+            }
+        }
+    }
+    assert!(
+        referencing.is_empty(),
+        "nothing may build a container any more: {referencing:#?}"
+    );
+}
+
 #[test]
 fn install_instructions_fetch_from_the_trunk() {
     let mut checked = 0;
