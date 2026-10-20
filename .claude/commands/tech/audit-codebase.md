@@ -217,11 +217,11 @@ ls .claude/commands/tech/ | wc -l
 # Règles auto-loaded
 ls .claude/rules/ | wc -l
 
-# CLAUDE.md taille (trop gros = trop dense)
-wc -l CLAUDE.md
+# AGENTS.md taille (trop gros = trop dense)
+wc -l AGENTS.md
 
-# Filter development checklist présente
-Grep "Filter Development Checklist" CLAUDE.md
+# Le gate de commit est présent dans la guidance agent
+Grep "Before you commit" AGENTS.md
 ```
 
 | Condition                        | Score |
@@ -229,7 +229,7 @@ Grep "Filter Development Checklist" CLAUDE.md
 | >5 agents spécialisés            | +2    |
 | >10 commands/skills              | +2    |
 | >5 règles auto-loaded            | +2    |
-| CLAUDE.md bien structuré         | +2    |
+| AGENTS.md bien structuré         | +2    |
 | Smoke tests + CI multi-platform  | +2    |
 | Score max                        | 10/10 |
 

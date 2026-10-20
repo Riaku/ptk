@@ -373,7 +373,7 @@ For each debugging session, provide:
 ### 4. Prevention Recommendations
 - **Patterns to adopt**: Code patterns that avoid similar issues
 - **Tooling**: Linting, testing, profiling tools to catch early
-- **Documentation**: Update CLAUDE.md or comments to prevent confusion
+- **Documentation**: Update AGENTS.md or comments to prevent confusion
 
 ## Key Principles
 
