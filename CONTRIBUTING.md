@@ -246,6 +246,44 @@ only integration branch — there is no staging branch to promote through.
 2. **CI/CD checks** -- Automated tests and linting must pass
 3. **Resolution** -- Address any feedback from review or CI failures
 
+#### What CI runs, and what it skips
+
+Every job is its own checkout and compile, so the workflow classifies your diff once and
+only pays for the jobs your change can affect. The **changed paths** job decides:
+
+| Flag | Set by |
+|------|--------|
+| `code` | `src/`, `engine/`, `proxy/`, `tests/`, `benches/`, `build.rs`, `rust-toolchain*`, `.cargo/`, `Cargo.toml`, `Cargo.lock`, `scripts/`, `.github/workflows/` |
+| `windows` | `src/cmds/windows/`, `src/core/windows_shell`, `scripts/benchmark.sh`, `.github/workflows/ci.yml` |
+
+`code` gates `test-windows`, `proxy`, `oss edition`, and `benchmark`; `windows` gates
+`benchmark (windows)`, which is the single longest job in the workflow and exercises the 14
+pwsh and cmd.exe rows that nothing else can move. The `test` matrix — ubuntu and macOS — is
+ungated, because macOS is the only leg that exercises the platform socket and path code and
+it is not worth making contributors guess when it runs.
+
+A documentation-only pull request therefore skips every gated job — measured at 4.9 minutes
+wall clock, 11 checks run and 5 skipped — leaving only the ungated `test` matrix. Note that
+`tests/` counts as `code`: editing a test must never be a way to skip running it.
+
+#### Workflow files are linted
+
+A workflow that does not parse fails anonymously: the run is named after the file and
+reports "This run likely failed because of a workflow file issue", with no line and no log.
+A job-level `if` may only read `github`, `needs`, `inputs` and `vars` — `matrix` is not in
+that list, and `if: matrix.os != 'windows-latest'` is rejected at parse time even though
+YAML and `cargo test` accept it.
+
+The `workflow lint` job runs [actionlint](https://github.com/rhysd/actionlint) on every
+workflow. Run it before pushing:
+
+```bash
+actionlint -shellcheck='shellcheck -S error' .github/workflows/*.yml
+```
+
+shellcheck is held to error severity because this repository's existing run blocks carry
+about a hundred pre-existing SC2086/SC2129 info findings.
+
 ### 7. Integration & Release
 
 Once merged, your change is on `main` and is released by that merge. `main` is the
