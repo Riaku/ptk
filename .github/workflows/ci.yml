@@ -75,7 +75,11 @@ jobs:
             | tar xz actionlint
           ./actionlint --version
       - name: Lint workflows
-        run: ./actionlint .github/workflows/*.yml
+        # shellcheck is limited to error severity: this repository's existing run
+        # blocks carry ~100 SC2086/SC2129 info findings, all pre-existing, and a gate
+        # that is red before it lands is a gate nobody reads. Structure, expressions,
+        # and contexts — the class that broke `main` — are still fatal.
+        run: ./actionlint -shellcheck='shellcheck -S error' .github/workflows/*.yml
 
   check-test-presence:
     name: test presence
