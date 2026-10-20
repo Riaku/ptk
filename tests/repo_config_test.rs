@@ -159,6 +159,11 @@ fn pull_requests_are_gated_to_main() {
         "pr-target-check must compare the base branch against `main`"
     );
 
+    assert!(
+        !check.contains("target develop branch"),
+        "the wrong-base message must name `main`, not the branch this fork retired"
+    );
+
     let template = repo_file(".github/PULL_REQUEST_TEMPLATE.md");
     assert!(
         template.contains("`main`") && !template.contains("`develop`"),

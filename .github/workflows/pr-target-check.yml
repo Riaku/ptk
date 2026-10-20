@@ -7,26 +7,44 @@ on:
 jobs:
   check-target:
     runs-on: ubuntu-latest
-    permissions: {}
-    # This fork's only trunk is main: every pull request must target it.
+    # The default token does the work here; the App is only an option for orgs that
+    # run this with a bot identity. Without these scopes `permissions: {}` left the
+    # fallback token unable to label or comment.
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    # The fork's only trunk is `main`: every pull request must target it.
     if: >-
       github.event.pull_request.base.ref != 'main'
     steps:
+      - name: Check for App credentials
+        id: app-creds
+        env:
+          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
+        if: steps.app-creds.outputs.configured == 'true'
         with:
-          app-id: ${{ secrets.APP_CLIENT_ID }}
+          client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-pull-requests: write
 
       - name: Add wrong-base label and comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
           script: |
             const pr = context.payload.pull_request;
 
-            // Add label
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -34,8 +52,7 @@ jobs:
               labels: ['wrong-base']
             });
 
-            // Post comment
-            const body = `Automatic message from CI checks : It seems like this branch is targeting the wrong branch, any contribution should target develop branch.
+            const body = `Automatic message from CI checks: this pull request targets \`${pr.base.ref}\`, but every contribution must target \`main\` — this fork's only trunk branch.
 
             See [CONTRIBUTING.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md) for details.`;
 
