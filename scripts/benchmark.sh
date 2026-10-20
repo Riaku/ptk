@@ -222,7 +222,11 @@ bench_cmd_win() {
   fi
 
   WIN_ROWS=$((WIN_ROWS + 1))
-  bench "win/$name" "cmd /D /C $cmd_line" "$ptk_cmd"
+  # `//D //C`, not `/D /C`: Git Bash rewrites a leading slash into a Windows path, so
+  # `cmd /D /C dir` reaches cmd.exe as `cmd D:\ C:\ dir` and answers with a
+  # "not recognized" error -- every such row measured a constant 28-token failure
+  # instead of the command's output. The doubled slash is the MSYS escape.
+  bench "win/$name" "cmd //D //C $cmd_line" "$ptk_cmd"
 }
 
 # ═══════════════════════════════════════════
