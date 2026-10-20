@@ -60,8 +60,9 @@ hand; it exists so you know what happens and what to do when a release is wrong.
 5. `release.yml` builds the five targets **at that tag** and publishes the GitHub Release
    with generated notes; the `latest` tag moves.
 
-**Never move or delete a published tag.** A wrong release is fixed by the next release, not
-by rewriting history. `main` has no branch protection, so the library gate in step 2 is the
+**Never move or delete a published version tag.** A wrong release is fixed by the next
+release, not by rewriting history. (`latest` is the exception: it is a moving pointer and is
+re-pointed on every stable release.) `main` has no branch protection, so the library gate in step 2 is the
 only thing standing between a broken merge and a permanent tag.
 
 ### If a release failed

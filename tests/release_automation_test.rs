@@ -380,12 +380,33 @@ fn cd_tags_main_without_a_release_pull_request() {
 }
 
 #[test]
+fn the_pre_release_tag_exists_before_the_build_checks_it_out() {
+    let cd = repo_file(".github/workflows/cd.yml");
+    let prerelease = cd
+        .split("  pre-release:")
+        .nth(1)
+        .and_then(|rest| rest.split("  build-prerelease:").next())
+        .expect("cd.yml must keep a pre-release job");
+    assert!(
+        prerelease.contains("git push origin") && prerelease.contains("git tag -a"),
+        "the pre-release job must create and push its tag: release.yml checks out \
+         inputs.tag, so building before the tag exists fails at checkout"
+    );
+}
+
+#[test]
 fn the_commit_being_tagged_is_compiled_and_tested_first() {
     let cd = repo_file(".github/workflows/cd.yml");
-    let test_at = cd
+    // Scope to the release job: the pre-release job also creates tags, and matching its
+    // `git tag -a` would pass this assertion for the wrong reason.
+    let job = cd
+        .split("name: Tag the release")
+        .nth(1)
+        .expect("cd.yml must have a job that tags the release");
+    let test_at = job
         .find("cargo test")
         .expect("cd.yml must validate the commit it is about to tag");
-    let tag_at = cd.find("git tag").expect("cd.yml must create the tag");
+    let tag_at = job.find("git tag").expect("cd.yml must create the tag");
     assert!(
         test_at < tag_at,
         "the fast test gate must run before the tag is created, or a broken main gets published"

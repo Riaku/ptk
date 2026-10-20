@@ -60,6 +60,14 @@ jobs:
             exit 1
           fi
 
+          # Tag before building: release.yml checks out this tag, so a build must not
+          # start against a ref that does not exist yet — and the assets must belong to
+          # a named commit rather than to whatever the branch says at build time.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Pre-release $TAG"
+          git push origin "$TAG"
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
 
