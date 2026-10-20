@@ -20,7 +20,7 @@ jobs:
 
   pre-release:
     # Pre-release tags belong to unmerged work: a manual dispatch from any branch
-    # other than the trunk. A push to main runs release-please instead, so the two
+    # other than the trunk. A push to main tags a release instead, so the two
     # paths can never both claim the same commit.
     if: >-
       github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
@@ -33,59 +33,25 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Compute version from commits like release please   
+      - name: Compute the pre-release tag
         id: tag
         run: |
-          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | grep -v '-' | head -1)
-          if [ -z "$LATEST_TAG" ]; then
-            # A fork with no releases yet has no tag to measure from: start
-            # from the manifest version instead of failing the run.
-            FALLBACK_VER=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
-            LATEST_TAG="v${FALLBACK_VER}"
-            echo "No existing release tags found. Defaulting base to $LATEST_TAG"
+          set +e
+          VERSION=$(bash scripts/next-version.sh)
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -eq 3 ]; then
+            # Nothing releasable since the last stable tag. A pre-release still has a
+            # job to do — exercising an unmerged branch — so preview the next patch.
+            BASE=$(sed -n 's/^version = "\([^"]*\)".*/\1/p' Cargo.toml | head -1)
+            IFS='.' read -r MAJOR MINOR PATCH <<<"$BASE"
+            VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+            echo "No releasable commits; previewing the next patch as $VERSION"
+          elif [ "$STATUS" -ne 0 ]; then
+            echo "::error::next-version.sh failed (exit $STATUS)"
+            exit "$STATUS"
           fi
-          LATEST_VERSION="${LATEST_TAG#v}"
-          echo "Latest release: $LATEST_TAG"
-
-          # ── Analyse conventional commits since that tag ──
-          if git rev-parse --verify --quiet "${LATEST_TAG}" >/dev/null; then
-            COMMITS=$(git log "${LATEST_TAG}..HEAD" --format="%s")
-          else
-            # The fallback tag above is fabricated from Cargo.toml, so there is
-            # no such ref to diff against: git exits 128 and `set -eo pipefail`
-            # fails the job. Measure from the whole history instead.
-            COMMITS=$(git log --format="%s")
-          fi
-          HAS_BREAKING=$(echo "$COMMITS" | grep -cE '^[a-z]+(\(.+\))?!:' || true)
-          HAS_FEAT=$(echo "$COMMITS"    | grep -cE '^feat(\(.+\))?:'     || true)
-          HAS_FIX=$(echo "$COMMITS"     | grep -cE '^fix(\(.+\))?:'      || true)
-          echo "Commits since ${LATEST_TAG} — breaking=$HAS_BREAKING feat=$HAS_FEAT fix=$HAS_FIX"
-
-          # ── Compute next version (matches release-please config) ──
-          # bump-minor-pre-major is OFF: a breaking change bumps the major
-          # even pre-1.0.
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
-          if [ "$MAJOR" -eq 0 ]; then
-            if [ "$HAS_BREAKING" -gt 0 ]; then
-              MAJOR=1; MINOR=0; PATCH=0                # breaking → 1.0.0
-            elif [ "$HAS_FEAT" -gt 0 ]; then
-              MINOR=$((MINOR + 1)); PATCH=0            # feat → minor
-            else
-              PATCH=$((PATCH + 1))                     # fix only → patch
-            fi
-          else
-            if [ "$HAS_BREAKING" -gt 0 ]; then
-              MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0   # breaking → major
-            elif [ "$HAS_FEAT" -gt 0 ]; then
-              MINOR=$((MINOR + 1)); PATCH=0             # feat → minor
-            else
-              PATCH=$((PATCH + 1))                      # fix → patch
-            fi
-          fi
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
           TAG="dev-${VERSION}-rc.${{ github.run_number }}"
-
-          echo "Next version: $VERSION (from $LATEST_VERSION)"
           echo "Pre-release tag: $TAG"
 
           # Safety: fail if this exact tag already exists
@@ -94,7 +60,16 @@ jobs:
             exit 1
           fi
 
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Tag before building: release.yml checks out this tag, so a build must not
+          # start against a ref that does not exist yet — and the assets must belong to
+          # a named commit rather than to whatever the branch says at build time.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Pre-release $TAG"
+          git push origin "$TAG"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
 
   build-prerelease:
     name: Build pre-release
@@ -112,12 +87,18 @@ jobs:
   # MAIN PATH: Full release
   # ═══════════════════════════════════════════════
 
-  release-please:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+  release:
+    name: Tag the release
+    # A push to main is the release trigger. The version-bump commit this job pushes
+    # must not start another release, so its own message skips the job; nothing else
+    # filters here, because "we forgot to re-run" is how a release goes missing.
+    if: >-
+      github.ref == 'refs/heads/main'
+      && !contains(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      tagged: ${{ steps.tag.outputs.tagged }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Check app credentials
         id: app-creds
@@ -133,34 +114,97 @@ jobs:
 
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
-        # Optional: without App credentials the job uses the default token.
+        # Optional: without App credentials the job uses the default token. The
+        # difference is that a pull request opened with the default token gets no CI,
+        # which no longer matters here — this path opens no pull request.
         if: steps.app-creds.outputs.configured == 'true'
         with:
           client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: write
-          permission-pull-requests: write
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        id: release
+
+      - uses: actions/checkout@v7
         with:
+          # Tags carry the release history the version is measured against.
+          fetch-depth: 0
+          fetch-tags: true
           token: ${{ steps.app-token.outputs.token || github.token }}
-          target-branch: ${{ github.ref_name }}
+
+      - name: Compute the next version from the commits
+        id: version
+        run: |
+          set +e
+          VERSION=$(bash scripts/next-version.sh)
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -eq 3 ]; then
+            echo "Nothing releasable since the last tag — docs, CI, chores. No release."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::next-version.sh failed (exit $STATUS)"
+            exit "$STATUS"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Next release: v$VERSION"
+
+      # Cheap gate on the exact commit being published. Pull-request CI already
+      # validated this tree, but a merge commit can combine two green branches into
+      # something nobody compiled, and this tag is permanent. The lib target is ~4k
+      # tests in seconds once built.
+      - name: Compile and test the commit being tagged
+        if: steps.version.outputs.version != ''
+        run: cargo test -p ptk --lib
+
+      - name: Write the version and the changelog, then tag
+        id: tag
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+
+          bash scripts/set-version.sh "$VERSION"
+          # Cargo.lock pins the workspace members' versions as well, so resolve it
+          # here rather than shipping a lockfile that disagrees with the manifests.
+          cargo metadata --format-version 1 > /dev/null
+
+          section=$(mktemp)
+          bash scripts/release-notes.sh "$VERSION" > "$section"
+          { cat "$section"; cat CHANGELOG.md; } > CHANGELOG.new
+          mv CHANGELOG.new CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml engine/Cargo.toml plugin/Cargo.toml text/Cargo.toml \
+                  proxy/Cargo.toml Cargo.lock CHANGELOG.md
+          git commit -m "chore(release): v${VERSION}"
+          git tag -a "$TAG" -m "v${VERSION}"
+
+          git push origin HEAD:main
+          git push origin "$TAG"
+
+          echo "tagged=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Tagged $TAG on $(git rev-parse --short HEAD)"
 
   build-release:
     name: Build and upload release assets
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    needs: release
+    if: ${{ needs.release.outputs.tagged == 'true' }}
     uses: ./.github/workflows/release.yml
     with:
-      tag: ${{ needs.release-please.outputs.tag_name }}
+      tag: ${{ needs.release.outputs.tag }}
     permissions:
       contents: write
     secrets: inherit
 
   update-latest-tag:
     name: Update 'latest' tag
-    needs: [release-please, build-release]
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    needs: [release, build-release]
+    if: ${{ needs.release.outputs.tagged == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check app credentials
@@ -193,5 +237,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -fa latest -m "Latest stable release (${{ needs.release-please.outputs.tag_name }})"
+          git tag -fa latest -m "Latest stable release (${{ needs.release.outputs.tag }})"
           git push origin latest --force

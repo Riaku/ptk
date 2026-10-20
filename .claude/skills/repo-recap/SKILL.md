@@ -108,7 +108,7 @@ If one author has 3+ open PRs, note it as a "cluster" with suggested review orde
 
 From `gh release list` output, extract version, date, and name. List the 5 most recent.
 
-If no releases found, check merged PRs for release-please pattern (title matching `chore(*): release *`) as fallback.
+If no releases found, check `main` for `chore(release): v*` commits as fallback — the release job commits the version bump before tagging.
 
 ### 5. Executive Summary
 

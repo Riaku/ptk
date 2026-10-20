@@ -51,8 +51,8 @@ Trigger: workflow_dispatch from any branch except main | Concurrency: cancel-in-
               │
      ┌────────▼──────────────────┐
      │ pre-release                │
-     │ compute next version      │
-     │ from conventional commits │
+     │ next-version.sh (shared    │
+     │ with the stable path)      │
      │ tag = dev-{next}-rc.{run} │
      └────────┬──────────────────┘
               │
@@ -74,42 +74,55 @@ Trigger: workflow_dispatch from any branch except main | Concurrency: cancel-in-
 
 ## Merge to main — stable release (cd.yml)
 
-Trigger: push to main (only) | Concurrency: never cancelled
+Trigger: push to main, or a manual dispatch on main | Concurrency: never cancelled
+
+No release pull request: the tag is created on the commit that landed.
 
 ```
-     ┌──────────────────┐
-     │ push to main      │
-     └────────┬─────────┘
-              │
-     ┌────────▼──────────────────┐
-     │ release-please            │
-     │ analyze conventional      │
-     │ commits                   │
-     └────────┬──────────────────┘
-              │
-         ┌────┴────────────────┐
-         │                     │
-    no release           release created
-         │                     │
-         ▼                     ▼
-  ┌──────────────┐    ┌───────────────────────┐
-  │ create/update│    │ release.yml            │
-  │ release PR   │    │ prerelease = false     │
-  └──────────────┘    └───────────┬───────────┘
-                                  │
-                      ┌────────────▼────────────┐
-                      │ Build                   │
-                      │ 5 platforms             │
-                      └────────────┬────────────┘
-                                   │
-                      ┌────────────▼────────────┐
-                      │ GitHub Release           │
-                      │ (stable, "Latest" badge) │
-                      └────────────┬────────────┘
-                                   │
-                                   ▼
-                              latest tag
+     ┌──────────────────────────┐
+     │ push to main / dispatch   │
+     └────────────┬─────────────┘
+                  │
+     ┌────────────▼─────────────────┐
+     │ scripts/next-version.sh      │
+     │ conventional commits since   │
+     │ the last stable vX.Y.Z       │
+     └────────────┬─────────────────┘
+                  │
+        ┌─────────┴──────────────────────┐
+        │                                │
+  nothing releasable             feat / fix / perf / !
+  (docs, ci, chore, test)                │
+        │                     ┌──────────▼─────────────────┐
+        ▼                     │ cargo test -p ptk --lib     │
+  ┌───────────────┐           │ on the exact commit         │
+  │ stop, no tag  │           └──────────┬─────────────────┘
+  └───────────────┘                      │
+                              ┌──────────▼─────────────────┐
+                              │ set-version.sh: 5 manifests │
+                              │ prepend CHANGELOG.md        │
+                              │ commit chore(release): vX.Y.Z│
+                              │ tag vX.Y.Z, push both       │
+                              └──────────┬─────────────────┘
+                                         │
+                              ┌──────────▼─────────────────┐
+                              │ release.yml                │
+                              │ prerelease = false         │
+                              │ (checks out the tag)       │
+                              └──────────┬─────────────────┘
+                                         │
+                              ┌──────────▼─────────────────┐
+                              │ GitHub Release             │
+                              │ 5 targets + generated notes│
+                              │ (stable, "Latest" badge)   │
+                              └──────────┬─────────────────┘
+                                         │
+                                         ▼
+                                    latest tag
 ```
+
+The push-triggered run cannot loop: the bump commit it pushes carries
+`chore(release):`, and the job's `if` skips that message.
 
 ## Manual release (release.yml)
 

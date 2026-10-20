@@ -9,8 +9,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repository is the **riaku/ptk fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk)**, synced to upstream `develop`. It keeps the upstream CLI intact and adds native Windows support: CMD built-ins, PowerShell cmdlets, and console code-page decoding. That code lives in `src/cmds/windows/` (one module per cmdlet) and `src/core/windows_shell.rs` (spawning, arg splitting, cmdlet detection); the CLI routes to it from `src/lib.rs`. The Windows entry points are reachable only from the `#[cfg(windows)]` interception in `run_fallback` plus their own subcommands, which is why both module trees carry `#![cfg_attr(not(windows), allow(dead_code))]`. It reduces bash output on common development operations (each filter must cut at least 20%; most cut far more) through smart filtering, grouping, truncation, and deduplication. All percentages in this repo measure bash output, not your bill. PTK ships no tokenizer (`src/core/tracking.rs` estimates tokens as `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
 
 **Branch model:** `main` is the trunk and the only PR target; `develop` is not merged into.
-Releases come from `main` through release-please in `cd.yml`, while `cd.yml`'s pre-release
-path builds `dev-*-rc.*` tags on manual dispatch from any other branch.
+Releases come from `main` directly: `cd.yml` computes the next version from the
+conventional commits (`scripts/next-version.sh`), tests the commit, writes the version into
+the manifests and `CHANGELOG.md`, and tags `vX.Y.Z`. There is no release PR. `cd.yml`'s
+pre-release path builds `dev-*-rc.*` tags on manual dispatch from any other branch, using
+the same script.
 
 ### Name Collision Warning
 
@@ -67,8 +70,8 @@ cargo fmt --manifest-path proxy/Cargo.toml --all   # proxy/ is its own workspace
 ```
 
 ### Package Building
-GitHub Releases is the only channel: `cd.yml` drives release-please and calls
-`release.yml`, which builds the full matrix (Linux/macOS/Windows archives plus
+GitHub Releases is the only channel: `cd.yml` tags the release and calls
+`release.yml`, which checks out that tag and builds the full matrix (Linux/macOS/Windows archives plus
 the `ptk-oss` archives and the separately-downloaded `ptk-proxy` archives) and
 writes `checksums.txt` — the names `install.sh` downloads. There is no crates.io, Homebrew, winget or DEB/RPM packaging in this
 fork, so those jobs and their metadata are absent.
