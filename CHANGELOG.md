@@ -1,3 +1,13 @@
+## 0.50.1 - 2026-10-20
+
+### Bug fixes
+
+- fix(release): release only from a push to main, and guard on the subject (#11)
+
+### Other changes
+
+- docs: what CI runs, what it skips, and how to lint a workflow (#6)
+
 ## 0.50.0 - 2026-10-20
 
 ### Breaking changes
