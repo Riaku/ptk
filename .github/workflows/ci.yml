@@ -4,6 +4,12 @@ on:
   pull_request:
     branches: [main]
 
+# A superseded push used to keep both runs alive: two full CI runs, 46 job-minutes
+# each, competing for the same runners and delaying the one that matters.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: read
@@ -12,7 +18,64 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # ─── Path classification ───
+  #
+  # Each job below is a separate checkout and a separate compile, so a docs-only PR
+  # paid for the whole matrix: 19 minutes of wall clock to validate a Markdown file.
+  # These two flags decide what a change can actually affect.
+
+  changes:
+    name: changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+      windows: ${{ steps.diff.outputs.windows }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          base="origin/${{ github.base_ref }}"
+          git fetch --quiet origin "+refs/heads/${{ github.base_ref }}:refs/remotes/${base}"
+          files=$(git diff --name-only "${base}...HEAD")
+          echo "changed: $(printf '%s' "$files" | grep -c . || true) file(s)"
+          printf '%s\n' "$files" | sed 's/^/  /'
+
+          # Anything that can change what compiles or what the benchmark measures.
+          if printf '%s\n' "$files" | grep -qE '^(src/|engine/|proxy/|tests/|benches/|build\.rs$|rust-toolchain|\.cargo/|Cargo\.(toml|lock)$|scripts/|\.github/workflows/)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # The pwsh/cmd.exe rows: the Windows filters, their dispatch, and the harness.
+          if printf '%s\n' "$files" | grep -qE '^(src/cmds/windows/|src/core/windows_shell|scripts/benchmark\.sh|\.github/workflows/ci\.yml)'; then
+            echo "windows=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "windows=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # ─── Fast gates (fail early, save CI minutes) ───
+
+  workflow-lint:
+    name: workflow lint
+    runs-on: ubuntu-latest
+    # A workflow that does not parse does not report a line number: the run is named
+    # after the file and says "likely failed because of a workflow file issue". PyYAML
+    # accepts `if: matrix.os != ...`, which GitHub then rejects, because `matrix` is
+    # not in the context list for a job-level `if`. Five seconds here beats that.
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install actionlint
+        env:
+          ACTIONLINT: 1.7.12
+        run: |
+          curl -sSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT}/actionlint_${ACTIONLINT}_linux_amd64.tar.gz" \
+            | tar xz actionlint
+          ./actionlint --version
+      - name: Lint workflows
+        run: ./actionlint .github/workflows/*.yml
 
   check-test-presence:
     name: test presence
@@ -71,7 +134,8 @@ jobs:
   proxy:
     name: proxy (lint + test)
     runs-on: ubuntu-latest
-    needs: clippy
+    needs: [clippy, changes]
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -89,7 +153,8 @@ jobs:
   oss:
     name: oss edition (build + purity)
     runs-on: ubuntu-latest
-    needs: clippy
+    needs: [clippy, changes]
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -113,7 +178,42 @@ jobs:
 
   test:
     name: test (${{ matrix.os }}${{ matrix.target && format(', {0}', matrix.target) || '' }})
-    needs: clippy
+    needs: [clippy, changes]
+    # `jobs.<id>.if` cannot read `matrix`, so the Windows legs live in their own job
+    # below and this matrix keeps the check names it always had.
+    runs-on: ${{ matrix.os }}
+    env:
+      # An explicit target on every leg keeps the run command the same. It also puts
+      # each leg in cross mode, where RUSTFLAGS no longer reach build scripts or proc-macros.
+      CARGO_BUILD_TARGET: ${{ matrix.target || 'host-tuple' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # `target: ''` keeps these legs on the host triple while leaving `matrix.target`
+        # defined for the name, the env, and the toolchain step below.
+        include:
+          - os: ubuntu-latest
+            target: ''
+          - os: macos-latest
+            target: ''
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        # `--all` is `--workspace`: `ptk` + `engine`. `proxy/` is tested in
+        # its own job, since it is not a member.
+      - run: cargo test --all
+
+
+  # 11 minutes of the matrix, and nothing outside Rust sources can break it.
+  test-windows:
+    name: test (${{ matrix.os }}${{ matrix.target && format(', {0}', matrix.target) || '' }})
+    needs: [clippy, changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     env:
       # An explicit target on every leg keeps the run command the same. It also puts
@@ -123,13 +223,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
           - os: windows-latest
           # Links with MinGW's ld, which link.exe's `/STACK:` spelling breaks (see build.rs).
           # The runner's host stays msvc, so build.rs also runs with host != target.
           - os: windows-latest
             target: x86_64-pc-windows-gnu
-          - os: macos-latest
     steps:
       - uses: actions/checkout@v7
         with:
@@ -281,7 +379,8 @@ jobs:
 
   benchmark:
     name: benchmark
-    needs: clippy
+    needs: [clippy, changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -327,7 +426,10 @@ jobs:
   # scripts/benchmark.sh).
   benchmark-windows:
     name: benchmark (windows)
-    needs: clippy
+    needs: [clippy, changes]
+    # 14.3 minutes, the longest job in the workflow, and it exercises 14 pwsh/cmd.exe
+    # rows that only change with the Windows filters.
+    if: needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
     defaults:
       run:
