@@ -68,7 +68,7 @@ PTK が報告するトークン数は `バイト数 / 4` で見積もられて�
 ### クイックインストール（Linux/macOS）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh
 ```
 
 ### Cargo
@@ -82,7 +82,7 @@ cargo install --git https://github.com/riaku/ptk ptk
 BUSL-1.1 圧縮エンジンを含めずにビルドした同じ `ptk` バイナリです。フック書き換えシステムとすべてのコマンドフィルタを Apache-2.0 のみで提供します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

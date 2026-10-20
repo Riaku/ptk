@@ -2,7 +2,7 @@
 
 ## PR Quality Gates (ci.yml)
 
-Trigger: pull_request to develop or master
+Trigger: pull_request to main
 
 ```
                           ┌──────────────────┐
@@ -34,17 +34,18 @@ Trigger: pull_request to develop or master
                       │  to merge          │
                       └────────────────────┘
 
-     + DCO check (independent, develop PRs only)
-     + Dependabot (weekly: Cargo deps + GitHub Actions)
+     + DCO check (independent, main PRs only)
+     + Dependabot (weekly: Cargo deps + GitHub Actions, targeting main)
+     + benchmark (windows): pwsh + cmd.exe filter rows on windows-latest
 ```
 
-## Merge to develop — pre-release (cd.yml)
+## Feature branches — pre-release (cd.yml)
 
-Trigger: push to develop | workflow_dispatch (not master) | Concurrency: cancel-in-progress
+Trigger: workflow_dispatch from any branch except main | Concurrency: cancel-in-progress
 
 ```
      ┌──────────────────┐
-     │ push to develop   │
+     │ dispatch (branch) │
      │ OR dispatch       │
      └────────┬─────────┘
               │
@@ -52,7 +53,7 @@ Trigger: push to develop | workflow_dispatch (not master) | Concurrency: cancel-
      │ pre-release                │
      │ compute next version      │
      │ from conventional commits │
-     │ tag = v{next}-rc.{run}    │
+     │ tag = dev-{next}-rc.{run} │
      └────────┬──────────────────┘
               │
      ┌────────▼──────────────────┐
@@ -71,13 +72,13 @@ Trigger: push to develop | workflow_dispatch (not master) | Concurrency: cancel-
       └──────────────────────────┘
 ```
 
-## Merge to master — stable release (cd.yml)
+## Merge to main — stable release (cd.yml)
 
-Trigger: push to master (only) | Concurrency: never cancelled
+Trigger: push to main (only) | Concurrency: never cancelled
 
 ```
      ┌──────────────────┐
-     │ push to master    │
+     │ push to main      │
      └────────┬─────────┘
               │
      ┌────────▼──────────────────┐

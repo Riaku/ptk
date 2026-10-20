@@ -24,7 +24,7 @@ else
     echo -e "   ${RED}❌ PTK is NOT installed${NC}"
     echo ""
     echo "   Install with:"
-    echo "   curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh| sh"
+    echo "   curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh| sh"
     exit 1
 fi
 echo ""
@@ -45,7 +45,7 @@ else
     echo ""
     echo "   You installed the wrong package. Fix it with:"
     echo "   cargo uninstall ptk"
-    echo "   curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh"
+    echo "   curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh"
     CORRECT_PTK=false
 fi
 echo ""
@@ -142,7 +142,7 @@ if [ ${#MISSING_FEATURES[@]} -gt 0 ]; then
     echo ""
     echo "To get all features, install the fork:"
     echo "  cargo uninstall ptk"
-    echo "  curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh"
+    echo "  curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh"
     echo "  cd ptk && git checkout feat/all-features"
     echo "  cargo install --path . --force"
 else

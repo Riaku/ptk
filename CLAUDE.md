@@ -8,6 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository is the **riaku/ptk fork of [rtk-ai/rtk](https://github.com/rtk-ai/rtk)**, synced to upstream `develop`. It keeps the upstream CLI intact and adds native Windows support: CMD built-ins, PowerShell cmdlets, and console code-page decoding. That code lives in `src/cmds/windows/` (one module per cmdlet) and `src/core/windows_shell.rs` (spawning, arg splitting, cmdlet detection); the CLI routes to it from `src/lib.rs`. The Windows entry points are reachable only from the `#[cfg(windows)]` interception in `run_fallback` plus their own subcommands, which is why both module trees carry `#![cfg_attr(not(windows), allow(dead_code))]`. It reduces bash output on common development operations (each filter must cut at least 20%; most cut far more) through smart filtering, grouping, truncation, and deduplication. All percentages in this repo measure bash output, not your bill. PTK ships no tokenizer (`src/core/tracking.rs` estimates tokens as `bytes / 4`), so the ratios are reliable but the absolute token counts are approximate.
 
+**Branch model:** `main` is the trunk and the only PR target; `develop` is not merged into.
+Releases come from `main` through release-please in `cd.yml`, while `cd.yml`'s pre-release
+path builds `dev-*-rc.*` tags on manual dispatch from any other branch.
+
 ### Name Collision Warning
 
 Upstream Rust Token Killer (`rtk-ai/rtk`, crate `rtk`) and the unrelated Rust Type Kit

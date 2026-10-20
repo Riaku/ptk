@@ -68,7 +68,7 @@ Los recuentos de tokens que reporta PTK se estiman como `bytes / 4`: PTK no incl
 ### Instalacion rapida (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh
 ```
 
 ### Cargo
@@ -82,7 +82,7 @@ cargo install --git https://github.com/riaku/ptk ptk
 El mismo binario `ptk` compilado sin el motor de compresión BUSL-1.1: el sistema de reescritura de hooks y todos los filtros de comandos, solo bajo Apache-2.0.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

@@ -3,11 +3,11 @@ name: CD
 on:
   workflow_dispatch:
   push:
-    branches: [develop, master]
+    branches: [main]
 
 concurrency:
   group: cd-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: write
@@ -15,13 +15,15 @@ permissions:
 
 jobs:
   # ═══════════════════════════════════════════════
-  # DEVELOP PATH: Pre-release
+  # FEATURE BRANCHES: Pre-release tags
   # ═══════════════════════════════════════════════
 
   pre-release:
+    # Pre-release tags belong to unmerged work: a manual dispatch from any branch
+    # other than the trunk. A push to main runs release-please instead, so the two
+    # paths can never both claim the same commit.
     if: >-
-      github.ref == 'refs/heads/develop'
-      || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+      github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
@@ -107,11 +109,11 @@ jobs:
     secrets: inherit
 
   # ═══════════════════════════════════════════════
-  # MASTER PATH: Full release
+  # MAIN PATH: Full release
   # ═══════════════════════════════════════════════
 
   release-please:
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}

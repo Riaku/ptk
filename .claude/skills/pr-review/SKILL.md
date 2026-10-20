@@ -169,7 +169,7 @@ Hey @<author>, thanks for the contribution! [mention spécifique de ce que la PR
 
 Two things before we can merge:
 
-1. The branch needs a rebase on `develop` — there's a conflict on [fichier]. A `git rebase origin/develop` should do it.
+1. The branch needs a rebase on `develop` — there's a conflict on [fichier]. A `git rebase origin/main` should do it.
 
 2. The CLA hasn't been signed yet. The CLAassistant bot left instructions in the PR — just follow the link, takes about a minute.
 
@@ -178,7 +178,7 @@ Once both are sorted, this will move quickly.
 
 **Template conflit seul** :
 ```
-Hey @<author>, good fix on [description spécifique]. One thing to address before merge: the branch has a conflict on [fichier] after recent changes to develop. A `git rebase origin/develop` should resolve it cleanly.
+Hey @<author>, good fix on [description spécifique]. One thing to address before merge: the branch has a conflict on [fichier] after recent changes to develop. A `git rebase origin/main` should resolve it cleanly.
 ```
 
 **Template CLA seul** :

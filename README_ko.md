@@ -68,7 +68,7 @@ PTK가 보고하는 토큰 수는 `바이트 / 4`로 추정됩니다. PTK에는 
 ### 빠른 설치 (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh
 ```
 
 ### Cargo
@@ -82,7 +82,7 @@ cargo install --git https://github.com/riaku/ptk ptk
 BUSL-1.1 압축 엔진 없이 빌드한 동일한 `ptk` 바이너리입니다. 훅 재작성 시스템과 모든 명령 필터를 Apache-2.0 으로만 제공합니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

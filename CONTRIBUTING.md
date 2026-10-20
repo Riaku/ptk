@@ -185,8 +185,8 @@ chore/release-pipeline-cleanup
 ### 1. Create Your Branch
 
 ```bash
-git checkout develop
-git pull origin develop
+git checkout main
+git pull origin main
 git checkout -b feat/scope-your-clear-description
 ```
 
@@ -226,9 +226,10 @@ By signing, you certify that:
 
 **This is automatic.** When you open a Pull Request, [CLA Assistant](https://cla-assistant.io) will post a comment asking you to sign. Click the link in that comment to sign with your GitHub account. You only need to sign once.
 
-### 5. Merge into `develop`
+### 5. Open a Pull Request into `main`
 
-Once your work is ready, open a Pull Request targeting the **`develop`** branch.
+Once your work is ready, open a Pull Request targeting **`main`**. It is the trunk and the
+only integration branch — there is no staging branch to promote through.
 
 ### 6. Review Process
 
@@ -238,10 +239,13 @@ Once your work is ready, open a Pull Request targeting the **`develop`** branch.
 
 ### 7. Integration & Release
 
-Once merged, your changes are tested on the `develop` branch alongside other features. When the maintainer is satisfied with the state of `develop`, they release to `master` under a specific version.
+Once merged, your change is on `main` and ships in the next build. `main` is also the
+release branch: `cd.yml` runs release-please on every push to it, which keeps a release PR
+open with the version computed from your commits. Merging that release PR tags the commit,
+builds the five targets, and publishes the GitHub Release.
 
 ```
-your branch --> develop (review + CI + integration testing) --> version branch --> master (versioned release)
+your branch --> main (review + CI) --> release PR (release-please) --> tag --> GitHub Release
 ```
 
 ---

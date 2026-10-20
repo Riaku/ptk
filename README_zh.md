@@ -68,7 +68,7 @@ PTK 报告的 token 数量按 `字节数 / 4` 估算：PTK 不内置分词器，
 ### 快速安装（Linux/macOS）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh
 ```
 
 ### Cargo
@@ -82,7 +82,7 @@ cargo install --git https://github.com/riaku/ptk ptk
 同一个 `ptk` 二进制文件，构建时不包含 BUSL-1.1 压缩引擎：钩子重写系统和所有命令过滤器，仅遵循 Apache-2.0。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

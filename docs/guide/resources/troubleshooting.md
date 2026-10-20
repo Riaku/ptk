@@ -22,7 +22,7 @@ the unrelated **Rust Type Kit** (`reachingforthejack/rtk`) installs a binary cal
 **Fix:**
 ```bash
 cargo uninstall ptk
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh
 ptk gain    # should now show token savings stats
 ```
 
@@ -142,7 +142,7 @@ Error: program not found
 
 **Fix:** Update to PTK v0.23.1+:
 ```bash
-cargo install --git https://github.com/riaku/ptk --branch develop ptk
+cargo install --git https://github.com/riaku/ptk --branch main ptk
 ptk --version    # should be 0.23.1+
 ```
 
@@ -184,7 +184,7 @@ This fork is not published to crates.io and no crate named `ptk` exists, so `car
 Always use the explicit URL, pinned to the release branch:
 
 ```bash
-cargo install --git https://github.com/riaku/ptk --branch develop ptk
+cargo install --git https://github.com/riaku/ptk --branch main ptk
 ```
 
 ## Does PTK break Claude's prompt cache?
