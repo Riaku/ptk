@@ -79,3 +79,5 @@ Two optional layers sit on top of the hooks. Neither changes anything until you 
 - [Agent Coverage](./resources/agent-coverage.md) — what each agent's hook API lets PTK do
 - [Editions and Licensing](./resources/editions.md) — the three downloads, what each contains, where the licence boundary falls
 - [ARCHITECTURE.md](https://github.com/riaku/ptk/blob/main/ARCHITECTURE.md) — system design for contributors
+
+<!-- branch-gate verification: docs-only change, PR will be closed -->
