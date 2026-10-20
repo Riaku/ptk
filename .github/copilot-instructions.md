@@ -67,3 +67,31 @@ For full details see [ARCHITECTURE.md](../docs/contributing/ARCHITECTURE.md) and
 - **Branch naming**: `fix(scope):`, `feat(scope):`, `chore(scope):` where scope is the affected component.
 
 For the full contribution workflow, design philosophy, and new-filter checklist, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+<!-- ptk-instructions v2 -->
+# PTK — Token-Optimized CLI
+
+**ptk** is a CLI proxy that filters and compresses command outputs, cutting 60-90% of bash output.
+
+## Rule
+
+Always prefix shell commands with `ptk`:
+
+```bash
+# Instead of:              Use:
+git status                 ptk git status
+git log -10                ptk git log -10
+cargo test                 ptk cargo test
+docker ps                  ptk docker ps
+kubectl get pods           ptk kubectl get pods
+```
+
+## Meta commands (use directly)
+
+```bash
+ptk gain              # Token savings dashboard
+ptk gain --history    # Per-command savings history
+ptk discover          # Find missed ptk opportunities
+ptk bypass <cmd>      # Run raw (no filtering) but track usage
+```
+<!-- /ptk-instructions -->

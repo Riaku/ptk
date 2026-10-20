@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # ptk installer - https://github.com/riaku/ptk
-# Usage: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 
 set -e
 
@@ -63,6 +63,14 @@ get_latest_version() {
         | grep -i '^location:' \
         | sed -E 's|.*/tag/([^[:space:]]+).*|\1|' \
         | tr -d '\r')
+
+    # The redirect only carries a tag when a stable release exists. With none, GitHub
+    # sends /releases/latest to /releases, so the sed above leaves the URL itself in
+    # VERSION -- non-empty, which would skip the fallback and download a 404 asset.
+    case "$VERSION" in
+        v[0-9]*) ;;
+        *) VERSION="" ;;
+    esac
 
     # Fallback to the REST API if the redirect didn't yield a tag.
     if [ -z "$VERSION" ]; then

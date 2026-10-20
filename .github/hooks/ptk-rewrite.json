@@ -1,9 +1,10 @@
 {
+  "version": 1,
   "hooks": {
     "PreToolUse": [
       {
         "type": "command",
-        "command": "ptk hook",
+        "command": "ptk hook copilot",
         "cwd": ".",
         "timeout": 5
       }

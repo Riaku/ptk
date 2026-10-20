@@ -129,7 +129,7 @@ Pre-built binaries for Linux, macOS and Windows are on the
 [releases page](https://github.com/riaku/ptk/releases), or install with the script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 From source:
@@ -187,7 +187,7 @@ flowchart TD
 **Production use is free**, engine and daemon included. What the BUSL grant does not cover is offering PTK or a derivative to third parties as a commercial product or service — for that, contact **contact@rtk-ai.app**.
 
 ```bash
-curl -fsSL .../install.sh | PTK_EDITION=oss sh    # Apache-2.0 edition
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh    # Apache-2.0 edition
 ```
 
 > What the Apache-2.0 edition omits and where the licence boundary falls: **[Editions and Licensing](docs/guide/resources/editions.md)**

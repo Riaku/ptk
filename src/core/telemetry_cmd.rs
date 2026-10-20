@@ -144,7 +144,7 @@ fn run_status() -> Result<()> {
 
     println!();
     println!("Data controller: PTK AI Labs, contact@rtk-ai.app");
-    println!("Details: https://github.com/riaku/ptk/blob/master/docs/TELEMETRY.md");
+    println!("Details: https://github.com/riaku/ptk/blob/develop/docs/TELEMETRY.md");
 
     Ok(())
 }
@@ -162,7 +162,7 @@ fn run_enable() -> Result<()> {
     eprintln!();
     eprintln!("  What:    command names (not arguments), token savings, OS, version");
     eprintln!("  Who:     PTK AI Labs, contact@rtk-ai.app");
-    eprintln!("  Details: https://github.com/riaku/ptk/blob/master/docs/TELEMETRY.md");
+    eprintln!("  Details: https://github.com/riaku/ptk/blob/develop/docs/TELEMETRY.md");
     eprintln!();
     eprint!("Enable anonymous telemetry? [y/N] ");
 

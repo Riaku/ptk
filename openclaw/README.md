@@ -15,7 +15,7 @@ All rewrite logic lives in PTK itself (`ptk rewrite`). This plugin is a thin del
 PTK must be installed and available in `$PATH`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 ### Install the plugin

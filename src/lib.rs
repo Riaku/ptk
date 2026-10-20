@@ -1359,7 +1359,7 @@ enum PipelineCommands {
         #[arg(long)]
         force: bool,
     },
-    /// Find shared pipelines on GitHub (topic ptk-pipeline; stars are the leaderboard)
+    /// Find shared pipelines on GitHub (topic rtk-pipeline; stars are the leaderboard)
     Search {
         /// Free-text filter added to the topic search
         query: Option<String>,

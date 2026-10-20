@@ -22,7 +22,7 @@ the unrelated **Rust Type Kit** (`reachingforthejack/rtk`) installs a binary cal
 **Fix:**
 ```bash
 cargo uninstall ptk
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
 ptk gain    # should now show token savings stats
 ```
 
@@ -31,7 +31,7 @@ ptk gain    # should now show token savings stats
 | If `ptk gain`... | You have |
 |------------------|----------|
 | Shows token savings dashboard | Rust Token Killer ✅ |
-| Returns "not a ptk command" | Rust Type Kit ❌ |
+| Returns "not a ptk command" | A stale build of this fork ❌ |
 
 ## AI assistant not using PTK
 
@@ -142,7 +142,7 @@ Error: program not found
 
 **Fix:** Update to PTK v0.23.1+:
 ```bash
-cargo install --git https://github.com/riaku/ptk --branch master ptk
+cargo install --git https://github.com/riaku/ptk --branch develop ptk
 ptk --version    # should be 0.23.1+
 ```
 
@@ -177,14 +177,14 @@ OpenCode's shell tool does not source `.profile`, `.bashrc` or `.bash_profile`
 and a binary found elsewhere cannot be spawned as a bare `ptk`. Set
 `PTK_DISABLED=1` to confirm which way round the behaviour goes.
 
-## `cargo install ptk` installs the wrong package
+## `cargo install ptk` fails or installs nothing
 
-If Rust Type Kit is published to crates.io under the name `ptk`, `cargo install ptk` may install the wrong one.
+This fork is not published to crates.io and no crate named `ptk` exists, so `cargo install ptk` errors out. (The Rust Type Kit is crate `rtk`, not `ptk`.)
 
 Always use the explicit URL, pinned to the release branch:
 
 ```bash
-cargo install --git https://github.com/riaku/ptk --branch master ptk
+cargo install --git https://github.com/riaku/ptk --branch develop ptk
 ```
 
 ## Does PTK break Claude's prompt cache?

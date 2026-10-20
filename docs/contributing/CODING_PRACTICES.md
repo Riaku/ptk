@@ -179,7 +179,7 @@ PTK executes shell commands on behalf of the user, so security is a first-class 
 
 **Hook integrity.** PTK verifies hook files via SHA-256 hashes before operational commands. If a hook has been tampered with, PTK exits with code 1. See [`src/hooks/integrity.rs`](../../src/hooks/integrity.rs).
 
-**Project filter trust.** `.PTK/filters.toml` files are not loaded until the user explicitly trusts them, and content changes require re-trust. See [`src/hooks/trust.rs`](../../src/hooks/trust.rs).
+**Project filter trust.** `.ptk/filters.toml` files are not loaded until the user explicitly trusts them, and content changes require re-trust. See [`src/hooks/trust.rs`](../../src/hooks/trust.rs).
 
 **Permission whitelist.** `is_operational_command()` in `main.rs` uses a whitelist pattern — new commands are *not* integrity-checked until explicitly added. This is an intentional security posture: fail-open with an audit trail is preferred over false confidence.
 

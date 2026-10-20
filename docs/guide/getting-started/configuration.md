@@ -209,7 +209,7 @@ Add your own filters (or override built-ins) in either location:
 - **Project-local** — `.ptk/filters.toml` in your project root (committed with the repo)
 - **User-global** — `~/.config/ptk/filters.toml` (applies to every project)
 
-See [`src/filters/README.md`](https://github.com/riaku/ptk/blob/master/src/filters/README.md) for the full TOML DSL reference.
+See [`src/filters/README.md`](https://github.com/riaku/ptk/blob/develop/src/filters/README.md) for the full TOML DSL reference.
 
 ### Trusting custom filters
 

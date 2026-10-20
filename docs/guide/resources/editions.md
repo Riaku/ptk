@@ -46,7 +46,7 @@ The practical difference: bash output is filtered exactly as in the full edition
 Set `PTK_EDITION=oss` for the install script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 ```
 
 There is no separate package for it: GitHub Releases carries the `ptk-oss-<target>` archives beside the main ones.

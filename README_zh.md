@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/workflows/Security%20Check/badge.svg" alt="CI"></a>
+  <a href="https://github.com/riaku/ptk/actions"><img src="https://github.com/riaku/ptk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/riaku/ptk/releases"><img src="https://img.shields.io/github/v/release/riaku/ptk" alt="Release"></a>
   <a href="#许可证"><img src="https://img.shields.io/badge/license-Apache--2.0%20%2B%20BUSL--1.1-blue.svg" alt="License: Apache-2.0 and BUSL-1.1"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
@@ -68,7 +68,7 @@ PTK 报告的 token 数量按 `字节数 / 4` 估算：PTK 不内置分词器，
 ### 快速安装（Linux/macOS）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
 ```
 
 ### Cargo
@@ -82,14 +82,14 @@ cargo install --git https://github.com/riaku/ptk ptk
 同一个 `ptk` 二进制文件，构建时不包含 BUSL-1.1 压缩引擎：钩子重写系统和所有命令过滤器，仅遵循 Apache-2.0。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/master/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 
 ### 验证
 
 ```bash
-ptk --version   # 应显示 "ptk 0.27.x"
+ptk --version   # 应显示 "ptk 0.49.x"
 ptk gain        # 应显示 token 节省统计
 ```
 
