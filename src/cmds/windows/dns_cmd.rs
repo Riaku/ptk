@@ -16,10 +16,38 @@ struct DnsRecord {
     target: String,
 }
 
+/// True when `output` is a PowerShell error record rather than cmdlet output.
+///
+/// Checked before parsing because both parsers key off punctuation that appears in
+/// error text too: the Format-List path looks for `Key: value` pairs (an error
+/// record has `CategoryInfo : ...`), and the table path accepts any line with two
+/// or more whitespace-separated fields.
+fn output_is_powershell_error(output: &str) -> bool {
+    const MARKERS: [&str; 4] = [
+        // Also matches Windows PowerShell 5.1's "is not recognized as the name of a cmdlet".
+        "is not recognized as",
+        // The structured tail that every non-terminating error record carries.
+        "CategoryInfo",
+        "FullyQualifiedErrorId",
+        "CommandNotFoundException",
+    ];
+    MARKERS.iter().any(|marker| output.contains(marker))
+}
+
 /// Filters raw `Resolve-DnsName` output into a concise DNS lookup summary.
 pub fn filter_dns_output(raw: &str) -> String {
     let clean = crate::core::utils::strip_ansi(raw);
     let mut entries: Vec<DnsRecord> = Vec::new();
+
+    // A failed spawn -- no NetTCPIP module, a non-Windows host, a typo in the
+    // queried name -- prints a PowerShell error record instead of a table. The
+    // table parser below splits on whitespace, so such a record was rendered as an
+    // answer row ("Resolve-DnsName: The term ..." became NAME="Resolve-DnsName:",
+    // TYPE="The"), which made a missing cmdlet look like a successful lookup. Pass
+    // the error through untouched so the failure stays visible and diagnosable.
+    if output_is_powershell_error(&clean) {
+        return clean.trim().trim_end().to_string();
+    }
 
     // Check if output is Format-List style (Name : ... \n QueryType : ...)
     if clean
@@ -206,6 +234,47 @@ IPAddress  : 10.0.0.2
         assert!(
             !filtered.contains("10.0.0.2"),
             "a second address for the same name is dropped: {filtered}"
+        );
+    }
+
+    #[test]
+    fn test_powershell_error_is_not_rendered_as_a_dns_record() {
+        // On a host without the NetTCPIP module -- or without Windows at all -- the
+        // spawn fails and PowerShell prints its error on stdout. The table parser
+        // splits any line with >= 5 whitespace fields into a record, so this error
+        // used to surface as an answer row: NAME="Resolve-DnsName:", TYPE="The".
+        let sample = "Resolve-DnsName: The term 'Resolve-DnsName' is not recognized as a name of a cmdlet, function, script file, or executable program.\n";
+        let filtered = filter_dns_output(sample);
+
+        assert!(
+            !filtered.contains("NAME") && !filtered.contains("TARGET/IP"),
+            "an error must not be formatted as a results table: {filtered}"
+        );
+        assert!(
+            filtered.contains("is not recognized"),
+            "the error text must survive so the user can act on it: {filtered}"
+        );
+    }
+
+    #[test]
+    fn test_full_powershell_error_dump_passes_through() {
+        let sample = r#"Resolve-DnsName: The term 'Resolve-DnsName' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ Resolve-DnsName localhost
++ ~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (Resolve-DnsName:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+"#;
+        let filtered = filter_dns_output(sample);
+
+        assert!(
+            !filtered.contains("NAME") && !filtered.contains("TARGET/IP"),
+            "an error record must not become a DNS answer: {filtered}"
+        );
+        assert!(
+            filtered.contains("CommandNotFoundException"),
+            "the failure reason must survive: {filtered}"
         );
     }
 }

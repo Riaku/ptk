@@ -4,6 +4,10 @@ set -e
 # Use local release build if available, otherwise fall back to installed ptk
 if [ -f "./target/release/ptk" ]; then
   PTK="$(cd "$(dirname ./target/release/ptk)" && pwd)/$(basename ./target/release/ptk)"
+elif [ -f "./target/release/ptk.exe" ]; then
+  # Windows runners build ptk.exe; without this the windows-latest job falls through
+  # to `command -v ptk` and aborts because nothing is installed on the runner.
+  PTK="$(cd "$(dirname ./target/release/ptk.exe)" && pwd)/$(basename ./target/release/ptk.exe)"
 elif command -v ptk &> /dev/null; then
   PTK="$(command -v ptk)"
 else
@@ -12,6 +16,31 @@ else
 fi
 BENCH_DIR="$(pwd)/scripts/benchmark"
 PTK_ROOT="$(pwd)"
+
+# ── Windows / PowerShell coverage ───────────────────────────────────────────────
+# This fork's Windows filters (src/cmds/windows/) dispatch by subcommand rather than
+# behind cfg(windows), so they are reachable on any host that has pwsh. They used to
+# be absent from this script entirely, and a missing pwsh made a row look like SKIP,
+# so a run that measured none of them still exited 0. The counters below are checked
+# in the summary: a row that could not run fails the run instead of disappearing.
+WIN_MODE=0
+[ "${1:-}" = "--windows" ] && WIN_MODE=1
+WIN_ROWS=0
+WIN_EXPECTED=0
+WIN_MISSING=0
+
+if [ -n "${PTK_BENCH_REQUIRE_PWSH:-}" ]; then
+  if ! command -v pwsh >/dev/null 2>&1; then
+    echo "Error: PTK_BENCH_REQUIRE_PWSH is set but pwsh is not on PATH." >&2
+    echo "       The Windows filters cannot be measured; refusing to report a pass." >&2
+    exit 1
+  fi
+  pwsh_major=$(pwsh -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.Major' 2>/dev/null || echo 0)
+  if [ "${pwsh_major:-0}" -lt 7 ]; then
+    echo "Error: pwsh 7+ is required for the Windows-filter benchmarks (found: ${pwsh_major:-unknown})." >&2
+    exit 1
+  fi
+fi
 
 # Only the gitignored output subdirectories get wiped between local runs.
 # `$BENCH_DIR` itself is tracked — it also holds the TypeScript VM-benchmark
@@ -150,6 +179,50 @@ bench() {
 section() {
   echo ""
   echo "── $1 ──"
+}
+
+# bench_win <name> <powershell command> <ptk command>
+#
+# A cmdlet this pwsh does not have yields two empty captures, which bench() would tag
+# SKIP and the summary would tolerate. That is how a run measuring none of the Windows
+# filters could still pass, so absence is a hard failure here.
+bench_win() {
+  local name="$1"
+  local ps_cmd="$2"
+  local ptk_cmd="$3"
+  local cmdlet="${ps_cmd%% *}"
+
+  if ! command -v pwsh >/dev/null 2>&1; then
+    echo "❌ win/$name │ pwsh is not on PATH — cannot measure" >&2
+    WIN_MISSING=$((WIN_MISSING + 1))
+    return
+  fi
+  if ! pwsh -NoProfile -NonInteractive -Command \
+      "if (-not (Get-Command '$cmdlet' -ErrorAction SilentlyContinue)) { exit 3 }" >/dev/null 2>&1; then
+    echo "❌ win/$name │ '$cmdlet' is not available in this pwsh — cannot measure" >&2
+    WIN_MISSING=$((WIN_MISSING + 1))
+    return
+  fi
+
+  WIN_ROWS=$((WIN_ROWS + 1))
+  bench "win/$name" "pwsh -NoProfile -NonInteractive -Command '$ps_cmd'" "$ptk_cmd"
+}
+
+# cmd.exe built-ins (dir, type, findstr, netstat) have no baseline on a non-Windows
+# host, so those rows only exist under --windows. Same rule: missing tool = failure.
+bench_cmd_win() {
+  local name="$1"
+  local cmd_line="$2"
+  local ptk_cmd="$3"
+
+  if ! command -v cmd.exe >/dev/null 2>&1; then
+    echo "❌ win/$name │ cmd.exe is not available (Windows-only row) — cannot measure" >&2
+    WIN_MISSING=$((WIN_MISSING + 1))
+    return
+  fi
+
+  WIN_ROWS=$((WIN_ROWS + 1))
+  bench "win/$name" "cmd /D /C $cmd_line" "$ptk_cmd"
 }
 
 # ═══════════════════════════════════════════
@@ -844,6 +917,35 @@ bench_rewrite "rewrite npm exec"     "$PTK rewrite npm exec"         "ptk npm ex
 bench_rewrite "rewrite cargo test"   "$PTK rewrite cargo test"       "ptk cargo test"
 bench_rewrite "rewrite compound"     "$PTK rewrite 'cargo test && git push'" "ptk cargo test && ptk git push"
 
+# ═══════════════════════════════════════════
+# Windows / PowerShell filters (fork-only)
+# ═══════════════════════════════════════════
+# These four measure the same on any host with pwsh 7, so they run on ubuntu-latest.
+section "windows: powershell (portable)"
+WIN_EXPECTED=4
+bench_win "ps pwsh"       "Get-Process pwsh"                            "$PTK ps pwsh"
+bench_win "gci windows"   "Get-ChildItem src/cmds/windows"              "$PTK gci src/cmds/windows"
+bench_win "gc Cargo.toml" "Get-Content Cargo.toml"                      "$PTK gc Cargo.toml"
+bench_win "sls fn"        "Select-String -Path src/lib.rs -Pattern fn"  "$PTK sls -Path src/lib.rs -Pattern fn"
+
+# cmd.exe built-ins and the cmdlets only Windows PowerShell ships. `scripts/benchmark.sh
+# --windows` is what CI runs on windows-latest; on Linux these are absent, and asking
+# for them there is a failure rather than a silent skip.
+if [ "$WIN_MODE" = 1 ]; then
+  section "windows: cmd.exe + Windows-only cmdlets"
+  WIN_EXPECTED=$((WIN_EXPECTED + 10))
+  bench_cmd_win "dir"       "dir"                                          "$PTK dir"
+  bench_cmd_win "type"      "type Cargo.toml"                              "$PTK type Cargo.toml"
+  bench_cmd_win "findstr"   "findstr /n fn src\\lib.rs"                    "$PTK findstr /n fn src/lib.rs"
+  bench_cmd_win "netstat"   "netstat -an"                                  "$PTK netstat -an"
+  bench_win "gsv"           "Get-Service"                                  "$PTK gsv"
+  bench_win "netip"         "Get-NetIPAddress"                             "$PTK netip"
+  bench_win "nettcp"        "Get-NetTCPConnection"                         "$PTK nettcp"
+  bench_win "resolve-dns"   "Resolve-DnsName localhost"                    "$PTK resolve-dns localhost"
+  bench_win "tnc"           "Test-NetConnection localhost -Port 135"        "$PTK tnc localhost -Port 135"
+  bench_win "winevent"      "Get-WinEvent -LogName System -MaxEvents 20"    "$PTK winevent -LogName System -MaxEvents 20"
+fi
+
 # ===================
 # Summary
 # ===================
@@ -863,6 +965,7 @@ if [ "$TOTAL_TESTS" -gt 0 ]; then
   echo ""
   echo "  ✅ $GOOD_TESTS good  ⚠️ $WARN_TESTS warn  🔴 $NEGATIVE_TESTS negative  ❌ $FAIL_TESTS fail    $GOOD_TESTS/$TOTAL_TESTS ($GOOD_PCT%)"
   echo "  Tokens: $TOTAL_UNIX → $TOTAL_PTK  (-$TOTAL_SAVE_PCT%)"
+  echo "  Windows filters measured: $WIN_ROWS/$WIN_EXPECTED"
   echo ""
 
   if [ -z "$CI" ]; then
@@ -871,6 +974,18 @@ if [ "$TOTAL_TESTS" -gt 0 ]; then
   echo ""
 
   EXIT_CODE=0
+
+  # A Windows row that could not run leaves the run green without having measured the
+  # fork's own feature, so it is a failure here rather than a SKIP in the tally.
+  if [ "$WIN_MISSING" -gt 0 ]; then
+    echo "  BENCHMARK FAILED: $WIN_MISSING Windows filter(s) could not be measured (pwsh or cmdlet missing)"
+    EXIT_CODE=1
+  fi
+
+  if [ "$WIN_ROWS" -ne "$WIN_EXPECTED" ]; then
+    echo "  BENCHMARK FAILED: ran $WIN_ROWS/$WIN_EXPECTED Windows rows — entries silently disappeared"
+    EXIT_CODE=1
+  fi
 
   if [ "$NEGATIVE_TESTS" -gt 0 ]; then
     echo "  BENCHMARK FAILED: $NEGATIVE_TESTS filter(s) produced more tokens than raw output"
