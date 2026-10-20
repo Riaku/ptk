@@ -16,11 +16,13 @@ fi
 BASE_TAG=$(git tag -l 'v[0-9]*' --sort=-version:refname \
   | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
 
-RANGE=()
+# Positional params rather than an array: macOS ships bash 3.2, where expanding an empty
+# array under `set -u` is an unbound variable.
+set --
 if [ -n "$BASE_TAG" ]; then
-  RANGE=("${BASE_TAG}..HEAD")
+  set -- "${BASE_TAG}..HEAD"
 fi
-SUBJECTS=$(git log "${RANGE[@]}" --format=%s)
+SUBJECTS=$(git log "$@" --format=%s)
 
 # A group is capped: the first automatic release diffs against the last stable tag,
 # which for this fork is hundreds of upstream commit subjects. The release page carries

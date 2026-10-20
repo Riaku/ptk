@@ -414,6 +414,36 @@ fn the_commit_being_tagged_is_compiled_and_tested_first() {
 }
 
 #[test]
+fn release_notes_work_before_the_first_tag_exists() {
+    // The no-tag branch has no git range to pass, and macOS ships bash 3.2, where
+    // expanding an empty array under `set -u` aborts with "unbound variable". That
+    // failed on the macOS runner and nowhere else, so exercise the branch, don't assume.
+    require_shell!();
+    let repo = TempRepo::new("notes-notags");
+    repo.write(
+        "Cargo.toml",
+        "[package]\nname = \"ptk\"\nversion = \"0.1.0\"\n",
+    );
+    repo.commit("feat(core): first thing");
+
+    let out = repo.run("release-notes.sh", &["0.1.0"]);
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        out.status.success(),
+        "release-notes.sh failed with no tags: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        text.contains("0.1.0"),
+        "notes must carry the version: {text}"
+    );
+    assert!(
+        text.contains("first thing"),
+        "notes must list commit subjects when there is no tag to diff from: {text}"
+    );
+}
+
+#[test]
 fn the_longest_group_is_capped_in_the_changelog() {
     require_shell!();
     let repo = TempRepo::new("changelog-cap");

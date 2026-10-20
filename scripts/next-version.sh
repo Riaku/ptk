@@ -21,12 +21,12 @@ base_tag() {
 BASE_TAG=$(base_tag)
 if [ -n "$BASE_TAG" ]; then
   BASE_VERSION=${BASE_TAG#v}
-  RANGE=("${BASE_TAG}..HEAD")
+  set -- "${BASE_TAG}..HEAD"
 else
   # A fork with no release yet has no tag to measure from. Start at the manifest
   # version rather than failing, and measure the whole history.
   BASE_VERSION=$(sed -n 's/^version = "\([^"]*\)".*/\1/p' Cargo.toml | head -1)
-  RANGE=()
+  set --
 fi
 
 if ! printf '%s' "$BASE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -34,8 +34,10 @@ if ! printf '%s' "$BASE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
   exit 1
 fi
 
-SUBJECTS=$(git log "${RANGE[@]}" --format=%s)
-BODIES=$(git log "${RANGE[@]}" --format=%B)
+# Positional params rather than an array: macOS ships bash 3.2, where expanding an empty
+# array under `set -u` is an unbound variable, and the no-tag branch has no range at all.
+SUBJECTS=$(git log "$@" --format=%s)
+BODIES=$(git log "$@" --format=%B)
 
 has() { grep -qE "$1" <<<"$2"; }
 
