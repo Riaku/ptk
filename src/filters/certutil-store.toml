@@ -1,0 +1,46 @@
+[filters.certutil-store]
+description = "Compact certutil store/dump - certificate subject, issuer and expiry only"
+match_command = "^certutil\\s+-(?:store|dump)\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "^\\s*Subject:",
+  "^\\s*Issuer:",
+  "^\\s*NotAfter:",
+  "(?i)ERROR|access is denied|not found|invalid",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 300
+on_empty = "certutil: no certificates"
+
+[[tests.certutil-store]]
+name = "keeps certificate identity and dates"
+input = """
+root "Trusted Root Certification Authorities"
+================ Certificate 0 ================
+Serial Number: 066c9fd7c1bb104c2943e5717b7b2cc81ac10e
+Issuer: CN=Amazon Root CA 4, O=Amazon, C=US
+ NotBefore: 2015-05-25 6:00 PM
+ NotAfter: 2040-05-25 6:00 PM
+Subject: CN=Amazon Root CA 4, O=Amazon, C=US
+Signature matches Public Key
+Root Certificate: Subject matches Issuer
+Cert Hash(sha1): f6108407d6f8bb67980cc2e244c2ebae1cef63be
+"""
+expected = """
+Issuer: CN=Amazon Root CA 4, O=Amazon, C=US
+NotAfter: 2040-05-25 6:00 PM
+Subject: CN=Amazon Root CA 4, O=Amazon, C=US
+"""
+
+[[tests.certutil-store]]
+name = "errors are preserved"
+input = """
+ERROR: Access is denied.
+"""
+expected = """
+ERROR: Access is denied.
+"""

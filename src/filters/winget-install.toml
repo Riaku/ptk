@@ -1,0 +1,72 @@
+[filters.winget-install]
+description = "Compact winget install/upgrade output - drop progress and license noise"
+match_command = "^winget\\s+(install|upgrade|uninstall|download)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^-{5,}\\s*$",
+  "^\\s*[█▓▒░]+.*$",
+  "^\\s*\\d+(?:\\.\\d+)?%\\s*$",
+  "^\\s*(?:Downloading|Fetching|Extracting) https?://.*$",
+  "^\\s*Successfully verified installer hash\\s*$",
+  "^\\s*Starting package install\\.\\.\\.\\s*$",
+  "^\\s*This application is licensed to you by its owner\\.\\s*$",
+  "^\\s*Microsoft is not responsible.*$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+truncate_lines_at = 160
+max_lines = 80
+match_output = [
+  { pattern = "No applicable update found", message = "winget: up to date" },
+  { pattern = "No installed package found matching input criteria", message = "winget: no matching package" },
+]
+on_empty = "winget: ok"
+
+[[tests.winget-install]]
+name = "upgrade table collapses padding"
+input = """
+Name                          Id                 Version   Available   Source
+-----------------------------------------------------------------------------
+Git                           Git.Git            2.55.0.3  2.55.0.5    winget
+uv                            astral-sh.uv       0.11.29   0.13.1      winget
+"""
+expected = """
+Name Id Version Available Source
+Git Git.Git 2.55.0.3 2.55.0.5 winget
+uv astral-sh.uv 0.11.29 0.13.1 winget
+"""
+
+[[tests.winget-install]]
+name = "install strips progress and license noise"
+input = """
+Found Git [Git.Git]
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/git-for-windows/git/releases/download/v2.55.0.5/Git-2.55.0.5-64-bit.exe
+  ██████████████████████████████  10.0 MB / 50.0 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+"""
+expected = """
+Found Git [Git.Git]
+Successfully installed
+"""
+
+[[tests.winget-install]]
+name = "no applicable update short-circuits"
+input = """
+No applicable update found.
+"""
+expected = "winget: up to date"
+
+[[tests.winget-install]]
+name = "all noise collapses to ok"
+input = """
+Successfully verified installer hash
+Starting package install...
+"""
+expected = "winget: ok"

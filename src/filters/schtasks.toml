@@ -1,0 +1,69 @@
+[filters.schtasks]
+description = "Compact schtasks query - folders, task names, next run and status"
+match_command = "^schtasks\\s+/+query\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^HostName:",
+  "^Logon Mode:",
+  "^[=\\s]+$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 150
+on_empty = "schtasks: no tasks"
+
+[[tests.schtasks]]
+name = "collapses table output"
+input = """
+Folder: \\
+TaskName                                 Next Run Time          Status
+======================================== ====================== ===============
+PowerENGAGE                              2026-10-19 8:09:42 PM  Ready
+RtkAudUService64_BG                      N/A                    Running
+
+Folder: \\ASUS
+TaskName                                 Next Run Time          Status
+======================================== ====================== ===============
+AcPowerNotification                      N/A                    Ready
+"""
+expected = """
+Folder: \\
+TaskName Next Run Time Status
+PowerENGAGE 2026-10-19 8:09:42 PM Ready
+RtkAudUService64_BG N/A Running
+Folder: \\ASUS
+TaskName Next Run Time Status
+AcPowerNotification N/A Ready
+"""
+
+[[tests.schtasks]]
+name = "drops list noise"
+input = """
+Folder: \\
+HostName:      DEFIANT
+TaskName:      \\PowerENGAGE
+Next Run Time: 2026-10-19 8:09:42 PM
+Status:        Ready
+Logon Mode:    Interactive/Background
+
+Folder: \\ASUS
+HostName:      DEFIANT
+TaskName:      \\ASUS\\AcPowerNotification
+Next Run Time: N/A
+Status:        Ready
+Logon Mode:    Interactive/Background
+"""
+expected = """
+Folder: \\
+TaskName: \\PowerENGAGE
+Next Run Time: 2026-10-19 8:09:42 PM
+Status: Ready
+Folder: \\ASUS
+TaskName: \\ASUS\\AcPowerNotification
+Next Run Time: N/A
+Status: Ready
+"""

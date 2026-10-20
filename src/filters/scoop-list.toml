@@ -1,0 +1,57 @@
+[filters.scoop-list]
+description = "Compact scoop list/status output - drop table rules, collapse padding, cap apps"
+match_command = "^scoop\\s+(list|status)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^[-\\s]+$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+truncate_lines_at = 160
+max_lines = 120
+match_output = [
+  { pattern = "Scoop is up to date\\.", message = "scoop: up to date" },
+  { pattern = "Everything is up to date\\.", message = "scoop: up to date" },
+]
+on_empty = "scoop: no apps"
+
+[[tests.scoop-list]]
+name = "collapses app table"
+input = """
+Installed apps:
+
+Name    Version Source Updated     Info
+----    ------- ------ -------     ----
+git     2.41.0  main   2024-01-01
+7zip    23.01   main   2024-01-01
+"""
+expected = """
+Installed apps:
+Name Version Source Updated Info
+git 2.41.0 main 2024-01-01
+7zip 23.01 main 2024-01-01
+"""
+
+[[tests.scoop-list]]
+name = "up to date short-circuits"
+input = """
+Scoop is up to date.
+"""
+expected = "scoop: up to date"
+
+[[tests.scoop-list]]
+name = "status keeps outdated rows"
+input = """
+WARN  Some apps are outdated:
+Name  Current Latest
+----  ------- ------
+git   2.40.0  2.41.0
+"""
+expected = """
+WARN Some apps are outdated:
+Name Current Latest
+git 2.40.0 2.41.0
+"""

@@ -1,0 +1,69 @@
+[filters.scoop-install]
+description = "Compact scoop install/update output - strip download, extract and repo noise"
+match_command = "^scoop\\s+(install|update|upgrade|uninstall)\\b"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^Updating Scoop\\.\\.\\.\\s*$",
+  "^Checking repo\\.\\.\\.\\s*$",
+  "^Updating .* bucket.*$",
+  "^Loading .*\\s*$",
+  "^Downloading .*\\s*$",
+  "^Extracting .*\\s*$",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "\\s+$", replacement = "" },
+]
+truncate_lines_at = 160
+max_lines = 80
+match_output = [
+  { pattern = "Everything is up to date\\.", message = "scoop: up to date" },
+]
+on_empty = "scoop: ok"
+
+[[tests.scoop-install]]
+name = "install keeps package and result lines"
+input = """
+Installing 'git' (2.41.0) [64bit]
+Loading git-2.41.0.7z from https://github.com/ScoopInstaller/Main
+Downloading https://github.com/git-for-windows/git/releases/download/v2.41.0/Git-2.41.0-64-bit.exe
+Extracting git-2.41.0.7z ...
+'git' (2.41.0) was installed successfully!
+"""
+expected = """
+Installing 'git' (2.41.0) [64bit]
+'git' (2.41.0) was installed successfully!
+"""
+
+[[tests.scoop-install]]
+name = "update keeps app update lines"
+input = """
+Updating Scoop...
+Checking repo...
+Updating 'git' (2.40.0 -> 2.41.0)
+'git' (2.41.0) was installed successfully!
+Scoop was updated successfully!
+"""
+expected = """
+Updating 'git' (2.40.0 -> 2.41.0)
+'git' (2.41.0) was installed successfully!
+Scoop was updated successfully!
+"""
+
+[[tests.scoop-install]]
+name = "up to date short-circuits"
+input = """
+Everything is up to date.
+"""
+expected = "scoop: up to date"
+
+[[tests.scoop-install]]
+name = "all noise collapses to ok"
+input = """
+Updating Scoop...
+Checking repo...
+Downloading https://example.com/file.zip
+Extracting file.zip ...
+"""
+expected = "scoop: ok"

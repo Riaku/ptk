@@ -415,7 +415,8 @@ ptk init --global       # Add PTK to ~/.claude/CLAUDE.md
 | Build | next, tsc, lint, prettier | 70-87% |
 | Git | status, log, diff, add, commit | 59-80% |
 | GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
+| Package Managers | pnpm, npm, npx, winget, choco, scoop | 60-90% |
+| Windows Diagnostics | ipconfig, systeminfo, tasklist, ping, schtasks | 60-90% |
 | Files | ls, read, grep, find | 60-75% |
 | Infrastructure | docker, kubectl | 85% |
 | Network | curl, wget | 65-70% |

@@ -1,0 +1,82 @@
+[filters.ipconfig]
+description = "Compact ipconfig output - adapters, IPv4, gateway and DNS only"
+match_command = "^ipconfig(?:\\s+/+all)?\\s*$"
+strip_ansi = true
+keep_lines_matching = [
+  "(?i)adapter ",
+  "^\\s*Connection-specific DNS Suffix",
+  "^\\s*IPv4 Address",
+  "^\\s*Subnet Mask",
+  "^\\s*Default Gateway",
+  "^\\s*DNS Servers",
+  "^\\s*(?:\\d{1,3}\\.){3}\\d{1,3}\\s*$",
+  "^\\s*[0-9a-fA-F:%]+\\s*$",
+  "(?i)media disconnected|error|not recognized|access is denied",
+]
+replace = [
+  { pattern = "(?:\\. ){3,}", replacement = "" },
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 80
+on_empty = "ipconfig: no network configuration"
+
+[[tests.ipconfig]]
+name = "keeps adapter, ip, gateway and dns"
+input = """
+Windows IP Configuration
+
+Ethernet adapter Ethernet:
+
+   Connection-specific DNS Suffix  . : corp.local
+   Description . . . . . . . . . . . : Intel(R) Ethernet Connection
+   Physical Address. . . . . . . . . : 00-11-22-33-44-55
+   DHCP Enabled. . . . . . . . . . . : Yes
+   IPv4 Address. . . . . . . . . . . : 192.168.1.10(Preferred)
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 192.168.1.1
+   DNS Servers . . . . . . . . . . . : 1.1.1.1
+                                       8.8.8.8
+"""
+expected = """
+Ethernet adapter Ethernet:
+Connection-specific DNS Suffix . : corp.local
+IPv4 Address: 192.168.1.10(Preferred)
+Subnet Mask: 255.255.255.0
+Default Gateway: 192.168.1.1
+DNS Servers: 1.1.1.1
+8.8.8.8
+"""
+
+[[tests.ipconfig]]
+name = "plain ipconfig works"
+input = """
+Windows IP Configuration
+
+Ethernet adapter Ethernet:
+
+   IPv4 Address. . . . . . . . . . . : 10.0.0.5
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 10.0.0.1
+"""
+expected = """
+Ethernet adapter Ethernet:
+IPv4 Address: 10.0.0.5
+Subnet Mask: 255.255.255.0
+Default Gateway: 10.0.0.1
+"""
+
+[[tests.ipconfig]]
+name = "media disconnected is preserved"
+input = """
+Windows IP Configuration
+
+Ethernet adapter Ethernet 2:
+
+   Media State . . . . . . . . . . . : Media disconnected
+"""
+expected = """
+Ethernet adapter Ethernet 2:
+Media State: Media disconnected
+"""

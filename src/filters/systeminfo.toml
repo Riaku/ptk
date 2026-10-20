@@ -1,0 +1,72 @@
+[filters.systeminfo]
+description = "Compact systeminfo - OS, hardware, domain and hotfixes only"
+match_command = "^systeminfo\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "^OS Name:",
+  "^OS Version:",
+  "^System Boot Time:",
+  "^System Manufacturer:",
+  "^System Model:",
+  "^System Type:",
+  "^Total Physical Memory:",
+  "^Domain:",
+  "^Processor\\(s\\):",
+  "^BIOS Version:",
+  "^Hotfix\\(s\\):",
+  "^\\[\\d+\\]: KB",
+  "(?i)^ERROR|access is denied|not recognized",
+]
+replace = [
+  { pattern = "[ \\t]{2,}", replacement = " " },
+  { pattern = "^\\s+", replacement = "" },
+  { pattern = "\\s+$", replacement = "" },
+]
+max_lines = 40
+on_empty = "systeminfo: no output"
+
+[[tests.systeminfo]]
+name = "keeps os hardware domain and hotfixes"
+input = """
+Host Name:                 DEFIANT
+OS Name:                   Microsoft Windows 11 Pro
+OS Version:                10.0.26200 N/A Build 26200
+OS Manufacturer:           Microsoft Corporation
+System Boot Time:          10/19/2026, 6:01:22 PM
+System Manufacturer:       ASUSTeK COMPUTER INC.
+System Model:              ROG STRIX
+System Type:               x64-based PC
+Processor(s):              1 Processor(s) Installed.
+Total Physical Memory:     32,000 MB
+Available Physical Memory: 10,000 MB
+Domain:                    WORKGROUP
+Hotfix(s):                 3 Hotfix(s) Installed.
+                           [01]: KB123456
+                           [02]: KB234567
+                           [03]: KB345678
+Hyper-V Requirements:      A hypervisor has been detected.
+"""
+expected = """
+OS Name: Microsoft Windows 11 Pro
+OS Version: 10.0.26200 N/A Build 26200
+System Boot Time: 10/19/2026, 6:01:22 PM
+System Manufacturer: ASUSTeK COMPUTER INC.
+System Model: ROG STRIX
+System Type: x64-based PC
+Processor(s): 1 Processor(s) Installed.
+Total Physical Memory: 32,000 MB
+Domain: WORKGROUP
+Hotfix(s): 3 Hotfix(s) Installed.
+[01]: KB123456
+[02]: KB234567
+[03]: KB345678
+"""
+
+[[tests.systeminfo]]
+name = "errors are preserved"
+input = """
+ERROR: Access is denied.
+"""
+expected = """
+ERROR: Access is denied.
+"""
