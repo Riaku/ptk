@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="https://avatars.githubusercontent.com/u/258253854?v=4" alt="PTK - Rust Token Killer" width="500">
-</p>
-
-<p align="center">
   <strong>Agent-agnostic token optimization: compress, route, filter, and more.</strong>
   <br><br>
   One composable pipeline across everything your AI agent reads and sends — built on PTK's battle-tested bash-output compression (up to 90% smaller).
@@ -28,16 +24,6 @@
   <a href="#installation">Install</a> &bull;
   <a href="docs/guide/resources/troubleshooting.md">Troubleshooting</a> &bull;
   <a href="docs/contributing/ARCHITECTURE.md">Architecture</a>
-</p>
-
-<p align="center">
-  <a href="README.md">English</a> &bull;
-  <a href="README_fr.md">Francais</a> &bull;
-  <a href="README_zh.md">中文</a> &bull;
-  <a href="README_ja.md">日本語</a> &bull;
-  <a href="README_ko.md">한국어</a> &bull;
-  <a href="README_es.md">Espanol</a> &bull;
-  <a href="README_pt.md">Português</a>
 </p>
 
 ---
