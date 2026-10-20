@@ -25,7 +25,7 @@ if [ -n "$PTK_VERSION" ]; then
   MAJOR=$(echo "$PTK_VERSION" | cut -d. -f1)
   MINOR=$(echo "$PTK_VERSION" | cut -d. -f2)
   if [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 23 ]; then
-    echo "[ptk] WARNING: ptk $PTK_VERSION is too old (need >= 0.23.0). Upgrade: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh" >&2
+    echo "[ptk] WARNING: ptk $PTK_VERSION is too old (need >= 0.23.0). Upgrade: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh" >&2
     exit 0
   fi
 fi

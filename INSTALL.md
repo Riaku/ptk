@@ -45,7 +45,7 @@ cargo uninstall ptk
 ### Quick Install (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh
 ```
 
 After installation, **verify you have the correct ptk**:
@@ -79,7 +79,7 @@ rewrite system and every command filter, under Apache-2.0 alone. Pick this if
 your policy does not allow a source-available licence in the build.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | PTK_EDITION=oss sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh
 cargo install --git https://github.com/riaku/ptk ptk --no-default-features
 ```
 

@@ -7,7 +7,7 @@ set -euo pipefail
 #   bash scripts/check-test-presence.sh [BASE_BRANCH]
 #   bash scripts/check-test-presence.sh --self-test
 #
-# BASE_BRANCH defaults to origin/develop
+# BASE_BRANCH defaults to origin/main
 
 if [ "${1:-}" = "--self-test" ]; then
     # Self-test: create a tempfile without tests and verify the check catches it
@@ -25,7 +25,7 @@ if [ "${1:-}" = "--self-test" ]; then
     exit 0
 fi
 
-BASE_BRANCH="${1:-origin/develop}"
+BASE_BRANCH="${1:-origin/main}"
 EXIT_CODE=0
 
 # Find *_cmd.rs files that were added or modified in this PR

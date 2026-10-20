@@ -1339,7 +1339,7 @@ fn prompt_telemetry_consent() -> Result<()> {
     eprintln!("  Who:     PTK AI Labs, contact@rtk-ai.app");
     eprintln!("  Rights:  disable anytime with `ptk telemetry disable`,");
     eprintln!("           request erasure with `ptk telemetry forget`");
-    eprintln!("  Details: https://github.com/riaku/ptk/blob/develop/docs/TELEMETRY.md");
+    eprintln!("  Details: https://github.com/riaku/ptk/blob/main/docs/TELEMETRY.md");
     eprintln!();
     eprint!("Enable anonymous telemetry? [y/N] ");
 

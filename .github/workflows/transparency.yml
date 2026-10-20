@@ -3,7 +3,7 @@ name: Transparency
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-    branches: [develop]
+    branches: [main]
 
 permissions: {}
 
@@ -15,7 +15,7 @@ jobs:
   trigger:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository
-      && github.head_ref == 'develop'
+      && github.base_ref == 'main'
       && contains(github.event.pull_request.labels.*.name, 'next-release')
       && (github.event.action != 'labeled'
           || github.event.label.name == 'next-release')

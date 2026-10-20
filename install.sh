@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # ptk installer - https://github.com/riaku/ptk
-# Usage: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh
 
 set -e
 

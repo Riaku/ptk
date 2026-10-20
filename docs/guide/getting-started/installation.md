@@ -28,7 +28,7 @@ If both commands work, PTK is already installed. Skip to [Project initialization
 ## Quick install (Linux and macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh
 ```
 
 Installs to `~/.local/bin`. Add it to your PATH if it is not there already:
@@ -44,7 +44,7 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # or ~/.zshrc
 :::
 
 ```bash
-cargo install --git https://github.com/riaku/ptk --branch develop ptk
+cargo install --git https://github.com/riaku/ptk --branch main ptk
 ```
 
 ## Pre-built binaries (Windows, Linux, macOS)
@@ -62,8 +62,8 @@ Download from [GitHub releases](https://github.com/riaku/ptk/releases):
 The same `ptk` binary built without the BUSL-1.1 compression engine — the hook rewrite system and every command filter, under Apache-2.0 alone. Pick this if your policy does not allow a source-available licence in the build.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | PTK_EDITION=oss sh
-cargo install --git https://github.com/riaku/ptk --branch develop ptk --no-default-features
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | PTK_EDITION=oss sh
+cargo install --git https://github.com/riaku/ptk --branch main ptk --no-default-features
 ```
 
 Release assets are named `ptk-oss-<target>`. This fork publishes no Debian or RPM package, and no Homebrew or winget package, for either edition — GitHub Releases is the only channel. The binary is still called `ptk`, so hooks and scripts are unchanged, but the two editions conflict and cannot be installed together.
@@ -96,7 +96,7 @@ winget install BurntSushi.ripgrep.MSVC
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) also works and behaves exactly like Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/develop/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh
 ptk init -g
 ```
 

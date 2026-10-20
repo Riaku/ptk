@@ -36,7 +36,7 @@ if [ ! -f "$CACHE_FILE" ]; then
     IFS=. read -r MAJOR MINOR PATCH <<<"$PTK_VERSION"
     # Require >= 0.23.0
     if [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 23 ]; then
-      echo "[ptk] WARNING: ptk $PTK_VERSION is too old (need >= 0.23.0). Upgrade: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/develop/install.sh | sh" >&2
+      echo "[ptk] WARNING: ptk $PTK_VERSION is too old (need >= 0.23.0). Upgrade: curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh" >&2
       exit 0
     fi
   fi
