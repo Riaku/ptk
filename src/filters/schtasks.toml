@@ -1,5 +1,6 @@
 [filters.schtasks]
 description = "Compact schtasks query - folders, task names, next run and status"
+windows_only = true
 match_command = "^schtasks\\s+/+query\\b"
 strip_ansi = true
 strip_lines_matching = [

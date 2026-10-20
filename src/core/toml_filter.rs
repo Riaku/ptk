@@ -109,6 +109,11 @@ struct TomlFilterDef {
     /// Use for tools like liquibase that emit banners/logs to stderr.
     #[serde(default)]
     filter_stderr: bool,
+    /// The filtered command is a Windows-only binary that PowerShell Core does
+    /// not provide on Linux either. Off Windows the filter must not match, so
+    /// the command stays native instead of routing to a binary that is absent.
+    #[serde(default)]
+    windows_only: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -154,6 +159,8 @@ pub struct CompiledFilter {
     on_empty: Option<String>,
     /// When true, the runner should capture stderr and merge it with stdout.
     pub filter_stderr: bool,
+    /// See `TomlFilterDef::windows_only` — the filter is inert off Windows.
+    pub windows_only: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -395,6 +402,7 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
     Ok(CompiledFilter {
         name,
         description: def.description,
+        windows_only: def.windows_only,
         match_regex,
         strip_ansi: def.strip_ansi,
         replace,
@@ -574,6 +582,7 @@ fn match_patterns_in(content: &str) -> Vec<String> {
         Ok(file) if file.schema_version == 1 => file
             .filters
             .into_values()
+            .filter(|def| cfg!(windows) || !def.windows_only)
             .map(|def| def.match_command)
             .filter(|pattern| is_fully_anchored(pattern))
             .collect(),
@@ -591,7 +600,9 @@ pub fn find_filter_in<'a>(
     command: &str,
     filters: &'a [CompiledFilter],
 ) -> Option<&'a CompiledFilter> {
-    filters.iter().find(|f| f.match_regex.is_match(command))
+    filters
+        .iter()
+        .find(|f| (cfg!(windows) || !f.windows_only) && f.match_regex.is_match(command))
 }
 
 /// Apply a compiled filter pipeline to raw stdout. Pure String -> String.

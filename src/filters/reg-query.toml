@@ -1,5 +1,6 @@
 [filters.reg-query]
 description = "Compact reg query - strip indentation and cap recursive listings"
+windows_only = true
 match_command = "^reg\\s+query\\b"
 strip_ansi = true
 strip_lines_matching = [

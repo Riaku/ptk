@@ -1,5 +1,6 @@
 [filters.robocopy]
 description = "Compact robocopy - source/dest, summary and failures only"
+windows_only = true
 match_command = "^robocopy\\b"
 strip_ansi = true
 keep_lines_matching = [

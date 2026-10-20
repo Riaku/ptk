@@ -49,6 +49,7 @@ pub fn filter_content(raw: &str, max_lines: usize) -> String {
 }
 
 /// Run `type` via CMD and filter output.
+#[cfg(windows)]
 pub fn run_cmd_type(args: &[String], _verbose: u8) -> Result<i32> {
     let cmd = windows_shell::spawn_cmd("type", args);
     let cmd_label = format!("type {}", display_args(args));
@@ -60,6 +61,18 @@ pub fn run_cmd_type(args: &[String], _verbose: u8) -> Result<i32> {
         |raw| filter_content(raw, MAX_DEFAULT_LINES),
         RunOptions::default(),
     )
+}
+
+/// Run `type` off Windows, where there is no `cmd.exe` to spawn.
+///
+/// PowerShell Core resolves `type` as an alias for `Get-Content`, so CMD's
+/// argument grammar is translated onto that rather than failing on a binary
+/// that is not there.
+#[cfg(not(windows))]
+pub fn run_cmd_type(args: &[String], verbose: u8) -> Result<i32> {
+    let t = crate::cmds::windows::cmd_fallback::type_to_get_content(args);
+    crate::cmds::windows::cmd_fallback::warn_dropped("type", &t.dropped);
+    run_get_content(&t.args, verbose)
 }
 
 /// Checks if arguments require raw passthrough (e.g. `-Wait` live tailing, `-AsByteStream` binary reading).

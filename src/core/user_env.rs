@@ -42,6 +42,21 @@ pub fn var_os(name: &str) -> Option<OsString> {
     legacy_name(name).and_then(|legacy| read_var_os(&legacy))
 }
 
+/// One variable, read under its own name only — never its `RTK_*` ancestor.
+///
+/// The [`var_os`] fallback is right for a switch: `RTK_TEE=0` means exactly
+/// what `PTK_TEE=0` means, so a setup written for rtk keeps its intent. It is
+/// wrong for a path that names a store whose schema the fork changed. Pointing
+/// ptk at rtk's live `history.db` makes every insert fail on the renamed
+/// `ptk_cmd` column (rtk's table has `rtk_cmd`), and the two binaries end up
+/// fighting over one file: whichever wrote last leaves the other unable to
+/// record anything. A caller that opens a database reads it exactly, so the
+/// two stay in their own files and a migrated user migrates on purpose rather
+/// than by accident.
+pub fn var_exact(name: &str) -> Option<String> {
+    read_var_os(name)?.into_string().ok()
+}
+
 /// The current name of a variable that existed as `RTK_<suffix>` before the
 /// rename, as that ancestor was spelled. `None` for anything else: only the
 /// fork's own variables have an ancestor, and `CI` must not go looking for

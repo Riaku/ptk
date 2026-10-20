@@ -1,5 +1,6 @@
 [filters.choco-search]
 description = "Compact choco search/info output - strip banner, collapse padding, cap results"
+windows_only = true
 match_command = "^choco(?:latey)?\\s+(search|find|info)\\b"
 strip_ansi = true
 strip_lines_matching = [

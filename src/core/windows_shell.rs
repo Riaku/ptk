@@ -135,19 +135,32 @@ pub fn spawn_powershell(command_str: &str) -> Command {
     cmd
 }
 
+/// Escapes one argument for embedding in a PowerShell command string.
+fn escape_powershell_arg(arg: &str) -> String {
+    if arg.contains(' ') || arg.contains('"') {
+        format!("\"{}\"", arg.replace('"', "`\""))
+    } else {
+        arg.to_string()
+    }
+}
+
 /// Spawns a PowerShell cmdlet with argument vector.
 pub fn spawn_powershell_args(cmdlet: &str, args: &[String]) -> Command {
-    let escaped_args: Vec<String> = args
-        .iter()
-        .map(|a| {
-            if a.contains(' ') || a.contains('"') {
-                format!("\"{}\"", a.replace('"', "`\""))
-            } else {
-                a.clone()
-            }
-        })
-        .collect();
+    let escaped_args: Vec<String> = args.iter().map(|a| escape_powershell_arg(a)).collect();
     let full_command = format!("{} {}", cmdlet, escaped_args.join(" "));
+    spawn_powershell(&full_command)
+}
+
+/// Spawns a PowerShell cmdlet whose output is piped into a trailing command.
+///
+/// Exists because the default rendering of some cmdlets is platform-dependent:
+/// off Windows `Get-ChildItem` prints the UnixMode layout and wraps names that
+/// overflow the Name column, so a long filename arrives as two lines. Callers
+/// that parse the Windows `Mode/LastWriteTime/Length/Name` shape pin it here
+/// instead of mis-reading the wrapped output.
+pub fn spawn_powershell_args_piped(cmdlet: &str, args: &[String], tail: &str) -> Command {
+    let escaped_args: Vec<String> = args.iter().map(|a| escape_powershell_arg(a)).collect();
+    let full_command = format!("{} {} | {}", cmdlet, escaped_args.join(" "), tail);
     spawn_powershell(&full_command)
 }
 

@@ -1,5 +1,6 @@
 [filters.winget-search]
 description = "Compact winget search output - drop table rules, collapse padding, cap results"
+windows_only = true
 match_command = "^winget\\s+(search|find)\\b"
 strip_ansi = true
 strip_lines_matching = [

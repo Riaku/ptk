@@ -29,6 +29,13 @@ pub struct PtkRule {
     pub savings_pct: f64,
     pub subcmd_savings: &'static [(&'static str, f64)],
     pub subcmd_status: &'static [(&'static str, PtkStatus)],
+    /// The target is a Windows-only binary with no PowerShell Core equivalent on
+    /// Linux, so the rule must not fire there. Rewriting `tasklist` to
+    /// `ptk tasklist` on Linux sends the agent into the exec fallback, which
+    /// dies with `No such file or directory` — a worse outcome than the native
+    /// `command not found` the shell would have given. Leaving the command alone
+    /// lets the real error surface.
+    pub windows_only: bool,
 }
 
 impl PtkRule {
@@ -45,6 +52,7 @@ impl PtkRule {
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
+        windows_only: false,
     };
 }
 
@@ -99,6 +107,7 @@ pub const RULES: &[PtkRule] = &[
         savings_pct: 80.0,
         subcmd_savings: &[("test", 90.0), ("check", 80.0)],
         subcmd_status: &[("fmt", PtkStatus::Passthrough)],
+        windows_only: false,
     },
     PtkRule {
         pattern: r"^pnpm\s+(exec|i|install|list|ls|outdated|run|run-script)",
@@ -810,6 +819,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["choco", "chocolatey"],
         category: "PackageManager",
         savings_pct: 60.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -818,6 +828,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["scoop"],
         category: "PackageManager",
         savings_pct: 60.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -826,6 +837,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["winget"],
         category: "PackageManager",
         savings_pct: 65.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -834,6 +846,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["ipconfig"],
         category: "Network",
         savings_pct: 70.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -842,6 +855,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["systeminfo"],
         category: "System",
         savings_pct: 85.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -850,6 +864,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["tasklist"],
         category: "System",
         savings_pct: 65.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -858,6 +873,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["robocopy"],
         category: "Files",
         savings_pct: 75.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -866,6 +882,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["certutil"],
         category: "System",
         savings_pct: 60.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -882,6 +899,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["schtasks"],
         category: "System",
         savings_pct: 70.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {
@@ -890,6 +908,7 @@ pub const RULES: &[PtkRule] = &[
         rewrite_prefixes: &["reg"],
         category: "System",
         savings_pct: 75.0,
+        windows_only: true,
         ..PtkRule::DEFAULT
     },
     PtkRule {

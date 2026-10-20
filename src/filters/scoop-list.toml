@@ -1,5 +1,6 @@
 [filters.scoop-list]
 description = "Compact scoop list/status output - drop table rules, collapse padding, cap apps"
+windows_only = true
 match_command = "^scoop\\s+(list|status)\\b"
 strip_ansi = true
 strip_lines_matching = [

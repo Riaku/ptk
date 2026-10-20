@@ -46,38 +46,22 @@ pub fn filter_gci_output(raw: &str) -> String {
             continue;
         }
 
-        if parts.len() >= 4 {
+        if parts.len() >= 2 {
             let mode = parts[0];
-            let is_dir = mode.starts_with('d');
+            // The name is always the last token; the size, when there is one, is
+            // the token right before it. Windows prints
+            // `Mode LastWriteTime Length Name` and Linux prints
+            // `UnixMode User Group LastWriteTime Size Name`, so counting columns
+            // from the front breaks across the two — reading from the back is
+            // the same question on both.
+            let name = parts[parts.len() - 1];
+            let before_name = parts[parts.len() - 2];
 
-            if is_dir {
-                // Directory: last element is the name
-                let name = parts[parts.len() - 1];
+            if mode.starts_with('d') {
                 current_entries.push(format!("{}/", name));
-            } else if parts.len() >= 5 {
-                // File: parts are [Mode, Date, Time, AM/PM, Length, ...Name]
-                // or without AM/PM: [Mode, Date, Time, Length, ...Name]
-                let (len_idx, name_idx) =
-                    if parts[3].eq_ignore_ascii_case("am") || parts[3].eq_ignore_ascii_case("pm") {
-                        (4, 5)
-                    } else {
-                        (3, 4)
-                    };
-
-                if len_idx < parts.len() && name_idx <= parts.len() {
-                    let len_str = parts[len_idx];
-                    let name = parts[name_idx..].join(" ");
-                    if let Ok(bytes) = len_str.parse::<u64>() {
-                        current_entries.push(format!("{} ({})", name, format_size(bytes)));
-                    } else {
-                        current_entries.push(format!("{} ({})", name, len_str));
-                    }
-                } else {
-                    let name = parts[parts.len() - 1];
-                    current_entries.push(name.to_string());
-                }
+            } else if let Ok(bytes) = before_name.parse::<u64>() {
+                current_entries.push(format!("{} ({})", name, format_size(bytes)));
             } else {
-                let name = parts[parts.len() - 1];
                 current_entries.push(name.to_string());
             }
         } else {
@@ -146,7 +130,17 @@ pub fn is_gci_passthrough(args: &[String]) -> bool {
 
 /// Run `Get-ChildItem` via PowerShell and filter output.
 pub fn run(args: &[String], _verbose: u8) -> Result<i32> {
-    let cmd = windows_shell::spawn_powershell_args("Get-ChildItem", args);
+    // Off Windows the default Get-ChildItem rendering wraps the Name column,
+    // so a long filename arrives as two lines and the tail becomes a stray
+    // entry. Widening the output keeps each name on its own line while leaving
+    // the per-directory `Directory:` headers that the filter groups on.
+    // (Format-Table with an explicit column list would fix the layout too, but
+    // it drops those headers, so the recursion loses its section structure.)
+    let cmd = if cfg!(windows) {
+        windows_shell::spawn_powershell_args("Get-ChildItem", args)
+    } else {
+        windows_shell::spawn_powershell_args_piped("Get-ChildItem", args, "Out-String -Width 512")
+    };
     let cmd_label = format!("Get-ChildItem {}", display_args(args));
 
     if is_gci_passthrough(args) {

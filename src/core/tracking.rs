@@ -1938,8 +1938,16 @@ fn db_sidecars(db_path: &std::path::Path) -> Vec<PathBuf> {
 /// itself. The rows it writes are indistinguishable from real usage in the
 /// developer's history.
 pub(crate) fn get_db_path() -> Result<PathBuf> {
-    // Priority 1: Environment variable PTK_DB_PATH
-    if let Some(custom_path) = user_env::var("PTK_DB_PATH") {
+    // Priority 1: Environment variable PTK_DB_PATH.
+    //
+    // Read exactly, not through the `RTK_*` fallback: rtk's `commands` table
+    // names its column `rtk_cmd` and ptk's names it `ptk_cmd`, so an inherited
+    // `RTK_DB_PATH` points ptk at a database whose table it cannot insert into.
+    // `CREATE TABLE IF NOT EXISTS` leaves rtk's table alone, every ptk insert
+    // then fails on the missing column, and `ptk gain` reports
+    // `no such column: ptk_cmd`. Keeping the two in separate files is what
+    // makes them safe to have installed side by side.
+    if let Some(custom_path) = user_env::var_exact("PTK_DB_PATH") {
         return Ok(PathBuf::from(custom_path));
     }
 
@@ -2953,6 +2961,45 @@ mod tests {
             let db_path = get_db_path().expect("Failed to get db path");
             assert_eq!(db_path, test_isolation::db_path());
         });
+    }
+
+    // 7b. rtk's DB path must never become ptk's DB path.
+    //
+    // The two `commands` tables differ by one column name (`rtk_cmd` vs
+    // `ptk_cmd`), so a shared file is not a shared history but a broken one:
+    // `CREATE TABLE IF NOT EXISTS` keeps whichever table was created first, and
+    // the other binary's inserts fail on the column it does not have. A machine
+    // with both tools installed and `RTK_DB_PATH` exported for rtk's benefit
+    // must still leave ptk in its own file.
+    #[test]
+    fn the_legacy_rtk_db_path_does_not_redirect_the_tracking_db() {
+        let rtk_db = test_isolation::scratch_dir().join("rtk_history.db");
+        user_env::with_vars(
+            &[
+                ("PTK_DB_PATH", None),
+                ("RTK_DB_PATH", Some(rtk_db.to_str().unwrap())),
+            ],
+            || {
+                let db_path = get_db_path().expect("Failed to get db path");
+                assert_ne!(
+                    db_path, rtk_db,
+                    "ptk must not open the database RTK_DB_PATH points at"
+                );
+                assert_eq!(db_path, test_isolation::db_path());
+            },
+        );
+
+        // PTK_DB_PATH still wins when both are set.
+        let ptk_db = test_isolation::scratch_dir().join("ptk_history.db");
+        user_env::with_vars(
+            &[
+                ("PTK_DB_PATH", Some(ptk_db.to_str().unwrap())),
+                ("RTK_DB_PATH", Some(rtk_db.to_str().unwrap())),
+            ],
+            || {
+                assert_eq!(get_db_path().expect("Failed to get db path"), ptk_db);
+            },
+        );
     }
 
     // 8b. Tracker::new() gates schema migration behind PRAGMA user_version, so a

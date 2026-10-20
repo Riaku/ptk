@@ -1,5 +1,6 @@
 [filters.certutil-hashfile]
 description = "Compact certutil hashfile - header and hash only"
+windows_only = true
 match_command = "^certutil\\s+-hashfile\\b"
 strip_ansi = true
 keep_lines_matching = [
