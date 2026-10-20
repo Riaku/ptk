@@ -379,6 +379,115 @@ fn cd_tags_main_without_a_release_pull_request() {
     assert!(cd.contains("git tag"), "cd.yml must create the tag itself");
 }
 
+/// One job's block, so a guard cannot be satisfied by an unrelated job's text.
+fn job_block<'a>(workflow: &'a str, job: &str) -> &'a str {
+    let header = format!("  {job}:");
+    let mut offset = 0usize;
+    let mut start = None;
+    let mut end = workflow.len();
+    for line in workflow.split_inclusive('\n') {
+        // Windows checkouts end every line with \r\n, so a literal comparison of the header
+        // fails there while passing everywhere else.
+        let bare = line.trim_end_matches(['\r', '\n']);
+        if start.is_none() {
+            if bare == header {
+                start = Some(offset);
+            }
+        } else if bare.starts_with("  ") && !bare.starts_with("   ") && bare.ends_with(':') {
+            end = offset;
+            break;
+        }
+        offset += line.len();
+    }
+    let start = start.unwrap_or_else(|| panic!("workflow must keep a `{job}` job"));
+    &workflow[start..end]
+}
+
+#[test]
+fn the_job_scraper_tolerates_crlf_checkouts() {
+    let crlf = "on:\n  push:\n\n  release:\n    if: github.ref == 'refs/heads/main'\n\n  other:\n    y: 1\n"
+        .replace('\n', "\r\n");
+    let block = job_block(&crlf, "release");
+    assert!(
+        block.contains("github.ref"),
+        "the scraper must find the job in a CRLF file: Windows checkouts use CRLF, and this \
+         failed on both Windows legs before the fix"
+    );
+    assert!(
+        !block.contains("y: 1"),
+        "the block must stop at the next job, or every guard reads unrelated text:\n{block}"
+    );
+}
+
+#[test]
+fn a_release_only_runs_for_a_push_to_main() {
+    let cd = repo_file(".github/workflows/cd.yml");
+    let release = job_block(&cd, "release");
+    assert!(
+        release.contains("github.event_name == 'push'"),
+        "the release job must require a push event: a workflow_dispatch on main publishes \
+         a version that no merge produced"
+    );
+    assert!(
+        release.contains("github.ref == 'refs/heads/main'"),
+        "the release job must require the trunk ref: a pull request head ref must never be \
+         able to publish a stable release"
+    );
+    let triggers = cd.split("jobs:").next().unwrap_or("");
+    assert!(
+        !triggers.contains("pull_request"),
+        "cd.yml must not be triggerable by a pull request:\n{triggers}"
+    );
+}
+
+#[test]
+fn a_body_that_merely_mentions_the_bump_commit_still_releases() {
+    let cd = repo_file(".github/workflows/cd.yml");
+    let release = job_block(&cd, "release");
+    assert!(
+        release.contains("startsWith(github.event.head_commit.message, 'chore(release):')"),
+        "the re-release guard must test the subject line only: a merge commit whose body \
+         quotes `chore(release): vX.Y.Z` skipped its own release, and the version was only \
+         cut by the next push"
+    );
+    assert!(
+        !release.contains("contains(github.event.head_commit.message"),
+        "matching the whole commit message for chore(release) silently skips any release \
+         whose description mentions the bump commit"
+    );
+}
+
+#[test]
+fn no_pull_request_workflow_can_publish_a_release() {
+    let dir = repo_root().join(".github/workflows");
+    for entry in std::fs::read_dir(&dir).expect(".github/workflows must exist") {
+        let path = entry.expect("readable workflow entry").path();
+        let is_yaml = path
+            .extension()
+            .map(|ext| ext == "yml" || ext == "yaml")
+            .unwrap_or(false);
+        if !is_yaml {
+            // CICD.md lives here too, and prose about release.yml is not a caller.
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if !text.contains("pull_request") {
+            continue;
+        }
+        assert!(
+            !text.contains("release.yml"),
+            "{name} is triggered by a pull request and calls release.yml: a release follows \
+             a merge to main, never a pull request"
+        );
+    }
+}
+
 #[test]
 fn the_pre_release_tag_exists_before_the_build_checks_it_out() {
     let cd = repo_file(".github/workflows/cd.yml");
