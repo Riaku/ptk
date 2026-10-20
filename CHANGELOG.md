@@ -1,3 +1,9 @@
+## 0.50.2 - 2026-10-20
+
+### Bug fixes
+
+- fix: gate Windows-only rewrites off Windows and repair Linux pwsh output (#12)
+
 ## 0.50.1 - 2026-10-20
 
 ### Bug fixes
