@@ -1,3 +1,138 @@
+## 0.50.0 - 2026-10-20
+
+### Breaking changes
+
+- feat(cli)!: pipelines in the CLI, hook gate, rtk llm-proxy
+- fix(cli)!: preserve argv boundaries in generic runners
+
+### Features
+
+- feat(release): tag and publish on every releaseable push to main, with no release PR (#8)
+- feat(windows): filter package managers and diagnostics (#9)
+- feat(hooks): agent plugins honour pipeline block and route
+- feat(proxy): rtk-proxy daemon, pipelines at the request layer
+- feat(engine): pipeline engine, plugin and text crates
+- feat(rewrite): read a quoted fish -c script as fish
+- feat(hook): add native Google Antigravity plugin lifecycle and hook support
+- feat(search): fold shared path prefix in file-list passthrough
+- feat(windows): add native PowerShell cmdlets, CMD commands, and Pester test suite
+- feat(config): add suppress_hook_warning option
+- feat(hooks): add direct Codex command rewrite
+- feat(git): filter large git show blob dumps with recovery and Latin-1 decoding
+- feat(ast-grep): filter ast-grep output like grep/rg
+- feat: add Trae hook integration
+- feat(ci): add winget manifest automation for Windows package manager
+
+### Bug fixes
+
+- fix(ci): make ci.yml parse, and stop paying 19 minutes for a docs change
+- fix(ci): make the wrong-base check work without App credentials
+- fix(bench): invoke cmd.exe with //D //C so Git Bash stops rewriting the flags
+- fix(bench): measure the pwsh filters, and stop faking a DNS answer on error
+- fix: act on the second audit round — dead branch, dead crate, and my own bad restore
+- fix(windows): satisfy CI's clippy in the dns filter, and pin what the guard does
+- fix: act on the audit reports — the install guide, and two things I got wrong
+- fix(windows): restore the dispatcher branch my conflict resolution dropped
+- fix(init): require the rtk-proxy binary for the on-ramp, gate binary_available, name the removed base URL
+- fix(hooks): leave git unrewritten in Claude Code managed worktrees
+- fix(init): only offer the proxy when rtk-proxy can run, and remove its base URL on uninstall
+- fix(git): no log cap notice under git's usage on git 2.56
+- fix(permissions): match deny and ask rules past assignments and wrappers (#4281)
+- fix(proxy): honour RTK_PROXY_BIND in `llm-proxy start` and the agent launchers
+- fix(gain): only suggest `rtk pipeline share` where the command exists
+- fix(hooks): pipeline hook rules act on Claude Code only; the shared hook core is develop's again
+- fix(pipeline): route before an edit is refused; the hook load rejects tasks named after real commands; a blank message keeps a reason
+- fix(release): one release and one v-tag for every crate
+- fix(hook): defer when a prefixed shell wrapper's script hits a deny rule
+- fix: read `cargo install --version=X` as a version, and pin three help guard decisions
+- fix(build): special-case msvc for the stack flag and test the reservation
+- fix(core): keep the usage guard off RTK's own probes and argv
+- fix(hooks/opencode): judge only the rules OpenCode applies, and keep init honest
+- fix(init/opencode): drop the floor helper the refactor orphaned
+- fix(init/opencode): leave the plugin alone on an OpenCode that cannot load it
+- fix(hooks/opencode): read OpenCode's rules the way OpenCode resolves them
+- fix(pytest): accept plugin summaries and pin trailing-result parsing
+- fix(hook): keep `case` terminators intact when rewriting (#3197)
+- fix(hook): match the Vibe bash tool name exactly
+- fix(gh): keep a lone escaped flag behind the boundary too
+- fix(gh): keep an escaped flag behind the boundary
+- fix(gh): drop rtk's own `--`, keep the user's
+- fix(gh): restore `--` over the whole subcommand region
+- fix(gh): tokenize gh args instead of walking them by hand
+- fix(pytest): strip ANSI inside filter_pytest_output
+- fix(core): emit one trailing newline, not one on top of the output's own
+- fix(ast-grep): route subcommands by the grammar ast-grep actually has
+- fix(git): only announce the log cap on a walk git ran, and count it right
+- fix(ls): match the ls the child will actually be
+- fix(ls): parse arguments through the tokenizer
+- fix(mvn): read goals through arg_tokenizer, not a dash scan
+- fix(tokenizer): pin the contracts the new presets rely on
+- fix(tokenizer): derive the /flag guard from the attach axis
+- fix(tracking): store commands so they read back as the same words
+- fix(pytest): report setup errors in the summary
+- fix(pipe): strip ANSI before pytest filter in pipe mode
+- fix(hooks/opencode): say which RTK_DISABLED is which
+- fix(init/opencode): drop the legacy plugin, floor at 1.18.29
+- fix(hooks/opencode): read OpenCode 2.x's native permission rules
+- fix(init/opencode): serve OpenCode <= 1.3.3 a legacy plugin
+
+_…and 181 more, listed in the GitHub release notes._
+
+### Other changes
+
+- chore: drop the translated READMEs, the container build, and the hero image (#10)
+- ci: raise actionlint's shellcheck severity to error (the repo has ~100 pre-existing info findings)
+- chore: make `main` the trunk — for PRs, for releases, and for every reference
+- ci: fix the pwsh version assertion, which threw on every runner
+- docs: the name collision was with `rtk`, not `ptk`, and the rename is what fixed it
+- docs: normalize the repository URL to lowercase riaku/ptk
+- test(smoke): align scripts/test-all.sh with the CLI the merge brought in
+- test(ruff): pin the analyze graph exemption on captured output
+- test(permissions): pin the load-failure warning and deny rules past a parse failure
+- test(init): pin that remove_rtk_block stops at the first closing marker
+- chore(pytest): drop the two new comments
+- chore(sync): merge latest develop into fix/init-preserve-user-prose-3403
+- test(hooks): pin the Claude Code worktree git exclusion
+- chore(sync): merge latest develop into fix/init-preserve-user-prose-3403
+- test(cli): pin which invocations run the telemetry ping
+- chore(sync): merge latest develop into fix/init-preserve-user-prose-3403
+- test(hook): probe the ls exit code, cover a clean git diff, isolate the python probe
+- chore(deps): bump which from 8.0.1 to 8.0.6
+- chore(deps): bump windows-sys from 0.59.0 to 0.61.2
+- chore(deps): bump googleapis/release-please-action from 4.4.1 to 5.0.0
+- chore(deps): bump actions/checkout from 4 to 7
+- chore(deps): bump actions/upload-artifact from 4 to 7
+- chore(sync): merge latest develop into fix/init-preserve-user-prose-3403
+- chore(sync): merge latest develop into fix/init-preserve-user-prose-3403
+- chore: merge develop and retain PR #4405 behavior
+- ci(release): fix the rtk-proxy build on x86_64-unknown-linux-musl
+- chore(deps): bump serde from 1.0.228 to 1.0.229
+- chore(deps): bump ignore from 0.4.25 to 0.4.32
+- chore(deps): bump encoding_rs from 0.8.35 to 0.8.42
+- chore: drop BREAKING_CHANGES.md and the release simulation script
+- chore: contributor tooling
+- chore: release config, CI, packaging
+- docs: v1 guide, pipelines, proxy
+- ci: run the Windows tests on the gnu target too
+- test: probe the filter guard with output that is large on every machine
+- test: assert err and summary filtered, not that the output got smaller
+- test(hook): isolate rewrite cases and pin failing tool statuses
+- docs(hook): state the rewrite exit codes per chain, in FEATURES.md too
+- docs(discover): list the case terminators among the split points
+- docs(hook): resolve upstream conflict and clarify rewrite protocol
+- test(hook): require compound Python rewrite coverage
+- test(gh): spawn rtk through common::rtk_command()
+- test(gh): isolate XDG_CONFIG_HOME too, not just HOME
+- ci: pin the third-party actions that run with secrets and write access
+- docs: fix doc references that never resolved, and gate cargo doc in CI
+- style: apply rustfmt to the pytest_cmd passthrough
+- test(isolation): start a spawned rtk from an empty environment
+- test(isolation): scan the resolvers for the variables they name
+- refactor(tokenizer): name presets after the parser library
+- refactor(tokenizer): make Dialect a struct of independent grammar axes
+
+_…and 149 more, listed in the GitHub release notes._
+
 # Changelog
 
 All notable changes to rtk (Rust Token Killer) will be documented in this file.

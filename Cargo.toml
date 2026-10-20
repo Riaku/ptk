@@ -22,7 +22,7 @@ members = [".", "text", "engine", "plugin"]
 
 [package]
 name = "ptk"
-version = "0.49.0"
+version = "0.50.0"
 edition = "2024"
 rust-version = "1.91"
 authors = ["PTK Contributors", "Patrick Szymkowiak"]
