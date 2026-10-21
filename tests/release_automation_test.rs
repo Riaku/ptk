@@ -505,20 +505,33 @@ fn the_pre_release_tag_exists_before_the_build_checks_it_out() {
 
 #[test]
 fn the_commit_being_tagged_is_compiled_and_tested_first() {
+    // The tag is no longer cut in cd.yml: since the tag-after-build rework the bump
+    // job stops at the commit, and release.yml creates the tag only once every leg
+    // has built. The invariant spans the two files, so assert both ends of the chain.
     let cd = repo_file(".github/workflows/cd.yml");
     // Scope to the release job: the pre-release job also creates tags, and matching its
     // `git tag -a` would pass this assertion for the wrong reason.
-    let job = cd
-        .split("name: Tag the release")
-        .nth(1)
-        .expect("cd.yml must have a job that tags the release");
-    let test_at = job
-        .find("cargo test")
-        .expect("cd.yml must validate the commit it is about to tag");
-    let tag_at = job.find("git tag").expect("cd.yml must create the tag");
+    let bump = job_block(&cd, "release");
     assert!(
-        test_at < tag_at,
-        "the fast test gate must run before the tag is created, or a broken main gets published"
+        bump.contains("cargo test"),
+        "cd.yml must compile and test the commit before pushing the bump commit the \
+         release is built from, or a broken main gets published"
+    );
+    assert!(
+        !bump.contains("git tag"),
+        "cd.yml's release job must not create the tag: a leg that dies after a tag \
+         pushed from here leaves a tag with no release, which is what the rework removed"
+    );
+    let rel = repo_file(".github/workflows/release.yml");
+    let create = job_block(&rel, "release");
+    assert!(
+        create.contains("needs: [build]"),
+        "the tag must be cut in the job that needs every build leg, so a failed target \
+         leaves no tag behind"
+    );
+    assert!(
+        create.contains("tag -a") && create.contains("git push origin"),
+        "release.yml must create and push the tag once the build is green"
     );
 }
 
@@ -591,11 +604,14 @@ fn the_release_please_flow_is_gone_and_not_merely_unused() {
 #[test]
 fn the_build_packages_the_tag_it_names() {
     let rel = repo_file(".github/workflows/release.yml");
+    // `ref` wins when the tag does not exist yet (cd.yml builds the bump commit and
+    // the tag is cut after the build); `inputs.tag` still pins the checkout when a
+    // dispatch republishes an existing tag. Either way the checkout is explicit.
     assert!(
-        rel.contains("ref: ${{ inputs.tag }}"),
-        "the build must check out the tag it packages: a workflow_call run otherwise \
-         builds the caller's ref, so a merge landing mid-build ships new code under an \
-         old version number"
+        rel.contains("ref: ${{ inputs.ref || inputs.tag }}"),
+        "the build must check out the exact ref it packages: a workflow_call run \
+         otherwise builds the caller's ref, so a merge landing mid-build ships new \
+         code under an old version number"
     );
 }
 
