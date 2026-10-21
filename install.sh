@@ -95,9 +95,15 @@ get_target() {
             esac
             ;;
         darwin)
-            TARGET="${ARCH}-apple-darwin"
+            case "$ARCH" in
+                aarch64) TARGET="aarch64-apple-darwin";;
+                x86_64)  error "Intel Macs have no prebuilt binary (Apple silicon only). Build from source: cargo install --git https://github.com/riaku/ptk ptk";;
+            esac
             ;;
     esac
+    if [ -z "${TARGET:-}" ]; then
+        error "No release asset for $OS $ARCH"
+    fi
 }
 
 # Download and install

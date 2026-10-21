@@ -111,7 +111,7 @@ The token counts PTK reports are estimated as `bytes / 4` — PTK ships no token
 
 ## Installation
 
-Pre-built binaries for Linux, macOS and Windows are on the
+Pre-built binaries for Linux, macOS (Apple silicon) and Windows are on the
 [releases page](https://github.com/riaku/ptk/releases), or install with the script:
 
 ```bash

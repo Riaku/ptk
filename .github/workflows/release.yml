@@ -36,10 +36,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            archive: tar.gz
+          # macOS — Apple silicon only: Intel Macs have no release asset and
+          # build from source (docs/guide/getting-started/installation.md).
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
