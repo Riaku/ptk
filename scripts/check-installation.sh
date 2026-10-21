@@ -123,7 +123,7 @@ if [ -f "$HOME/.claude/hooks/ptk-rewrite.sh" ]; then
     fi
 else
     echo -e "   ${YELLOW}⚠️${NC}  Auto-rewrite hook not installed (optional)"
-    echo "      Install: cp .claude/hooks/ptk-rewrite.sh ~/.claude/hooks/"
+    echo "      Install: ptk init -g   (legacy script: cp hooks/claude/ptk-rewrite.sh ~/.claude/hooks/)"
 fi
 echo ""
 
