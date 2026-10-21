@@ -90,11 +90,16 @@ jobs:
   # ═══════════════════════════════════════════════
 
   release:
-    name: Tag the release
+    name: Bump the version
     # A push to main is the only trigger: a merged change ships, and nothing else does. Not a
     # pull request (the head of an unmerged branch must never publish), not a manual dispatch
     # on main (that would cut a version no merge produced — release.yml can republish an
     # existing tag when a build needs redoing).
+    #
+    # This job stops short of tagging. It commits the version bump to main and hands the
+    # commit to release.yml, which creates the tag only once every leg has built: a leg that
+    # dies used to leave a tag with no release and no assets, which then had to be either
+    # deleted or republished by hand. Now a failed build leaves nothing but a bump commit.
     #
     # The version-bump commit this job pushes must not start another release, so its subject
     # skips the job. Only the subject: a merge whose *body* quotes `chore(release): vX.Y.Z`
@@ -105,8 +110,8 @@ jobs:
       && !startsWith(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
     outputs:
-      tagged: ${{ steps.tag.outputs.tagged }}
       tag: ${{ steps.tag.outputs.tag }}
+      sha: ${{ steps.tag.outputs.sha }}
     steps:
       - name: Check app credentials
         id: app-creds
@@ -165,7 +170,7 @@ jobs:
         if: steps.version.outputs.version != ''
         run: cargo test -p ptk --lib
 
-      - name: Write the version and the changelog, then tag
+      - name: Write the version and the changelog, then push the bump commit
         id: tag
         if: steps.version.outputs.version != ''
         env:
@@ -189,32 +194,48 @@ jobs:
           cargo metadata --locked --format-version 1 > /dev/null
           cargo metadata --locked --format-version 1 --manifest-path proxy/Cargo.toml > /dev/null
 
-          section=$(mktemp)
-          bash scripts/release-notes.sh "$VERSION" > "$section"
-          { cat "$section"; cat CHANGELOG.md; } > CHANGELOG.new
-          mv CHANGELOG.new CHANGELOG.md
+          # A retry after a failed build finds the same version already written, so only
+          # add the section when it is not already the newest one; otherwise a second copy
+          # of the same notes lands in the file for nothing. release-notes.sh writes the
+          # header as `## <version> - <date>`, so match that and not a bracketed form.
+          if grep -q "^## ${VERSION} - " CHANGELOG.md; then
+            echo "CHANGELOG already has a ${VERSION} section; leaving it alone."
+          else
+            section=$(mktemp)
+            bash scripts/release-notes.sh "$VERSION" > "$section"
+            { cat "$section"; cat CHANGELOG.md; } > CHANGELOG.new
+            mv CHANGELOG.new CHANGELOG.md
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Cargo.toml engine/Cargo.toml plugin/Cargo.toml text/Cargo.toml \
                   proxy/Cargo.toml Cargo.lock proxy/Cargo.lock CHANGELOG.md
-          git commit -m "chore(release): v${VERSION}"
-          git tag -a "$TAG" -m "v${VERSION}"
 
-          git push origin HEAD:main
-          git push origin "$TAG"
+          # Nothing staged means the bump is already on main from an earlier attempt that
+          # failed after this point; rebuild the commit that is there rather than failing
+          # on an empty `git commit`.
+          if git diff --cached --quiet; then
+            echo "Version ${VERSION} is already committed; building HEAD as it stands."
+          else
+            git commit -m "chore(release): v${VERSION}"
+            git push origin HEAD:main
+          fi
 
-          echo "tagged=true" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Tagged $TAG on $(git rev-parse --short HEAD)"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Bumped to ${VERSION} at $(git rev-parse --short HEAD); the tag is cut after the build."
 
   build-release:
     name: Build and upload release assets
     needs: release
-    if: ${{ needs.release.outputs.tagged == 'true' }}
+    if: ${{ needs.release.outputs.tag != '' }}
     uses: ./.github/workflows/release.yml
     with:
       tag: ${{ needs.release.outputs.tag }}
+      # Build the bump commit, not a tag: the tag does not exist until every leg here
+      # has succeeded.
+      ref: ${{ needs.release.outputs.sha }}
     permissions:
       contents: write
     secrets: inherit
@@ -222,7 +243,7 @@ jobs:
   update-latest-tag:
     name: Update 'latest' tag
     needs: [release, build-release]
-    if: ${{ needs.release.outputs.tagged == 'true' }}
+    if: ${{ needs.release.outputs.tag != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check app credentials
