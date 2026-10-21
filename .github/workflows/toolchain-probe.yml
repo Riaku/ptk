@@ -1,0 +1,139 @@
+name: Toolchain probe (aarch64 musl)
+
+# Dispatch-only diagnostic, not a gate. The arm64 release leg depends on an
+# external C toolchain, so when a release fails we need the runner's own view of
+# every candidate host -- my laptop reaching musl.cc in 0.14s proved nothing
+# about GitHub's egress. This logs a curl verdict per URL and then proves the
+# zig path end to end: build both arm64 binaries, statically linked, executed
+# under qemu so "it runs" is a fact rather than an inference.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Probe every candidate URL from this runner
+        run: |
+          set -u
+          probe() {
+            printf '\n=== %s ===\n' "$1"
+            curl -sS -v --max-time 45 -o /dev/null \
+              -w 'VERDICT %{http_code} connect=%{time_connect}s total=%{time_total}s ip=%{remote_ip} size_dl=%{size_download}\n' \
+              "$1" 2>&1 | grep -E 'Trying|Connected|HTTP/|VERDICT|curl:|SSL|could not|Failed|timed out' || echo "VERDICT no-output"
+          }
+          set +e
+          probe "https://musl.cc/aarch64-linux-musl-cross.tgz"
+          probe "https://more.musl.cc/11.2.1/x86_64-linux-musl/aarch64-linux-musl-cross.tgz"
+          probe "http://musl.cc/aarch64-linux-musl-cross.tgz"
+          probe "https://pypi.org/pypi/ziglang/0.13.0/json"
+          probe "https://files.pythonhosted.org/"
+          probe "https://static.rust-lang.org/dist/channel-rust-stable.toml"
+          probe "https://crates.io/api/v1/crates/cargo-zigbuild"
+          probe "https://ghcr.io/v2/"
+          probe "https://github.com/ziglang/zig/releases/latest"
+          echo
+          echo "=== DNS ==="
+          for h in musl.cc more.musl.cc pypi.org files.pythonhosted.org; do
+            printf '%-24s ' "$h"
+            getent ahostsv4 "$h" | awk '{print $1}' | sort -u | tr '\n' ' ' || echo "no-answer"
+            echo
+          done
+
+      - name: Install zig cross C compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          python3 -m pip install --break-system-packages "ziglang==0.13.0"
+          zig="$(python3 -c 'import os, ziglang; print(os.path.join(os.path.dirname(ziglang.__file__), "zig"))')"
+          sudo chmod +x "$zig"
+          sudo ln -sf "$zig" /usr/local/bin/zig
+          zig version
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild --locked --version 0.23.4
+
+      - name: Add the arm64 target
+        run: rustup target add aarch64-unknown-linux-musl
+
+      - name: Build ptk (aarch64 musl)
+        run: cargo zigbuild --release --locked --target aarch64-unknown-linux-musl
+
+      - name: Build ptk-proxy (aarch64 musl)
+        run: >
+          cargo zigbuild --release --locked
+          --manifest-path proxy/Cargo.toml --target-dir target
+          --target aarch64-unknown-linux-musl
+        env:
+          CFLAGS_aarch64_unknown_linux_musl: -Du_int8_t=uint8_t -Du_int16_t=uint16_t -Du_int64_t=uint64_t
+
+      - name: Static inspection
+        run: |
+          for b in ptk ptk-proxy; do
+            p="target/aarch64-unknown-linux-musl/release/$b"
+            echo "=== $b ==="
+            file "$p"
+            ls -l "$p"
+            echo "NEEDED entries: $(readelf -d "$p" | grep -c NEEDED)"
+            echo "interpreter: $(readelf -l "$p" | grep -o 'interpreter: [^]]*' || echo none)"
+            echo "build-id: $(readelf -n "$p" | grep -o 'Build ID: .*' || echo none)"
+          done
+
+      - name: Run the arm64 binaries under qemu
+        run: |
+          sudo apt-get install -y qemu-user-static procps
+          set +e
+          BIN=target/aarch64-unknown-linux-musl/release
+          for b in ptk ptk-proxy; do
+            echo "=== $b --version ==="
+            qemu-aarch64-static "$BIN/$b" --version; echo "rc=$?"
+          done
+          echo "=== rewrite (rc 3 is the documented ask decision, not a fault) ==="
+          qemu-aarch64-static "$BIN/ptk" rewrite 'git status'; echo "rc=$?"
+          echo "=== ps aux ==="
+          qemu-aarch64-static "$BIN/ptk" ps aux > /tmp/ps.txt 2>&1; echo "rc=$? bytes=$(wc -c < /tmp/ps.txt)"
+          head -3 /tmp/ps.txt
+          echo "=== kubectl get pods against a crash-looping cluster ==="
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/kubectl" <<'SH'
+          #!/bin/sh
+          # ptk asks kubectl for -o json; anything else gets the human table.
+          case "$*" in
+            *"-o json"*)
+              cat <<'JSON'
+          {"apiVersion":"v1","kind":"List","items":[
+          {"metadata":{"name":"api-6d8f9c-abc12","namespace":"apps"},"status":{"phase":"Running","containerStatuses":[{"name":"api","ready":false,"restartCount":64,"state":{"waiting":{"reason":"CrashLoopBackOff"}}}]}},
+          {"metadata":{"name":"api-6d8f9c-def34","namespace":"apps"},"status":{"phase":"Running","containerStatuses":[{"name":"api","ready":false,"restartCount":64,"state":{"waiting":{"reason":"CrashLoopBackOff"}}}]}},
+          {"metadata":{"name":"web-7c9d8b-ghi56","namespace":"apps"},"status":{"phase":"Running","containerStatuses":[{"name":"web","ready":true,"restartCount":0,"state":{"running":{}}}]}}]}
+          JSON
+              ;;
+            *)
+              cat <<'OUT'
+          NAMESPACE     NAME              READY   STATUS             RESTARTS   AGE
+          apps          api-6d8f9c-abc12   0/1     CrashLoopBackOff   64         3h
+          apps          api-6d8f9c-def34   0/1     CrashLoopBackOff   64         3h
+          apps          web-7c9d8b-ghi56   1/1     Running            0          3h
+          OUT
+              ;;
+          esac
+          SH
+          chmod +x "$RUNNER_TEMP/fakebin/kubectl"
+          PATH="$RUNNER_TEMP/fakebin:$PATH" qemu-aarch64-static "$BIN/ptk" kubectl get pods; echo "rc=$?"
+
+      - name: Upload binaries and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aarch64-musl-probe
+          if-no-files-found: warn
+          retention-days: 3
+          path: |
+            target/aarch64-unknown-linux-musl/release/ptk
+            target/aarch64-unknown-linux-musl/release/ptk-proxy
