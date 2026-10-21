@@ -58,14 +58,14 @@ git diff "$BASE_BRANCH"...HEAD --stat
 
 | Si le diff contient...         | Vérifier                                   |
 | ------------------------------ | ------------------------------------------ |
-| `src/**/*.rs`                  | CLAUDE.md sections Error Handling + Tests  |
-| `src/core/filter.rs` ou `src/cmds/**/*_cmd.rs` | Filter Development Checklist (CLAUDE.md) |
+| `src/**/*.rs`                  | AGENTS.md Coding rules + `.claude/rules/rust-patterns.md` |
+| `src/core/filter.rs` ou `src/cmds/**/*_cmd.rs` | Filter Development Checklist (`src/cmds/README.md`) |
 | `src/main.rs`                  | Command routing + Commands enum            |
 | `src/core/tracking.rs`         | SQLite patterns + DB path config           |
 | `src/core/config.rs`           | Configuration system                       |
 | `src/hooks/init/`              | Init patterns + hook installation          |
 | `.github/workflows/`           | CI/CD multi-platform build targets         |
-| `tests/` ou `fixtures/`        | Testing Strategy (CLAUDE.md)               |
+| `tests/` ou `fixtures/`        | Testing Strategy (`.claude/rules/cli-testing.md`) |
 | `Cargo.toml`                   | Dependencies + build optimizations         |
 
 ### Règles clés PTK

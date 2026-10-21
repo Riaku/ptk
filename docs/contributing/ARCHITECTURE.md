@@ -964,7 +964,7 @@ strip = true           # Remove debug symbols
 
 - **[TECHNICAL.md](TECHNICAL.md)**: Guided tour of end-to-end flow
 - **[CONTRIBUTING.md](../../CONTRIBUTING.md)**: Design philosophy, contribution workflow, checklist
-- **CLAUDE.md**: Quick reference for AI agents (dev commands, build verification)
+- **[AGENTS.md](../../AGENTS.md)**: Quick reference for AI agents (dev commands, build verification)
 - **README.md**: User guide, installation, examples
 - **Cargo.toml**: Dependencies, build profiles, package metadata
 

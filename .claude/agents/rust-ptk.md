@@ -506,7 +506,7 @@ ptk newcmd args
 
 ### 8. Document
 
-- Update `CLAUDE.md` Module Responsibilities table
+- Update the `AGENTS.md` workspace layout table
 - Update `README.md` with command support
 - CHANGELOG.md is written by the release job in `cd.yml` — do not edit manually
 
