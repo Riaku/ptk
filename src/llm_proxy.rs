@@ -542,12 +542,24 @@ pub fn is_ptk_proxy_at(addr: &str, timeout: Duration) -> bool {
 }
 
 fn health_check_with_timeout(bind: &str, timeout: Duration) -> bool {
-    ureq::get(&format!("http://{bind}/health"))
+    let Ok(resp) = ureq::get(&format!("http://{bind}/health"))
         .timeout(timeout)
         .call()
-        .ok()
-        .and_then(|resp| resp.into_string().ok())
-        .is_some_and(|body| is_ptk_proxy_health(&body))
+    else {
+        return false;
+    };
+    // Read through the reader, not `into_string()`: ureq 2.x *panics* on a body
+    // read error (response.rs `read_exact` expect), and `.ok()` cannot catch a
+    // panic. The timeout watcher can shut the socket down mid-read — EINVAL on
+    // macOS, unexpected-EOF on a Content-Length mismatch — and a truncated
+    // health body must surface as "not our proxy", not as a panic inside a
+    // session hook.
+    let mut body = String::new();
+    use std::io::Read;
+    match resp.into_reader().read_to_string(&mut body) {
+        Ok(_) => is_ptk_proxy_health(&body),
+        Err(_) => false,
+    }
 }
 
 /// Whether a `/health` body identifies the ptk daemon. Anything else on the

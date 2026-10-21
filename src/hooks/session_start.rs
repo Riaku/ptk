@@ -226,4 +226,27 @@ mod probe_identity {
             "a non-ptk server answering on the port must not count as the proxy"
         );
     }
+
+    /// The stranger test above raced a ureq panic: `into_string()` panics on a
+    /// body read error, and a socket shut down mid-read (timeout watcher, or a
+    /// server that closes before the promised Content-Length arrives) surfaced
+    /// EINVAL on macOS and killed the probe. A truncated health response must
+    /// be "not the proxy", never a panic.
+    #[test]
+    fn a_body_cut_off_mid_read_is_rejected_not_panicked() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr").to_string();
+        std::thread::spawn(move || {
+            if let Some(mut s) = listener.incoming().flatten().next() {
+                use std::io::Write;
+                // Promise 100 bytes, deliver one, then hang up mid-body.
+                let _ = s.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n{");
+                let _ = s.shutdown(std::net::Shutdown::Both);
+            }
+        });
+        assert!(
+            !probe(&addr, Duration::from_millis(300)),
+            "a response cut off before its promised body must not count as the proxy"
+        );
+    }
 }
