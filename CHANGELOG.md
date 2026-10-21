@@ -1,3 +1,16 @@
+## 0.50.3 - 2026-10-21
+
+### Bug fixes
+
+- fix: count crash-looping pods, unshadow ps on unix, and gate the daemon lock (#18)
+
+### Other changes
+
+- ci: build the Linux releases as static musl, arm64 included (#17)
+- ci: drop the Intel Mac build from the release matrix (#16)
+- chore: remove .claude directory and prune unused scripts (#14)
+- docs: rename CLAUDE.md to AGENTS.md and correct it against the repo (#13)
+
 ## 0.50.2 - 2026-10-20
 
 ### Bug fixes
