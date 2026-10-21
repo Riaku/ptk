@@ -51,9 +51,11 @@ cargo install --git https://github.com/riaku/ptk --branch main ptk
 
 Download from [GitHub releases](https://github.com/riaku/ptk/releases):
 
-- macOS: `ptk-x86_64-apple-darwin.tar.gz` / `ptk-aarch64-apple-darwin.tar.gz`
+- macOS (Apple silicon): `ptk-aarch64-apple-darwin.tar.gz`
 - Linux: `ptk-x86_64-unknown-linux-musl.tar.gz` / `ptk-aarch64-unknown-linux-gnu.tar.gz`
 - Windows: `ptk-x86_64-pc-windows-msvc.zip`
+
+Intel Macs (`x86_64-apple-darwin`) have no release asset — build from source (both commands are under [Apache-2.0 edition](#apache-20-edition)).
 
 **Windows users**: Extract the zip and place `ptk.exe` in a directory on your PATH. Run PTK from Command Prompt, PowerShell, or Windows Terminal — do not double-click the `.exe` (it prints usage and exits immediately). See [Windows](#windows) below — the hook system works natively, no WSL required.
 

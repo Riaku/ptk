@@ -113,7 +113,7 @@ No release pull request: the tag is created on the commit that landed.
                                          │
                               ┌──────────▼─────────────────┐
                               │ GitHub Release             │
-                              │ 5 targets + generated notes│
+                              │ 4 targets + generated notes│
                               │ (stable, "Latest" badge)   │
                               └──────────┬─────────────────┘
                                          │
