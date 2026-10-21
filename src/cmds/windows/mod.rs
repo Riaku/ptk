@@ -91,7 +91,12 @@ pub fn run_smart_command(raw: &str, verbose: u8) -> Result<i32> {
         return findstr_cmd::run_select_string(&args, verbose);
     }
 
-    if first_token == "gps" || first_token == "ps" || first_token == "get-process" {
+    // Bare `ps` is POSIX's process lister on unix; only Windows can route it to
+    // Get-Process. See the `Ps` variant in src/lib.rs.
+    if first_token == "gps"
+        || first_token == "get-process"
+        || (cfg!(windows) && first_token == "ps")
+    {
         return process_cmd::run(&args, verbose);
     }
 
