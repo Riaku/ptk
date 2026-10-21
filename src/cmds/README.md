@@ -301,7 +301,7 @@ Adding a new filter or command requires changes in multiple places. For TOML-vs-
    - Add variant to `Commands` enum in `main.rs` with `#[arg(trailing_var_arg = true, allow_hyphen_values = true)]`
    - Add routing match arm in `main.rs`: `Commands::Mycmd { args } => mycmd_cmd::run(&args, cli.verbose)?,`
 3. **Add rewrite pattern** — Entry in `src/discover/rules.rs` (PATTERNS + RULES arrays at matching index) so hooks auto-rewrite the command
-4. **Write tests** — Real fixture, snapshot test, >= 20% reduction in bash output (measured with PTK's token estimator, see [testing rules](../../.claude/rules/cli-testing.md))
+4. **Write tests** — Real fixture, snapshot test, >= 20% reduction in bash output (measured with PTK's token estimator, see [testing rules](../../docs/contributing/CLI_TESTING.md))
 5. **Update docs** — Ecosystem README (CHANGELOG.md is written by the release job in `cd.yml`)
 
 ### TOML filter (simple line-based filtering)

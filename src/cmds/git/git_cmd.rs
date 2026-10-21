@@ -4850,7 +4850,7 @@ mod tests {
         // HEAD:src/main.rs | head -350`, ~10.7 KB) has always cleared it: windowing to
         // the 8 KiB head plus a few-token recovery hint is the savings floor. (An earlier
         // revision introduced a synthetic ~107 KB fixture to chase a stale 60% figure
-        // that only `.claude/rules/cli-testing.md` still cites; that churn is reverted.)
+        // that only `docs/contributing/CLI_TESTING.md` still cites; that churn is reverted.)
         fn count_tokens(text: &str) -> usize {
             text.split_whitespace().count()
         }

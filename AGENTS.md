@@ -150,7 +150,7 @@ Supported ecosystems, each confirmed against `ptk --help`:
 
 ## Coding rules
 
-All six rules are mandatory, and each states its requirement with a keyword. They override general Rust convention. You MUST read `.claude/rules/rust-patterns.md` for the full set with examples and counter-examples.
+All six rules are mandatory, and each states its requirement with a keyword. They override general Rust convention. You MUST read `docs/contributing/RUST_PATTERNS.md` for the full set with examples and counter-examples.
 
 1. You MUST NOT add `async`, and the workspace MUST stay free of `tokio`, `async-std`, and `futures`. The CLI is single-threaded by design, and an async runtime adds 5-10 ms to startup.
 2. You MUST NOT call `unwrap()` in production code. Use `.context("description")?` there, and `expect("reason")` in tests.
@@ -161,7 +161,7 @@ All six rules are mandatory, and each states its requirement with a keyword. The
 
 ## Tests and performance
 
-You MUST read `.claude/rules/cli-testing.md` before you write tests.
+You MUST read `docs/contributing/CLI_TESTING.md` before you write tests.
 
 | Metric | Target | Measured |
 |---|---|---|
