@@ -372,6 +372,27 @@ pub fn k8s_pods(tool: &str, args: &[String], _verbose: u8) -> Result<i32> {
     run_k8s_json(cmd, tool, "get pods", format_kubectl_pods)
 }
 
+/// Container-level reasons that mean "this pod is not serving", regardless of what
+/// `status.phase` reports — every one of them keeps the pod in `Running`.
+fn container_failure_reason(container: &Value) -> Option<&str> {
+    let reason = container["state"]["waiting"]["reason"]
+        .as_str()
+        .or_else(|| container["state"]["terminated"]["reason"].as_str())?;
+    const BROKEN: [&str; 7] = [
+        "CrashLoop",
+        "ImagePull",
+        "ErrImagePull",
+        "CreateContainerConfigError",
+        "RunContainerError",
+        "OOMKilled",
+        "Error",
+    ];
+    BROKEN
+        .iter()
+        .any(|needle| reason.contains(needle))
+        .then_some(reason)
+}
+
 fn format_kubectl_pods(json: &Value) -> String {
     let Some(pods) = json["items"].as_array().filter(|a| !a.is_empty()) else {
         return "No pods found\n".to_string();
@@ -383,11 +404,26 @@ fn format_kubectl_pods(json: &Value) -> String {
         let ns = pod["metadata"]["namespace"].as_str().unwrap_or("-");
         let name = pod["metadata"]["name"].as_str().unwrap_or("-");
         let phase = pod["status"]["phase"].as_str().unwrap_or("Unknown");
+        // Container state wins over `status.phase`: a pod whose container is in
+        // `CrashLoopBackOff`, `ImagePullBackOff` or `CreateContainerConfigError` keeps
+        // `phase: Running`, so a phase-first match counts a dead pod as healthy and never
+        // reaches `[warn] Issues`. Read the containers first, fall back to the phase only
+        // when they are clean.
+        let mut broken: Option<String> = None;
 
         if let Some(containers) = pod["status"]["containerStatuses"].as_array() {
             for c in containers {
                 restarts_total += c["restartCount"].as_i64().unwrap_or(0);
+                if broken.is_none() {
+                    broken = container_failure_reason(c).map(str::to_string);
+                }
             }
+        }
+
+        if let Some(reason) = broken {
+            failed += 1;
+            issues.push(format!("{}/{} {}", ns, name, reason));
+            continue;
         }
 
         match phase {
@@ -400,18 +436,7 @@ fn format_kubectl_pods(json: &Value) -> String {
                 failed += 1;
                 issues.push(format!("{}/{} {}", ns, name, phase));
             }
-            _ => {
-                if let Some(containers) = pod["status"]["containerStatuses"].as_array() {
-                    for c in containers {
-                        if let Some(w) = c["state"]["waiting"]["reason"].as_str()
-                            && (w.contains("CrashLoop") || w.contains("Error"))
-                        {
-                            failed += 1;
-                            issues.push(format!("{}/{} {}", ns, name, w));
-                        }
-                    }
-                }
-            }
+            _ => {}
         }
     }
 
@@ -1061,6 +1086,53 @@ api-1  | Connected to database";
             savings >= 60.0,
             "Expected >=60% savings, got {:.1}%",
             savings
+        );
+    }
+
+    // ── pod health vs phase ────────────────────────────────
+
+    #[test]
+    fn test_container_failure_reason_reads_waiting_and_terminated() {
+        let waiting = serde_json::json!({"state": {"waiting": {"reason": "ImagePullBackOff"}}});
+        let terminated =
+            serde_json::json!({"state": {"terminated": {"reason": "OOMKilled", "exitCode": 137}}});
+        let running =
+            serde_json::json!({"state": {"running": {"startedAt": "2026-10-21T00:00:00Z"}}});
+        let creating = serde_json::json!({"state": {"waiting": {"reason": "ContainerCreating"}}});
+
+        assert_eq!(container_failure_reason(&waiting), Some("ImagePullBackOff"));
+        assert_eq!(container_failure_reason(&terminated), Some("OOMKilled"));
+        assert_eq!(container_failure_reason(&running), None);
+        assert_eq!(
+            container_failure_reason(&creating),
+            None,
+            "ContainerCreating is normal provisioning, not a failure"
+        );
+    }
+
+    #[test]
+    fn test_crashloop_pods_are_reported_as_issues() {
+        // Regression: a CrashLoopBackOff pod keeps `status.phase: Running`, so a
+        // phase-first summary counted it as healthy and never listed it in
+        // `[warn] Issues`.
+        let input_str = include_str!("../../../tests/fixtures/kubectl_pods_crashloop.json");
+        let input: Value = serde_json::from_str(input_str).expect("fixture should parse");
+        let out = format_kubectl_pods(&input);
+
+        assert!(
+            out.starts_with("8 pods: 4, 1 pending, 3 [x], 64 restarts"),
+            "summary must count the two crash-looping pods as failed: {out}"
+        );
+        assert!(
+            out.contains("apps/crashloop-demo CrashLoopBackOff"),
+            "{out}"
+        );
+        assert!(out.contains("apps/oom-demo CrashLoopBackOff"), "{out}");
+        assert!(out.contains("apps/error-demo Error"), "{out}");
+        assert!(out.contains("apps/pending-demo Pending"), "{out}");
+        assert!(
+            !out.contains("ContainerCreating"),
+            "a pod still provisioning must not be reported as an issue: {out}"
         );
     }
 }
