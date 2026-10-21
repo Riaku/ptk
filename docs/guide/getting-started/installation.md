@@ -52,7 +52,7 @@ cargo install --git https://github.com/riaku/ptk --branch main ptk
 Download from [GitHub releases](https://github.com/riaku/ptk/releases):
 
 - macOS (Apple silicon): `ptk-aarch64-apple-darwin.tar.gz`
-- Linux: `ptk-x86_64-unknown-linux-musl.tar.gz` / `ptk-aarch64-unknown-linux-gnu.tar.gz`
+- Linux: `ptk-x86_64-unknown-linux-musl.tar.gz` / `ptk-aarch64-unknown-linux-musl.tar.gz` — statically linked, so they run on any distribution regardless of its glibc version
 - Windows: `ptk-x86_64-pc-windows-msvc.zip`
 
 Intel Macs (`x86_64-apple-darwin`) have no release asset — build from source (both commands are under [Apache-2.0 edition](#apache-20-edition)).

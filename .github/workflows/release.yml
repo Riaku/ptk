@@ -41,15 +41,18 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
-          # Linux
+          # Linux — musl on both architectures: statically linked, so the
+          # binary does not inherit the build machine's glibc version. A
+          # glibc aarch64 build linked against ubuntu-latest symbols (2.39)
+          # refuses to start on Debian 12, Ubuntu 22.04 or RHEL 9.
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             archive: tar.gz
             musl: true
-          - target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
             archive: tar.gz
-            cross: true
+            musl: true
           # Windows
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -69,18 +72,30 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross-compilation tools
-        if: matrix.cross
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
+      # musl-tools from apt is an x86_64-hosted musl-gcc and nothing more.
+      # The arm64 leg also needs a cross C compiler, because the build compiles
+      # C for the target (rusqlite's bundled SQLite, ring). rustc statically
+      # links the musl binary in both cases, which is the whole point: no
+      # dependency on the machine's glibc.
       - name: Install musl tools
         if: matrix.musl
         run: |
           sudo apt-get update
           sudo apt-get install -y musl-tools
+
+      - name: Install aarch64 musl cross toolchain
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: |
+          curl -fsSL --retry 3 https://musl.cc/aarch64-linux-musl-cross.tgz -o /tmp/aarch64-musl.tgz \
+            || curl -fsSL --retry 3 https://more.musl.cc/11.2.1/x86_64-linux-musl/aarch64-linux-musl-cross.tgz -o /tmp/aarch64-musl.tgz
+          sudo tar -xzf /tmp/aarch64-musl.tgz -C /opt
+          prefix=/opt/aarch64-linux-musl-cross
+          "$prefix/bin/aarch64-linux-musl-gcc" --version
+          {
+            echo "CC_aarch64_unknown_linux_musl=$prefix/bin/aarch64-linux-musl-gcc"
+            echo "AR_aarch64_unknown_linux_musl=$prefix/bin/aarch64-linux-musl-ar"
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=$prefix/bin/aarch64-linux-musl-gcc"
+          } >> "$GITHUB_ENV"
 
       - name: Build ptk
         run: cargo build --release --target ${{ matrix.target }}
@@ -164,7 +179,10 @@ jobs:
           --target-dir target
           --target ${{ matrix.target }}
         env:
+          # Some vendored C in the daemon's graph assumes the BSD u_int*_t
+          # types, which musl does not provide through <sys/types.h>.
           CFLAGS_x86_64_unknown_linux_musl: "-Du_int8_t=uint8_t -Du_int16_t=uint16_t -Du_int64_t=uint64_t"
+          CFLAGS_aarch64_unknown_linux_musl: "-Du_int8_t=uint8_t -Du_int16_t=uint16_t -Du_int64_t=uint64_t"
 
       - name: Package ptk-proxy (Unix)
         if: matrix.os != 'windows-latest'
