@@ -177,7 +177,17 @@ jobs:
           bash scripts/set-version.sh "$VERSION"
           # Cargo.lock pins the workspace members' versions as well, so resolve it
           # here rather than shipping a lockfile that disagrees with the manifests.
+          # The daemon has its own lock and is not a workspace member, so it needs the
+          # same treatment: the release build passes --locked, and a lock left at the
+          # previous version fails that build after this tag has already been pushed.
           cargo metadata --format-version 1 > /dev/null
+          cargo metadata --format-version 1 --manifest-path proxy/Cargo.toml > /dev/null
+
+          # Both locks must now resolve without being rewritten, which is exactly what
+          # the release build demands. Verify that before tagging, not while the twelve
+          # archives are half-built.
+          cargo metadata --locked --format-version 1 > /dev/null
+          cargo metadata --locked --format-version 1 --manifest-path proxy/Cargo.toml > /dev/null
 
           section=$(mktemp)
           bash scripts/release-notes.sh "$VERSION" > "$section"
@@ -187,7 +197,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Cargo.toml engine/Cargo.toml plugin/Cargo.toml text/Cargo.toml \
-                  proxy/Cargo.toml Cargo.lock CHANGELOG.md
+                  proxy/Cargo.toml Cargo.lock proxy/Cargo.lock CHANGELOG.md
           git commit -m "chore(release): v${VERSION}"
           git tag -a "$TAG" -m "v${VERSION}"
 

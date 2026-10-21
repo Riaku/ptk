@@ -1479,7 +1479,7 @@ dependencies = [
 
 [[package]]
 name = "ptk-engine"
-version = "0.50.2"
+version = "0.50.3"
 dependencies = [
  "htmd",
  "ptk-text",
@@ -1492,7 +1492,7 @@ dependencies = [
 
 [[package]]
 name = "ptk-proxy"
-version = "0.50.2"
+version = "0.50.3"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1534,7 +1534,7 @@ dependencies = [
 
 [[package]]
 name = "ptk-text"
-version = "0.50.2"
+version = "0.50.3"
 dependencies = [
  "regex",
 ]
