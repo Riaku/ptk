@@ -230,7 +230,17 @@ enum Commands {
     },
 
     /// PowerShell process viewer with token-optimized output (proxy to Get-Process)
-    #[command(alias = "get-process", alias = "gps")]
+    ///
+    /// On unix the bare name `ps` belongs to POSIX's process lister, not to
+    /// `Get-Process`, so the proxy answers to `gps`/`get-process` there and `ps`
+    /// resolves through the TOML filter in `src/filters/ps.toml` like any other
+    /// external command. Claiming `ps` on unix made `ptk ps aux` run PowerShell
+    /// against a POSIX argument and print an error sentence as a process row.
+    #[cfg_attr(windows, command(name = "ps", alias = "gps", alias = "get-process"))]
+    #[cfg_attr(
+        not(windows),
+        command(name = "gps", alias = "get-process", hide = true)
+    )]
     Ps {
         /// Arguments passed to Get-Process
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -4923,6 +4933,10 @@ mod tests {
             "findstr",
             "sls",
             "ps",
+            // On unix the Get-Process proxy answers to `gps` only, because
+            // bare `ps` there is the POSIX lister and reaches it through
+            // src/filters/ps.toml instead of a subcommand.
+            "gps",
             "gsv",
             "netip",
             "ni",
