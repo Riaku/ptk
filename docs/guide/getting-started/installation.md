@@ -31,6 +31,8 @@ If both commands work, PTK is already installed. Skip to [Project initialization
 curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | sh
 ```
 
+The script installs the Apache-2.0 edition — the only edition published as a binary. On Apple silicon macOS, Linux x86_64 and Linux arm64 it picks the matching archive; on an Intel Mac it stops and points you at the source build.
+
 Installs to `~/.local/bin`. Add it to your PATH if it is not there already:
 
 ```bash
@@ -47,26 +49,34 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # or ~/.zshrc
 cargo install --git https://github.com/riaku/ptk --branch main ptk
 ```
 
-## Pre-built binaries (Windows, Linux, macOS)
+## Pre-built binaries
 
-Download from [GitHub releases](https://github.com/riaku/ptk/releases):
+Every release asset is the Apache-2.0 edition (`ptk-oss-<target>`). Download from [GitHub releases](https://github.com/riaku/ptk/releases):
 
-- macOS: `ptk-x86_64-apple-darwin.tar.gz` / `ptk-aarch64-apple-darwin.tar.gz`
-- Linux: `ptk-x86_64-unknown-linux-musl.tar.gz` / `ptk-aarch64-unknown-linux-gnu.tar.gz`
-- Windows: `ptk-x86_64-pc-windows-msvc.zip`
+- macOS (Apple silicon): `ptk-oss-aarch64-apple-darwin.tar.gz`
+- Linux x86_64: `ptk-oss-x86_64-unknown-linux-musl.tar.gz` — statically linked, runs on any distribution
+- Linux arm64: `ptk-oss-aarch64-unknown-linux-gnu.tar.gz`
+- Windows x64: `ptk-oss-x86_64-pc-windows-msvc.zip`
+
+The [PTK Proxy](../proxy/overview.md) daemon is a separate archive, one per platform: `ptk-proxy-aarch64-apple-darwin.tar.gz`, `ptk-proxy-aarch64-unknown-linux-gnu.tar.gz`, `ptk-proxy-x86_64-unknown-linux-musl.tar.gz`, `ptk-proxy-x86_64-pc-windows-msvc.zip`.
 
 **Windows users**: Extract the zip and place `ptk.exe` in a directory on your PATH. Run PTK from Command Prompt, PowerShell, or Windows Terminal — do not double-click the `.exe` (it prints usage and exits immediately). See [Windows](#windows) below — the hook system works natively, no WSL required.
 
-## Apache-2.0 edition
+**No prebuilt binary for Intel Macs or Windows on ARM.** Build from source on those (below).
 
-The same `ptk` binary built without the BUSL-1.1 compression engine — the hook rewrite system and every command filter, under Apache-2.0 alone. Pick this if your policy does not allow a source-available licence in the build.
+## Editions
+
+Prebuilt binaries are Apache-2.0 only: the hook rewrite system and every command filter, with no BUSL-1.1 code compiled in. The compression engine is therefore absent — no `ptk pipeline`, no PostToolUse compression. Nothing needs to be opted into; `install.sh` fetches this edition and accepts `PTK_EDITION` only as `oss`.
+
+The full edition — same CLI **plus** the BUSL-1.1 engine — is a source build:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/main/install.sh | PTK_EDITION=oss sh
-cargo install --git https://github.com/riaku/ptk --branch main ptk --no-default-features
+cargo install --git https://github.com/riaku/ptk --branch main ptk
 ```
 
-Release assets are named `ptk-oss-<target>`. This fork publishes no Debian or RPM package, and no Homebrew or winget package, for either edition — GitHub Releases is the only channel. The binary is still called `ptk`, so hooks and scripts are unchanged, but the two editions conflict and cannot be installed together.
+Use `--no-default-features` there if you want a source build that matches the released binary.
+
+This fork publishes no Debian or RPM package, and no Homebrew or winget package, for either edition — GitHub Releases and `install.sh` are the only channels. Both editions install a binary named `ptk`, so hooks and scripts are unchanged, but they cannot be installed side by side.
 
 See [Editions and Licensing](../resources/editions.md) for what the edition omits and where the licence boundary falls.
 
@@ -77,7 +87,7 @@ PTK works fully on native Windows. Since **v0.37.2** the auto-rewrite hook runs 
 ### Native Windows (manual install)
 
 ```powershell
-# 1. Download and extract ptk-x86_64-pc-windows-msvc.zip from releases
+# 1. Download and extract ptk-oss-x86_64-pc-windows-msvc.zip from releases
 # 2. Add ptk.exe to your PATH (e.g. C:\Users\<you>\.local\bin)
 # 3. Initialize - installs the native binary hook
 ptk init -g

@@ -36,10 +36,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            archive: tar.gz
+          # macOS — Apple silicon only. An Intel Mac has no release asset: it
+          # builds from source (see docs/guide/getting-started/installation.md).
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
@@ -84,42 +82,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools
 
-      - name: Build ptk
-        run: cargo build --release --target ${{ matrix.target }}
-        env:
-          PTK_TELEMETRY_URL: ${{ vars.PTK_TELEMETRY_URL }}
-          PTK_TELEMETRY_TOKEN: ${{ secrets.PTK_TELEMETRY_TOKEN }}
-
-      - name: Package (Unix)
-        if: matrix.os != 'windows-latest'
-        run: |
-          # The binary links the BUSL-1.1 ptk-engine, so both texts travel
-          # with every artifact: LICENSE (Apache-2.0, the CLI sources) and
-          # LICENSE-ENGINE (BUSL-1.1, the linked engine).
-          cp LICENSE target/${{ matrix.target }}/release/LICENSE
-          cp engine/LICENSE target/${{ matrix.target }}/release/LICENSE-ENGINE
-          cd target/${{ matrix.target }}/release
-          tar -czvf ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk LICENSE LICENSE-ENGINE
-          cd ../../..
-
-      - name: Package (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cp LICENSE target/${{ matrix.target }}/release/LICENSE
-          cp engine/LICENSE target/${{ matrix.target }}/release/LICENSE-ENGINE
-          cd target/${{ matrix.target }}/release
-          7z a ../../../ptk-${{ matrix.target }}.${{ matrix.archive }} ptk.exe LICENSE LICENSE-ENGINE
-          cd ../../..
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ptk-${{ matrix.target }}
-          path: ptk-${{ matrix.target }}.${{ matrix.archive }}
-
-      # The Apache-2.0 edition: the same binary built without the BUSL engine,
-      # so only LICENSE travels with it. Same binary name `ptk` inside -- an
-      # installed hook command must keep working across editions.
+      # The one CLI edition published. Apache-2.0, built without the BUSL
+      # engine, so only LICENSE travels with the archive. The binary is still
+      # named `ptk` inside, so hook commands already in an agent's settings
+      # keep working. The engine edition is a source build only -- there is no
+      # `ptk-<target>` release asset.
       - name: Build ptk (Apache-2.0 edition)
         run: cargo build --release --no-default-features --target ${{ matrix.target }}
         env:

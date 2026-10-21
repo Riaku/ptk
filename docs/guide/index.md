@@ -77,5 +77,5 @@ Two optional layers sit on top of the hooks. Neither changes anything until you 
 - [Troubleshooting](./resources/troubleshooting.md) — common issues and fixes
 - [Telemetry & Privacy](./resources/telemetry.md) — what PTK collects and how to opt out
 - [Agent Coverage](./resources/agent-coverage.md) — what each agent's hook API lets PTK do
-- [Editions and Licensing](./resources/editions.md) — the three downloads, what each contains, where the licence boundary falls
+- [Editions and Licensing](./resources/editions.md) — the Apache-2.0 download, the source-built engine edition, and where the licence boundary falls
 - [ARCHITECTURE.md](https://github.com/riaku/ptk/blob/main/ARCHITECTURE.md) — system design for contributors

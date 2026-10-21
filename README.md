@@ -135,45 +135,41 @@ ptk gain        # must show the savings dashboard, not "command not found"
 
 ## What You Install
 
-PTK ships as three downloads. The two `ptk` editions install a binary with the **same name** — hooks, scripts and agent config work unchanged across both — so they cannot be installed together. Uninstall one before installing the other.
+PTK ships two binaries under two licences. Releases carry the Apache-2.0 CLI and the BUSL-1.1 daemon; the edition that adds the compression engine is a source build. Both `ptk` flavours install a binary with the **same name**, so hooks, scripts and agent config work unchanged.
 
 ```mermaid
 flowchart TD
     agent["Your coding agent"]
 
-    subgraph editions["Pick one · both install a binary named ptk"]
-        direction LR
-        full["<b>ptk</b><br/>Apache-2.0 + BUSL-1.1<br/>hooks · filters · engine"]
-        oss["<b>ptk-oss</b><br/>Apache-2.0 only<br/>hooks · filters"]
-    end
+    oss["<b>ptk-oss</b> · released<br/>Apache-2.0 only<br/>hooks · filters"]
+    full["<b>ptk</b> · source build<br/>Apache-2.0 + BUSL-1.1<br/>hooks · filters · engine"]
+    proxy["<b>ptk-proxy</b> · released<br/>BUSL-1.1<br/>compresses API traffic"]
 
-    proxy["<b>ptk-proxy</b><br/>BUSL-1.1<br/>compresses API traffic"]
-
-    agent -->|"command output"| full
     agent -->|"command output"| oss
+    agent -->|"command output"| full
     agent -.->|"API traffic"| proxy
 
     classDef apache stroke:#2da44e,stroke-width:2px,fill:none
     classDef busl stroke:#0969da,stroke-width:2px,fill:none
     classDef mixed stroke:#8250df,stroke-width:2px,fill:none
     classDef plain stroke:#8c959f,stroke-width:1px,fill:none
-    class full mixed
     class oss apache
+    class full mixed
     class proxy busl
     class agent plain
-    style editions fill:none,stroke:#d0d7de,stroke-dasharray:4 4
 ```
 
 | Download | Licence | Contains |
 |---|---|---|
-| `ptk-<target>` | Apache-2.0 + BUSL-1.1 | Hook core, every command filter, **and** the compression engine |
-| `ptk-oss-<target>` | Apache-2.0 only | Hook core and every command filter. No engine. |
-| `ptk-proxy-<target>` | BUSL-1.1 | The PTK Proxy daemon. Never bundled with either `ptk`. |
+| `ptk-oss-<target>` | Apache-2.0 only | Hook core and every command filter. No engine. **The only prebuilt CLI.** |
+| `ptk-proxy-<target>` | BUSL-1.1 | The PTK Proxy daemon. Never bundled with `ptk`. |
+| *source build* | Apache-2.0 + BUSL-1.1 | The same CLI **plus** the compression engine. |
 
 **Production use is free**, engine and daemon included. What the BUSL grant does not cover is offering PTK or a derivative to third parties as a commercial product or service — for that, contact **contact@rtk-ai.app**.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh    # Apache-2.0 edition
+curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | sh              # Apache-2.0 edition (only prebuilt)
+cargo install --git https://github.com/riaku/ptk --branch main ptk                                 # engine edition (source build)
 ```
 
 > What the Apache-2.0 edition omits and where the licence boundary falls: **[Editions and Licensing](docs/guide/resources/editions.md)**

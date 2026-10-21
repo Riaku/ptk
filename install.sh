@@ -6,15 +6,11 @@ set -e
 
 REPO="riaku/ptk"
 BINARY_NAME="ptk"
-# PTK_EDITION=oss installs the Apache-2.0 edition: the same `ptk` binary built
-# without the BUSL-1.1 engine. Only the asset name changes -- the installed
-# binary is always `ptk`, so hook commands already in an agent's settings keep
-# working across editions.
-if [ "${PTK_EDITION:-}" = "oss" ]; then
-    ASSET_PREFIX="ptk-oss"
-else
-    ASSET_PREFIX="ptk"
-fi
+# Releases carry the Apache-2.0 CLI only: `ptk-oss-<target>`. The binary inside
+# is always `ptk`, so hook commands already in an agent's settings keep working.
+# The engine edition (Apache-2.0 + BUSL-1.1) has no prebuilt binary -- build it
+# from source: cargo install --git https://github.com/riaku/ptk ptk
+ASSET_PREFIX="ptk-oss"
 INSTALL_DIR="${PTK_INSTALL_DIR:-$HOME/.local/bin}"
 
 # Colors
@@ -95,7 +91,25 @@ get_target() {
             esac
             ;;
         darwin)
-            TARGET="${ARCH}-apple-darwin"
+            case "$ARCH" in
+                aarch64) TARGET="aarch64-apple-darwin";;
+                x86_64)  error "Intel Macs have no prebuilt binary (Apple silicon only). Build from source: cargo install --git https://github.com/riaku/ptk ptk --no-default-features";;
+            esac
+            ;;
+    esac
+    if [ -z "${TARGET:-}" ]; then
+        error "No release asset for $OS $ARCH"
+    fi
+}
+
+# PTK_EDITION=oss was how you opted into the Apache-2.0 edition. Releases now
+# carry that edition and nothing else, so an explicit request for the engine
+# edition has to fail loudly instead of downloading a 404 asset.
+check_edition() {
+    case "${PTK_EDITION:-oss}" in
+        oss|ptk-oss) ;;
+        *)
+            error "PTK_EDITION=${PTK_EDITION}: releases carry the Apache-2.0 edition only. Build the engine edition from source: cargo install --git https://github.com/riaku/ptk ptk"
             ;;
     esac
 }
@@ -181,7 +195,8 @@ verify() {
 }
 
 main() {
-    info "Installing $ASSET_PREFIX..."
+    check_edition
+    info "Installing $ASSET_PREFIX (Apache-2.0 edition)..."
 
     detect_os
     detect_arch

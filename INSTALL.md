@@ -55,7 +55,7 @@ ptk gain  # Must show the savings dashboard (not "command not found")
 
 ### Quick Install (Windows)
 
-Download `ptk-x86_64-pc-windows-msvc.zip` from the
+Download `ptk-oss-x86_64-pc-windows-msvc.zip` from the
 [releases page](https://github.com/riaku/ptk/releases), extract it, and put
 `ptk.exe` on your `PATH` (e.g. `%USERPROFILE%\.local\bin`). This fork has no
 winget or Homebrew package.
@@ -72,20 +72,23 @@ ptk gain  # MUST show the savings dashboard, not "command not found"
 
 ⚠️ **WARNING**: `cargo install ptk` installs nothing — this fork is not published to crates.io and no crate named `ptk` exists. Use the Git URL above and verify with `ptk gain`.
 
-## Apache-2.0 edition (open source only, commercial use allowed)
+## Editions (Apache-2.0 prebuilt, engine from source)
 
-The same `ptk` binary built without the BUSL-1.1 compression engine: the hook
-rewrite system and every command filter, under Apache-2.0 alone. Pick this if
-your policy does not allow a source-available licence in the build.
+Releases carry one CLI: the Apache-2.0 edition, built without the BUSL-1.1
+compression engine — the hook rewrite system and every command filter, under
+Apache-2.0 alone. `install.sh` fetches it, and it is the asset named
+`ptk-oss-<target>` (there is no DEB or RPM in this fork's release). It does not
+include `ptk pipeline`, PostToolUse compression, or delegation tasks.
+
+The engine edition (Apache-2.0 + BUSL-1.1) has no prebuilt binary — build it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riaku/ptk/refs/heads/main/install.sh | PTK_EDITION=oss sh
-cargo install --git https://github.com/riaku/ptk ptk --no-default-features
+cargo install --git https://github.com/riaku/ptk ptk
+cargo install --git https://github.com/riaku/ptk ptk --no-default-features   # Apache-2.0 only, same as the release asset
 ```
 
-Release assets are named `ptk-oss-<target>` (there is no DEB or RPM in this
-fork's release). It does not include `ptk pipeline`, PostToolUse
-compression, or delegation tasks.
+Prebuilt platforms: Apple silicon macOS, Linux x86_64 (musl, static), Linux
+arm64, Windows x64. Intel Macs and Windows on ARM build from source.
 
 ## Project Initialization
 
