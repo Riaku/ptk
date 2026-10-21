@@ -1,3 +1,9 @@
+## 0.50.4 - 2026-10-21
+
+### Bug fixes
+
+- fix(cd): relock the daemon lock on a version bump, before tagging (#19)
+
 ## 0.50.3 - 2026-10-21
 
 ### Bug fixes
