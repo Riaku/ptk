@@ -1144,7 +1144,7 @@ dependencies = [
 
 [[package]]
 name = "ptk"
-version = "0.50.4"
+version = "0.50.5"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "ptk-engine"
-version = "0.50.4"
+version = "0.50.5"
 dependencies = [
  "htmd",
  "ptk-text",
@@ -1195,14 +1195,14 @@ dependencies = [
 
 [[package]]
 name = "ptk-plugin"
-version = "0.50.4"
+version = "0.50.5"
 dependencies = [
  "ptk-engine",
 ]
 
 [[package]]
 name = "ptk-text"
-version = "0.50.4"
+version = "0.50.5"
 dependencies = [
  "regex",
 ]

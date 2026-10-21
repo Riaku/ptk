@@ -1,3 +1,15 @@
+## 0.50.5 - 2026-10-21
+
+### Bug fixes
+
+- fix(proxy): never panic the health probe on a cut-off response body (#23)
+
+### Other changes
+
+- ci: retarget the release-structure guards at the tag-after-build layout (#22)
+- ci(release): build aarch64 musl with zig instead of a musl.cc download (#20)
+- ci(cd): tag only after every leg has built (#21)
+
 ## 0.50.4 - 2026-10-21
 
 ### Bug fixes
