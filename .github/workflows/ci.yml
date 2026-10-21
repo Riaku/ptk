@@ -148,6 +148,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --manifest-path proxy/Cargo.toml --all --check
       - run: cargo clippy --manifest-path proxy/Cargo.toml --all-targets
+      # The daemon is not a workspace member, so its lock file is only read by
+      # the release build. A stale one there means the tag fails after the
+      # twelve archives are half-built; check both locks here instead.
+      - name: lock files are current
+        run: |
+          cargo metadata --locked --format-version 1 > /dev/null
+          cargo metadata --locked --format-version 1 --manifest-path proxy/Cargo.toml > /dev/null
       - run: cargo test --manifest-path proxy/Cargo.toml
 
   # The Apache-2.0 edition. Two things must hold: it builds and passes its own

@@ -175,6 +175,7 @@ jobs:
         id: build_proxy
         run: >
           cargo build --release
+          --locked
           --manifest-path proxy/Cargo.toml
           --target-dir target
           --target ${{ matrix.target }}
