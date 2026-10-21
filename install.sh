@@ -89,9 +89,10 @@ get_latest_version() {
 get_target() {
     case "$OS" in
         linux)
+            # Statically linked musl on both architectures: no dependency on
+            # the host's glibc version, so one archive runs everywhere.
             case "$ARCH" in
-                x86_64)  TARGET="x86_64-unknown-linux-musl";;
-                aarch64) TARGET="aarch64-unknown-linux-gnu";;
+                x86_64|aarch64) TARGET="${ARCH}-unknown-linux-musl";;
             esac
             ;;
         darwin)
