@@ -53,6 +53,9 @@ jobs:
             os: ubuntu-latest
             archive: tar.gz
             musl: true
+            # Zig ships clang plus musl libc for every target it knows, so the
+            # cross C compiler comes from a PyPI wheel instead of musl.cc.
+            build: cargo zigbuild
           # Windows
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -83,22 +86,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools
 
-      - name: Install aarch64 musl cross toolchain
+      # The arm64 C compiler used to come from musl.cc. That host stopped
+      # answering GitHub's runners (curl 28 on every mirror, twice in a row,
+      # while the same URL was up from elsewhere), and a build leg that cannot
+      # fetch its toolchain costs the whole release: Create Release needs all
+      # four legs. Zig ships clang and musl libc for every target it knows and
+      # arrives as a PyPI wheel, so cargo-zigbuild gives the same static musl
+      # artifact without a third-party tarball in the critical path.
+      - name: Install zig cross C compiler
         if: matrix.target == 'aarch64-unknown-linux-musl'
         run: |
-          curl -fsSL --retry 3 https://musl.cc/aarch64-linux-musl-cross.tgz -o /tmp/aarch64-musl.tgz \
-            || curl -fsSL --retry 3 https://more.musl.cc/11.2.1/x86_64-linux-musl/aarch64-linux-musl-cross.tgz -o /tmp/aarch64-musl.tgz
-          sudo tar -xzf /tmp/aarch64-musl.tgz -C /opt
-          prefix=/opt/aarch64-linux-musl-cross
-          "$prefix/bin/aarch64-linux-musl-gcc" --version
-          {
-            echo "CC_aarch64_unknown_linux_musl=$prefix/bin/aarch64-linux-musl-gcc"
-            echo "AR_aarch64_unknown_linux_musl=$prefix/bin/aarch64-linux-musl-ar"
-            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=$prefix/bin/aarch64-linux-musl-gcc"
-          } >> "$GITHUB_ENV"
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          python3 -m pip install --break-system-packages "ziglang==0.13.0"
+          zig="$(python3 -c 'import os, ziglang; print(os.path.join(os.path.dirname(ziglang.__file__), "zig"))')"
+          sudo chmod +x "$zig"
+          sudo ln -sf "$zig" /usr/local/bin/zig
+          zig version
+
+      - name: Install cargo-zigbuild
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: cargo install cargo-zigbuild --locked --version 0.23.4
 
       - name: Build ptk
-        run: cargo build --release --target ${{ matrix.target }}
+        run: ${{ matrix.build || 'cargo build' }} --release --target ${{ matrix.target }}
         env:
           PTK_TELEMETRY_URL: ${{ vars.PTK_TELEMETRY_URL }}
           PTK_TELEMETRY_TOKEN: ${{ secrets.PTK_TELEMETRY_TOKEN }}
@@ -134,7 +145,7 @@ jobs:
       # so only LICENSE travels with it. Same binary name `ptk` inside -- an
       # installed hook command must keep working across editions.
       - name: Build ptk (Apache-2.0 edition)
-        run: cargo build --release --no-default-features --target ${{ matrix.target }}
+        run: ${{ matrix.build || 'cargo build' }} --release --no-default-features --target ${{ matrix.target }}
         env:
           PTK_TELEMETRY_URL: ${{ vars.PTK_TELEMETRY_URL }}
           PTK_TELEMETRY_TOKEN: ${{ secrets.PTK_TELEMETRY_TOKEN }}
@@ -174,7 +185,7 @@ jobs:
       - name: Build ptk-proxy
         id: build_proxy
         run: >
-          cargo build --release
+          ${{ matrix.build || 'cargo build' }} --release
           --locked
           --manifest-path proxy/Cargo.toml
           --target-dir target
