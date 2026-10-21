@@ -3994,7 +3994,7 @@ mod tests {
 
     // Full-output regression tests locking the complete filtered output of
     // every mvnd fixture, per the repo-prescribed fixture pattern
-    // (`.claude/rules/cli-testing.md`: expected-output files in
+    // (`docs/contributing/CLI_TESTING.md`: expected-output files in
     // `tests/fixtures/`, compared via `include_str!` + `assert_eq!` — no
     // snapshot-testing crate) — the substring assertions above document
     // intent; these catch everything else.

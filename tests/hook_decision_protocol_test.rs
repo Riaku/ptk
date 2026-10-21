@@ -648,11 +648,6 @@ mod rewrite_host_scoping {
                 "/hookSpecificOutput/permissionDecision",
             ),
             (
-                ".claude/hooks/ptk-rewrite.sh",
-                "/hookSpecificOutput/updatedInput/command",
-                "/hookSpecificOutput/permissionDecision",
-            ),
-            (
                 "hooks/cursor/ptk-rewrite.sh",
                 "/updated_input/command",
                 "/permission",
